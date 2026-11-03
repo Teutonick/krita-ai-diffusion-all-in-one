@@ -1,12 +1,11 @@
-import asyncio
 import os
 import subprocess
 import sys
 from pathlib import Path
-from shutil import copy, copytree, ignore_patterns, make_archive, rmtree
+from shutil import copy, copytree, ignore_patterns, make_archive
+from tempfile import TemporaryDirectory
 from typing import NamedTuple
 
-import aiohttp
 from markdown import markdown
 
 sys.path.append(str(Path(__file__).parent.parent))
@@ -18,7 +17,7 @@ import translation
 from source_package import build_source, write_checksums
 
 root = Path(__file__).parent.parent
-package_dir = root / "scripts" / ".package"
+build_dir = root / "builds" / ai_diffusion.__version__
 version = ai_diffusion.__version__
 package_name = f"krita_ai_diffusion-{version}"
 
@@ -87,69 +86,46 @@ def precheck():
 
 def build_package():
     precheck()
-    source_archive = build_source(root, version)
+    source_archive = build_source(root, version, build_dir)
+    staging_root = root / ".build"
+    staging_root.mkdir(exist_ok=True)
+    with TemporaryDirectory(prefix="package-", dir=staging_root) as temporary:
+        package_dir = Path(temporary)
+        copy(root / "ai_diffusion.desktop", package_dir)
+        plugin_src = root / "ai_diffusion"
+        plugin_dst = package_dir / "ai_diffusion"
 
-    rmtree(package_dir, ignore_errors=True)
-    package_dir.mkdir()
-    copy(root / "ai_diffusion.desktop", package_dir)
+        def ignore(path, names):
+            if Path(path) == plugin_src / "websockets":
+                return [name for name in names if name not in ("src", "LICENSE")]
+            return ignore_patterns(".*", "*.pyc", "__pycache__", "debugpy")(path, names)
 
-    plugin_src = root / "ai_diffusion"
-    plugin_dst = package_dir / "ai_diffusion"
-
-    def ignore(path, names):
-        return ignore_patterns(".*", "*.pyc", "__pycache__", "debugpy")(path, names)
-
-    copytree(plugin_src, plugin_dst, ignore=ignore)
-    copytree(root / "custom_workflows", plugin_dst / "presets" / "workflows")
-    copy(root / "scripts" / "download_models.py", plugin_dst)
-    copy(root / "LICENSE", plugin_dst)
-    copy(root / "BUILD-REPORT.md", plugin_dst)
-    copy(root / "SECURITY-UPDATE.md", plugin_dst)
-    copy(root / "THIRD-PARTY-NOTICES.md", plugin_dst)
-    copy(root / "RELEASE-NOTES.md", plugin_dst)
-    copy(root / "SOURCE-MANIFEST.json", plugin_dst)
-    convert_markdown_to_html(root / "README.md", plugin_dst / "manual.html")
-
-    make_archive(str(root / package_name), "zip", package_dir)
-    write_checksums(root, version, [root / f"{package_name}.zip", source_archive])
+        copytree(plugin_src, plugin_dst, ignore=ignore)
+        copytree(root / "custom_workflows", plugin_dst / "presets" / "workflows")
+        copy(root / "scripts" / "download_models.py", plugin_dst)
+        for name in [
+            "LICENSE",
+            "BUILD-REPORT.md",
+            "SECURITY-UPDATE.md",
+            "THIRD-PARTY-NOTICES.md",
+            "RELEASE-NOTES.md",
+        ]:
+            copy(root / name, plugin_dst)
+        copy(build_dir / "SOURCE-MANIFEST.json", plugin_dst)
+        convert_markdown_to_html(root / "README.md", plugin_dst / "manual.html")
+        make_archive(str(build_dir / package_name), "zip", package_dir)
+    write_checksums(build_dir, version, [build_dir / f"{package_name}.zip", source_archive])
+    print(f"Build artifacts: {build_dir.relative_to(root)}")
     print(f"Corresponding source: {source_archive.name}")
     print(f"Checksums: SHA256SUMS-{version}.txt")
-
-
-async def publish_package(package_path: Path, target: str):
-    from service.pod.lib.environment import Config  # type: ignore
-
-    config = Config.from_env()
-    service_url = os.environ.get("TEST_SERVICE_URL", "http://localhost:8787")
-    if target == "production":
-        service_url = "https://api.interstice.cloud"
-    headers = {"Authorization": f"Bearer {config.secrets.interstice_infra_token}"}
-
-    archive_data = package_path.read_bytes()
-    async with aiohttp.ClientSession(service_url, headers=headers) as session:
-        print("Uploading package to", service_url)
-        async with session.put(f"/plugin/upload/{version}", data=archive_data) as response:
-            if response.status != 200:
-                raise RuntimeError(
-                    f"Failed to upload package: {response.status}", await response.text()
-                )
-            uploaded = await response.json()
-            for key, value in uploaded.items():
-                print(f"{key}: {value}")
 
 
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "build"
 
     if cmd == "build":
-        print("Building package", root / package_name)
+        print("Building package", build_dir / package_name)
         build_package()
-
-    elif cmd == "publish":
-        target = sys.argv[2] if len(sys.argv) > 2 else "production"
-        package = root / f"{package_name}.zip"
-        print("Publishing package", str(package))
-        asyncio.run(publish_package(package, target))
 
     elif cmd == "check":
         print("Performing precheck without building")
@@ -158,3 +134,6 @@ if __name__ == "__main__":
     elif cmd == "update":
         print("Updating server requirements without building")
         update_server_requirements()
+
+    else:
+        raise SystemExit("Usage: python scripts/package.py [build|check|update]")

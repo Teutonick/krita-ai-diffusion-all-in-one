@@ -27,3 +27,11 @@ bin
 lib
 pyvenv.cfg
 .venv
+# Generated build artifacts and temporary staging
+/.build/
+/builds/*
+!/builds/README.md
+/SOURCE-MANIFEST.json
+/SHA256SUMS-*.txt
+/krita_ai_diffusion*.zip.sha256
+/.ruff_cache/

@@ -1,4 +1,4 @@
-# 1.53.0-reloaded.8 — Unofficial Combined Build
+# 1.53.0-reloaded.9 — Unofficial Combined Build
 
 An independent community build by **Teutonick**, combining **Acly's Krita AI Diffusion
 1.53.0** with **FatGuy84's Krita AI Reloaded** and Krea 2 Edit V2 integration.
@@ -7,9 +7,9 @@ endorsed by their authors.
 
 ## Download
 
-- [Installable plugin ZIP](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.8/krita_ai_diffusion-1.53.0-reloaded.8.zip)
-- [Exact corresponding source](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.8/krita_ai_diffusion-1.53.0-reloaded.8-source.zip)
-- [SHA-256 checksums](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.8/SHA256SUMS-1.53.0-reloaded.8.txt)
+- [Installable plugin ZIP](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.9/krita_ai_diffusion-1.53.0-reloaded.9.zip)
+- [Exact corresponding source](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.9/krita_ai_diffusion-1.53.0-reloaded.9-source.zip)
+- [SHA-256 checksums](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.9/SHA256SUMS-1.53.0-reloaded.9.txt)
 
 Import the plugin ZIP through **Tools → Scripts → Import Python Plugin from File**,
 then fully restart Krita. Configure workloads and optional components in Managed Server.
@@ -25,6 +25,10 @@ then fully restart Krita. Configure workloads and optional components in Managed
 - Session-based media storage and startup cleanup of abandoned plugin-owned sessions.
 
 ## Fixes in this build
+
+- Build archives, checksums and source manifests now live under `builds/<version>/`, outside tracked source files.
+- Packaging uses temporary staging with automatic cleanup and includes only the runtime WebSocket library and its license in the plugin ZIP.
+- Remove unused ffmpeg preview code and unavailable private upstream publishing/upload commands. Test-fixture downloads remain available without private service credentials.
 
 - Resolve the remaining 409 Dependabot occurrences through compatible dependency updates and shared downgrade protection.
 - Preserve translation using an exact official Argos source revision where vulnerable Stanza is optional.

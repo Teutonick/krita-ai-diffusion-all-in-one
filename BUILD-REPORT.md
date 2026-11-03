@@ -1,49 +1,26 @@
-# Combined build report
+# Build validation
 
-Version: `1.53.0-reloaded.8`. Prepared 2026-11-03. No commit or publication performed.
+Current plugin: `1.53.0-reloaded.9`. Managed-server dependency version remains `.8` because this cleanup does not change server requirements.
 
-This is Teutonick's unofficial combined fork of Acly's Krita AI Diffusion 1.53.0 and FatGuy84's Reloaded improvements, with Krea 2 integration. See THIRD-PARTY-NOTICES.md and SOURCE-MANIFEST.json for attribution and exact source provenance.
+This unofficial combined fork includes Acly 1.53.0, FatGuy84's Reloaded improvements and Krea 2 Edit integration. Attribution, source revisions and license terms are documented in THIRD-PARTY-NOTICES.md and the source manifest embedded in each release archive.
 
-## Changes
+## Repository and packaging
 
-- Preserves upstream 1.53, Reloaded UI/features, managed optional-component installation, Krea Turbo/Edit/Remix and Identity/General Edit V2.
-- Closed settings dropdowns ignore mouse-wheel changes and forward scrolling to their enclosing scroll area.
-- Session-owned temporary media, crash recovery and active-instance protection; automatic preview images stay in RAM or temporary session storage. Manual exports, preferences, model weights and .kra contents retain their intended persistence. Unowned historical files are not deleted.
-- Krea V2 setup presents English terms, official document links and two explicit acknowledgements. Bundled, hash-verified LICENSE_V2.md, LICENSE.pdf and NOTICE are copied beside the weights before download. CLI installation also requires explicit acceptance. Acceptance does not grant commercial rights.
-- README, About and release notes identify this unofficial combined fork and separately credit Acly and FatGuy84. Matching source and plugin archives contain the same source manifest; checksums accompany both archives.
-- Server startup is single-flight. An occupied default port selects an available port; an explicitly requested occupied port produces an actionable error. Existing processes are not killed.
-- ComfyUI's SQLite database is explicitly redirected into the session's user directory, avoiding the shared default database.
-- Legacy Krea UI workflows receive defaults for newly added node widgets instead of failing with IndexError during import.
+- All local release archives and checksum files are stored under `builds/<version>/` and excluded from Git. Existing archives were moved without changing their SHA-256 hashes.
+- New builds place both ZIPs, the shared source manifest and checksums in that directory. Temporary packaging space is cleaned automatically.
+- The installable ZIP includes WebSocket runtime sources and the BSD license; upstream examples, experiments and dependency test suites stay out of the plugin installation. Complete dependency sources remain in the corresponding source archive.
+- Removed unused ffmpeg preview extraction, unavailable private upstream publishing/upload commands and unused development dependencies. Online preview behavior and test-fixture downloads are retained.
+- Generated source manifests are no longer tracked in the repository root. Both release ZIPs still contain the same manifest, and an extracted source archive can rebuild without Git.
 
 ## Validation
 
-- Ruff check and format passed. Pyright: zero errors.
-- Available CI suite: 354 passed, 112 skipped, 9 deselected. Windows TEMP/TMP redirected into the working copy. Seven deselected cases require a dedicated live test-server fixture; two require working standalone PyQt TLS.
-- Real isolated ComfyUI CPU startup passed with an occupied default port and two concurrent start requests: exactly one server process started. Dedicated session database arguments were applied. Both bundled Krea workflows imported against actual node definitions (26 and 23 nodes). The test server stopped and its session directory was removed.
-- Qt terms dialog checked: both acknowledgements are required, and withdrawing either disables acceptance. Dialog rendered and visually reviewed.
-- Existing Identity V2 weights on the user's server were checked in full: SHA-256 c53843f9451963a6cb3c22dc4975205056b93a6575fb9347dd2bc6e055ef9877 matches the pinned official artifact. No re-download is required for that file.
-- Required workflow integration attempt: eight passed, then stopped because the test style requests checkpoint 'not-found', absent on the available server. This does not establish diffusion inference acceptance.
-- Required fresh-installer integration attempt stopped at standalone PyQt TLS initialization while downloading ComfyUI. Full first-run installation inside Krita remains unverified.
-- Earlier isolated CPU media smoke test generated a 64x64 test image through ETN RAM transfer; standard SaveImage output stayed in the session and was removed at cleanup. This was not model inference.
+- Ruff check/format and Pyright passed.
+- Available CI: 355 passed, 112 skipped, 9 deselected. Windows TEMP/TMP are confined to the working copy. The excluded pre-existing cases require a live test server or working standalone PyQt TLS.
+- Source packaging tests cover exact file hashes, exclusion of private/generated files, dedicated artifact output and rebuilding an extracted snapshot without Git.
+- ZIP integrity, matching manifests, source hashes, license SHA-256 values, artifact checksums and imports from the trimmed plugin archive checked after packaging.
 
-## Remaining acceptance
+## Retained security validation
 
-Import the plugin ZIP into Krita and restart Krita completely. Verify first-run installation in Krita, actual Krea V2 generation/editing, online previews and Eagle export. GPU generation and a fresh complete installation are not claimed as validated. Eagle's own installation/activation remains interactive. No existing user server was terminated or modified by the isolated startup test.
+The .8 dependency update covered the 409 remaining Dependabot occurrences and retained earlier critical fixes. All 12 backend platform locks, Docker and legacy requirements resolved. Real CPU imports, isolated ComfyUI startup and both bundled Krea workflow imports passed. Accelerate's shard guard and Transformers' consent-before-download behavior were exercised against the actual libraries.
 
-## LoRA library hotfix (.5)
-
-The supplied logs show LoRA Manager skipping models because restored sidecars were missing its mandatory preview_url field. Metadata retention now keeps that field as an empty string, preserving the schema while discarding local preview paths. The manager list is supplemented by the standard ComfyUI file list, with case/separator normalization to avoid duplicate entries and correct preservation of subfolders. Unknown architecture labels no longer hide otherwise unclassified models. Missing previews use the neutral LoRA icon. Existing CivitAI SHA-256 resolution remains independent of sidecar files; preview bytes stay in RAM. Regression checks cover incomplete/unavailable manager responses and schema-preserving session restoration.
-
-## Settings, shutdown and download fixes (.6)
-
-Late Python-property updates now check Qt receiver lifetime before invoking a setter. The exact deleted ErrorBox scenario was reproduced in standalone Qt and passed after the fix. Settings labels wrap with explicit height-for-width policy; Integrations was rendered and reviewed at 760px, and every settings control remained within its row and scroll viewport. Managed model downloads first synchronize the plugin CivitAI API key and selected host through the LoRA Manager settings API. Tests verify transfer order, trimmed keys, clearing stale credentials and denial when synchronization fails. The installed manager source confirms that its downloader reads these settings for authentication. No real account key or paid/restricted model download was used in validation; account authorization and early-access restrictions still apply.
-
-## Critical security dependency update (.7)
-
-All 87 critical Dependabot occurrences from the 2026-11-03 snapshot are addressed in the affected manifests (10 unique advisories). Pillow, certifi, PyJWT and uv use patched versions, and shared constraints protect managed dependency installation from vulnerable downgrades. The server installation version is bumped so existing managed installations are offered an update; old uv binaries are replaced and installer scripts use a version-specific cache. The user server itself was not modified.
-
-Full dependency resolution passed for 11 of 12 platform locks plus Docker. Linux ROCm resolution timed out while fetching a large pre-existing PyTorch wheel; no incompatibility was reported, but that platform is not fully validated. Documentation was migrated to compatible patched Astro/Starlight versions: npm audit reports zero vulnerabilities, and the static build generated 16 pages. Available CI passed with Pillow 13: 354 passed, 112 skipped, 9 deselected; Ruff and Pyright passed. Fresh installer integration was attempted and blocked by standalone PyQt TLS initialization while fetching ComfyUI. See SECURITY-UPDATE.md for advisory mapping and validation limits.
-
-## Remaining dependency advisories (.8)
-
-The remaining snapshot contains 409 occurrences / 65 unique advisories. Every affected manifest now uses versions outside the recorded vulnerable ranges, with offline regression coverage. All 12 backend platform locks plus Docker and legacy requirements resolve. Real CPU imports and isolated ComfyUI startup/workflow import passed with the updated libraries. Accelerate receives an installer-applied path/regular-file guard because its newer release still contains the vulnerable code; real Transformers 5.22.1 was verified to refuse untrusted generation code before downloading it. See SECURITY-UPDATE.md for complete scope, Argos source provenance, Windows ROCm upstream risk and fresh-install validation limits.
+See SECURITY-UPDATE.md for the advisory scope and Windows ROCm upstream limitation. Complete fresh installation in Krita, GPU inference and an actual Docker image build remain unverified. The previous fresh-installer attempt was blocked by standalone PyQt TLS initialization. No user-server packages or processes were changed during this cleanup.

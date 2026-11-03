@@ -133,3 +133,11 @@ You can also run the file server manually. Then you can start Krita with the `HO
 python scripts/file_server.py
 
 HOSTMAP=1 /your/krita/install/krita
+
+### Release artifacts
+
+Run `python scripts/package.py build` from the repository root. Output is written
+to `builds/<version>/`; archives, checksums and the generated source manifest are not
+tracked in Git. `.build/` is temporary packaging space and is cleared after a build.
+Upload the matching plugin ZIP, source ZIP and checksum file together as GitHub release
+assets. Keep source notices, bundled model licenses and the manifest in the archives.

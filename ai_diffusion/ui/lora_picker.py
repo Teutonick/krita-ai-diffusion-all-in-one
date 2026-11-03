@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import shutil
-import subprocess
-
 from PyQt5.QtCore import QRect, QSize, Qt, QTimer, QUrl, pyqtSignal
 from PyQt5.QtGui import QColor, QDesktopServices, QGuiApplication, QIcon, QPainter, QPixmap
 from PyQt5.QtWidgets import (
@@ -197,41 +194,6 @@ def _visible_range(grid, overscan: int = 24) -> range:
     start = first.row() if first.isValid() else 0
     end = last.row() if last.isValid() else start + 200  # empty space below last row
     return range(max(0, start - overscan), min(count, end + overscan + 1))
-
-
-_ffmpeg_path = shutil.which("ffmpeg")
-
-
-def _extract_video_frame(data: bytes) -> bytes | None:
-    """Extract the first frame of a video as JPEG using ffmpeg. Returns None if
-    ffmpeg is not installed or extraction fails. Runs blocking - call in executor."""
-    if _ffmpeg_path is None:
-        return None
-    try:
-        result = subprocess.run(
-            [
-                _ffmpeg_path,
-                "-loglevel",
-                "error",
-                "-i",
-                "pipe:0",
-                "-frames:v",
-                "1",
-                "-f",
-                "image2pipe",
-                "-vcodec",
-                "mjpeg",
-                "pipe:1",
-            ],
-            input=data,
-            capture_output=True,
-            check=False,
-            timeout=20,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
-        return result.stdout if result.returncode == 0 else None
-    except Exception:
-        return None
 
 
 class LoraBrowser(QWidget):

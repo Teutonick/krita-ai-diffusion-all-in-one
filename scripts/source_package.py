@@ -59,7 +59,9 @@ def collect_files(root: Path):
     return sorted(name for name in candidates if allowed(Path(name)) and (root / name).is_file())
 
 
-def build_source(root: Path, version: str):
+def build_source(root: Path, version: str, output_dir: Path | None = None):
+    output_dir = output_dir or root / "builds" / version
+    output_dir.mkdir(parents=True, exist_ok=True)
     files = collect_files(root)
     manifest = {
         "format": "krita-ai-diffusion-source-v1",
@@ -74,9 +76,9 @@ def build_source(root: Path, version: str):
         "files": {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in files},
     }
     manifest_text = json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
-    (root / "SOURCE-MANIFEST.json").write_bytes(manifest_text.encode("utf-8"))
+    (output_dir / "SOURCE-MANIFEST.json").write_bytes(manifest_text.encode("utf-8"))
     prefix = f"krita_ai_diffusion-{version}-source"
-    destination = root / f"{prefix}.zip"
+    destination = output_dir / f"{prefix}.zip"
     with ZipFile(destination, "w", compression=ZIP_DEFLATED) as archive:
         for name in files:
             archive.write(root / name, f"{prefix}/{name}")
@@ -84,10 +86,10 @@ def build_source(root: Path, version: str):
     return destination
 
 
-def write_checksums(root: Path, version: str, artifacts: list[Path]):
+def write_checksums(output_dir: Path, version: str, artifacts: list[Path]):
     content = "".join(
         f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n" for path in artifacts
     )
-    destination = root / f"SHA256SUMS-{version}.txt"
+    destination = output_dir / f"SHA256SUMS-{version}.txt"
     destination.write_text(content, encoding="utf-8")
     return destination

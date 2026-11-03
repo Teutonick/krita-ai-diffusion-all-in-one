@@ -26,8 +26,3 @@ psutil
 tqdm
 PyQt5
 Pillow>=13.0.0
-
-# Service
-ndjson
-ujson
-boto3
