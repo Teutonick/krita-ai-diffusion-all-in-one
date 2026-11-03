@@ -1,0 +1,5 @@
+# Minimum versions addressing critical Dependabot advisories (2026-11-03).
+Pillow>=13.0.0
+certifi>=2026.10.18
+PyJWT>=2.14.0
+uv>=0.13.4

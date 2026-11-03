@@ -58,7 +58,7 @@ catalogue==2.0.10
     #   spacy
     #   srsly
     #   thinc
-certifi==2026.7.22
+certifi==2026.10.18
     # via
     #   httpcore
     #   httpx
@@ -404,7 +404,7 @@ packaging==26.3
     #   thinc
     #   transformers
     #   weasel
-pillow==12.3.0
+pillow==13.0.0
     # via
     #   -r ComfyUI/custom_nodes/comfyui_controlnet_aux/requirements.txt
     #   -r ComfyUI/requirements.txt
@@ -465,7 +465,7 @@ pygithub==2.10.0
     # via -r ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt
 pygments==2.21.0
     # via rich
-pyjwt==2.13.0
+pyjwt==2.14.0
     # via pygithub
 pynacl==1.6.2
     # via pygithub
@@ -708,7 +708,7 @@ urllib3==2.7.0
     # via
     #   pygithub
     #   requests
-uv==0.12.5
+uv==0.13.4
     # via -r ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt
 vhacdx==0.0.10
     # via trimesh

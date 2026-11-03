@@ -104,6 +104,7 @@ def build_package():
     copy(root / "scripts" / "download_models.py", plugin_dst)
     copy(root / "LICENSE", plugin_dst)
     copy(root / "BUILD-REPORT.md", plugin_dst)
+    copy(root / "SECURITY-UPDATE.md", plugin_dst)
     copy(root / "THIRD-PARTY-NOTICES.md", plugin_dst)
     copy(root / "RELEASE-NOTES.md", plugin_dst)
     copy(root / "SOURCE-MANIFEST.json", plugin_dst)

@@ -12,6 +12,7 @@ root_files = {
     "AGENTS.md",
     "CONTRIBUTING.md",
     "BUILD-REPORT.md",
+    "SECURITY-UPDATE.md",
     "THIRD-PARTY-NOTICES.md",
     "RELEASE-NOTES.md",
     "requirements.txt",

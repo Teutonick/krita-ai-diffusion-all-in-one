@@ -16,11 +16,18 @@
   },
   "dependencies": {
     "@astro-community/astro-embed-youtube": "^0.5.6",
-    "@astrojs/starlight": "^0.30.3",
-    "astro": "^5.0.2",
-    "astro-icon": "^1.1.5"
+    "@astrojs/starlight": "^0.42.8",
+    "astro": "^7.4.5",
+    "astro-icon": "^1.1.5",
+    "@astrojs/markdown-remark": "^7.3.0"
   },
   "devDependencies": {
     "tsx": "^4.19.2"
+  },
+  "overrides": {
+    "tar": "^7.5.19"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

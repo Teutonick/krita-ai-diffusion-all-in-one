@@ -53,3 +53,19 @@ def test_ready_url_strips_ansi_and_ignores_unrelated_messages():
         == "127.0.0.1:8199"
     )
     assert _server_ready_url("Port 8188 is already in use") is None
+
+
+@pytest.mark.parametrize(
+    "version,outdated",
+    [
+        ("uv 0.9.26 (old)", True),
+        ("uv 0.13.3", True),
+        ("uv 0.13.4", False),
+        ("uv 0.14.0", False),
+        ("unknown", True),
+    ],
+)
+def test_uv_security_version(version, outdated):
+    from ai_diffusion.backend.server import _uv_is_outdated
+
+    assert _uv_is_outdated(version) is outdated

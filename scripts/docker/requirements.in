@@ -70,3 +70,9 @@ argostranslate
 sentencepiece==0.2.0
 # argostranslate uses pip to install stuff on demand but doesn't depend on it
 pip
+
+# Critical security fixes
+Pillow>=13.0.0
+certifi>=2026.10.18
+PyJWT>=2.14.0
+uv>=0.13.4

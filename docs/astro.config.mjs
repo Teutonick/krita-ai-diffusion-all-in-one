@@ -14,11 +14,11 @@ export default defineConfig({
 			title: 'Krita AI Handbook',
 			logo: { src: './src/assets/logo.png' },
 			favicon: '/favicon.png',
-			social: {
-				github: 'https://github.com/Acly/krita-ai-diffusion',
-				discord: 'https://discord.gg/pWyzHfHHhU',
-				youtube: 'https://www.youtube.com/@aclysia',
-			},
+			social: [
+				{ icon: 'github', label: 'GitHub', href: 'https://github.com/Acly/krita-ai-diffusion' },
+				{ icon: 'discord', label: 'Discord', href: 'https://discord.gg/pWyzHfHHhU' },
+				{ icon: 'youtube', label: 'YouTube', href: 'https://www.youtube.com/@aclysia' },
+			],
 			sidebar: [
 				{
 					label: 'Setup',

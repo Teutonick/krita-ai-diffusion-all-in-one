@@ -4,3 +4,6 @@ scripts/docker/* text eof=lf
 scripts/docker/nginx/* text eof=lf
 *.sh -text
 Dockerfile -text
+
+# License snapshots are verified byte-for-byte against their official SHA-256.
+ai_diffusion/licenses/krea2-v2/* -text

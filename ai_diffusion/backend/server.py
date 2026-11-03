@@ -42,6 +42,11 @@ from .resources import (
 _exe = ".exe" if is_windows else ""
 
 
+def _uv_is_outdated(version: str):
+    match = re.search(r"\buv (\d+)\.(\d+)\.(\d+)", version)
+    return match is None or tuple(map(int, match.groups())) < (0, 13, 4)
+
+
 class ServerState(Enum):
     not_installed = 0
     missing_resources = 2
@@ -188,8 +193,8 @@ class Server:
         self._cache_dir.mkdir(parents=True, exist_ok=True)
         self._version_file.write_text("incomplete")
 
-        if self._uv_cmd is None:
-            await try_install(self.path / "uv", self._install_uv, network, cb)
+        if self._uv_cmd is None or _uv_is_outdated(await get_python_version_string(self._uv_cmd)):
+            await self._install_uv(network, cb)
 
         if self.comfy_dir is None:
             python_dir = self.path / "venv"
@@ -302,12 +307,14 @@ class Server:
             cmd = [self._uv_cmd, "pip", "install", *args]
         else:
             cmd = [self._python_cmd, "-su", "-m", "pip", "install", *args]
+        constraints = Path(__file__).parent / "requirements" / "security.in"
+        cmd += ["--constraint", str(constraints)]
         return _execute_process(name, cmd, self.path, cb, env=env)
 
     async def _install_uv(self, network: QNetworkAccessManager, cb: InternalCB):
         script_ext = ".ps1" if is_windows else ".sh"
-        url = f"https://astral.sh/uv/0.9.26/install{script_ext}"
-        script_path = self._cache_dir / f"install_uv{script_ext}"
+        url = f"https://astral.sh/uv/0.13.4/install{script_ext}"
+        script_path = self._cache_dir / f"install_uv_0.13.4{script_ext}"
         await _download_cached("Python", network, url, script_path, cb)
 
         env = {"UV_UNMANAGED_INSTALL": str(self.path / "uv")}

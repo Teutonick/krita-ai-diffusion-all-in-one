@@ -54,7 +54,7 @@ catalogue==2.0.10
     #   srsly
     #   thinc
     # from https://pypi.org/simple
-certifi==2026.7.22
+certifi==2026.10.18
     # via
     #   httpcore
     #   httpx
@@ -374,7 +374,7 @@ packaging==26.3
     #   transformers
     #   weasel
     # from https://pypi.org/simple
-pillow==12.3.0
+pillow==13.0.0
     # via
     #   -r ai_diffusion/backend/requirements/base.in
     #   fvcore

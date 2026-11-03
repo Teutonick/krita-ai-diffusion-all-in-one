@@ -32,7 +32,7 @@ RUN apt update && \
 # Install Python virtual environment
 ENV XDG_BIN_HOME="/usr/bin" \
     PATH="/venv/bin:$PATH"
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+RUN curl -LsSf https://astral.sh/uv/0.13.4/install.sh | sh
 RUN uv venv /venv --python python3.12
 
 # Install Python dependencies
