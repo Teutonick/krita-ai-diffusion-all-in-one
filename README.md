@@ -2,7 +2,7 @@
 
 **Acly's foundation. Reloaded's workflow tools. Krea 2 Edit V2 integration.**
 
-[![Version](https://img.shields.io/badge/build-1.53.0--reloaded.4-blue)](https://github.com/Teutonick/krita-ai-diffusion/releases)
+[![Version](https://img.shields.io/badge/build-1.53.0--reloaded.6-blue)](https://github.com/Teutonick/krita-ai-diffusion/releases)
 [![Code license](https://img.shields.io/badge/plugin_code-GPLv3-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-unofficial_fork-orange)](#credits)
 
@@ -14,6 +14,27 @@ This build combines upstream **1.53.0**, the interface and workflow improvements
 **Krita AI Reloaded**, and **Krea 2 Turbo / Identity Edit V2 / General Edit V2** support.
 It also adds managed component installation, protection against accidental mouse-wheel
 changes in settings, and a policy for temporary media storage.
+
+## Built from these projects
+
+**This fork combines existing open-source work. The original authors deserve the credit
+for their contributions; Teutonick maintains the integration and changes made here.**
+
+| Original project | What this build uses |
+| --- | --- |
+| **[Acly/krita-ai-diffusion](https://github.com/Acly/krita-ai-diffusion)** | The original Krita plugin: upstream 1.53.0, generation engine, ComfyUI integration, server installer and core interface. |
+| **[FatGuy84/krita-ai-reloaded](https://github.com/FatGuy84/krita-ai-reloaded)** | Reloaded's interface and workflow improvements: visual model browsers, prompt and wildcard tools, batch workflows, history tools and export integrations. |
+| **[lbouaraba/comfyui-krea2edit](https://github.com/lbouaraba/comfyui-krea2edit)** | Krea 2 Edit custom nodes used by the Identity Edit and General Edit workflows; installed as an optional server component. |
+| **[willmiao/ComfyUI-Lora-Manager](https://github.com/willmiao/ComfyUI-Lora-Manager)** | The server-side model library, metadata and download functionality used by the browsers; installed as an optional server component. |
+
+The Krea 2 Edit model weights come from
+**[conradlocke/krea2-identity-edit](https://huggingface.co/conradlocke/krea2-identity-edit)**
+and have their own terms, separate from the plugin's code license.
+
+This fork adds the combined setup, Krea integration and the fixes documented in
+[the release notes](RELEASE-NOTES.md). For contributor acknowledgements and support links,
+see [Credits](#credits); exact source revisions and license details are recorded in
+[Third-party notices](THIRD-PARTY-NOTICES.md) and the release's `SOURCE-MANIFEST.json`.
 
 ## Install once, choose your components
 
