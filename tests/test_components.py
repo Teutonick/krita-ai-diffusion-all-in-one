@@ -5,11 +5,53 @@ import pytest
 from PyQt5.QtNetwork import QNetworkAccessManager
 
 from ai_diffusion.backend import resources, server
+from ai_diffusion.backend.api import CheckpointInput, ConditioningInput, LoraInput
 from ai_diffusion.backend.comfy_workflow import ComfyWorkflow, Output
+from ai_diffusion.backend.resources import Arch, ControlMode
 from ai_diffusion.backend.server import Server
+from ai_diffusion.backend.workflow import (
+    Conditioning,
+    Control,
+    ImageOutput,
+    apply_krea2_edit_patch,
+)
 from ai_diffusion.settings import settings
 
 from .conftest import qtapp
+
+
+@pytest.mark.parametrize(
+    "name, boost",
+    [("identity_edit_v2", 2.0), ("general_edit_v2", 4.0), ("identity_edit_v1_2", 1.0)],
+)
+def test_krea_reference_fidelity(name, boost):
+    models = CheckpointInput("krea2.safetensors", Arch.krea2)
+    models.loras = [LoraInput(f"krea2_{name}.safetensors", 1.0)]
+    cond = Conditioning.from_input(ConditioningInput("change the background"), None, models)
+    cond.edit_reference = True
+    assert cond.copy().krea2_ref_boost == boost
+    w = ComfyWorkflow()
+    patch = apply_krea2_edit_patch(
+        w, Output(1, 0), Output(2, 0), None, cond, Output(3, 0), Output(4, 0), False
+    )
+    assert w.root[str(patch.node)]["inputs"]["ref_boost"] == boost
+
+    cond.control = [Control(ControlMode.reference, ImageOutput(Output(5, 0)), strength=0.75)]
+    patch = apply_krea2_edit_patch(
+        w, Output(1, 0), Output(2, 0), None, cond, Output(3, 0), Output(4, 0), False
+    )
+    inputs = w.root[str(patch.node)]["inputs"]
+    assert inputs["ref_boost"] == 0.75 * boost
+    assert inputs["ref_boost_a"] == 1.0
+
+    cond.edit_reference = False
+    cond.control.append(Control(ControlMode.reference, ImageOutput(Output(6, 0)), strength=0.5))
+    patch = apply_krea2_edit_patch(
+        w, Output(1, 0), None, None, cond, Output(3, 0), Output(4, 0), False
+    )
+    inputs = w.root[str(patch.node)]["inputs"]
+    assert inputs["ref_boost"] == 0.5 * boost
+    assert inputs["ref_boost_a"] == 0.75
 
 
 def test_v2_download_does_not_accept_old_weights(tmp_path: Path):

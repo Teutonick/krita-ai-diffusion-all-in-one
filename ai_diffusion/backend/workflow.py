@@ -425,10 +425,20 @@ class Conditioning:
     regions: list[Region] = field(default_factory=list)
     style_prompt: str = ""
     edit_reference: bool = False
+    krea2_ref_boost: float = 1.0
 
     @staticmethod
-    def from_input(i: ConditioningInput, sampling: SamplingInput | None):
+    def from_input(
+        i: ConditioningInput, sampling: SamplingInput | None, models: CheckpointInput | None = None
+    ):
         has_negative = sampling and sampling.cfg_scale > 1
+        ref_boost = 1.0
+        if models and models.version is Arch.krea2:
+            names = [lora.name.lower() for lora in models.loras if lora.strength > 0]
+            if any("krea2_general_edit_v2" in name for name in names):
+                ref_boost = 4.0
+            elif any("krea2_identity_edit_v2" in name for name in names):
+                ref_boost = 2.0
         return Conditioning(
             TextPrompt(i.positive, i.language),
             TextPrompt(i.negative, i.language) if has_negative else None,
@@ -436,6 +446,7 @@ class Conditioning:
             [Region.from_input(r, idx, i.language) for idx, r in enumerate(i.regions)],
             i.style,
             i.edit_reference,
+            ref_boost,
         )
 
     def copy(self):
@@ -446,6 +457,7 @@ class Conditioning:
             [r.copy() for r in self.regions],
             self.style_prompt,
             self.edit_reference,
+            self.krea2_ref_boost,
         )
 
     def downscale(self, original: Extent, target: Extent):
@@ -787,7 +799,9 @@ def apply_krea2_edit_patch(
 
     if not images:
         if cond.edit_reference and input_latent:
-            return w.krea2_edit_model_patch(model, input_latent, target_latent=target_latent)
+            return w.krea2_edit_model_patch(
+                model, input_latent, target_latent=target_latent, ref_boost=cond.krea2_ref_boost
+            )
         return model
 
     image_a = images[0]
@@ -795,8 +809,12 @@ def apply_krea2_edit_patch(
     latent_a = vae_encode(w, vae, image_a, tiled_vae)
     latent_b = vae_encode(w, vae, image_b, tiled_vae) if image_b is not None else None
 
-    ref_boost = extra_input[0].strength if extra_input else 1.0
-    ref_boost_a = extra_input[1].strength if len(extra_input) > 1 else 1.0
+    # The node's main boost controls the last reference; boost_a controls the first.
+    strengths = ([1.0] if cond.edit_reference and input_image else []) + [
+        c.strength for c in extra_input
+    ]
+    ref_boost = strengths[len(images[:2]) - 1] * cond.krea2_ref_boost
+    ref_boost_a = strengths[0] if len(images) > 1 else 1.0
 
     return w.krea2_edit_model_patch(
         model,
@@ -2062,7 +2080,7 @@ def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.serve
             workflow,
             ensure(i.models),
             ScaledExtent.from_input(i.extent),
-            Conditioning.from_input(ensure(i.conditioning), i.sampling),
+            Conditioning.from_input(ensure(i.conditioning), i.sampling, i.models),
             ensure(i.sampling),
             misc,
             models.for_arch(ensure(i.models).version),
@@ -2072,7 +2090,7 @@ def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.serve
             workflow,
             ensure(i.images),
             ensure(i.models),
-            Conditioning.from_input(ensure(i.conditioning), i.sampling),
+            Conditioning.from_input(ensure(i.conditioning), i.sampling, i.models),
             ensure(i.sampling),
             ensure(i.inpaint),
             ensure(i.crop_upscale_extent),
@@ -2085,7 +2103,7 @@ def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.serve
             i.image,
             ScaledExtent.from_input(i.extent),
             ensure(i.models),
-            Conditioning.from_input(ensure(i.conditioning), i.sampling),
+            Conditioning.from_input(ensure(i.conditioning), i.sampling, i.models),
             ensure(i.sampling),
             misc,
             models.for_arch(ensure(i.models).version),
@@ -2095,7 +2113,7 @@ def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.serve
             workflow,
             ensure(i.images),
             ensure(i.models),
-            Conditioning.from_input(ensure(i.conditioning), i.sampling),
+            Conditioning.from_input(ensure(i.conditioning), i.sampling, i.models),
             ensure(i.sampling),
             ensure(i.inpaint),
             misc,
@@ -2113,7 +2131,7 @@ def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.serve
             i.image,
             i.extent,
             ensure(i.models),
-            Conditioning.from_input(ensure(i.conditioning), i.sampling),
+            Conditioning.from_input(ensure(i.conditioning), i.sampling, i.models),
             ensure(i.sampling),
             ensure(i.upscale),
             misc,
