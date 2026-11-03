@@ -1,4 +1,4 @@
-# 1.53.0-reloaded.7 — Unofficial Combined Build
+# 1.53.0-reloaded.8 — Unofficial Combined Build
 
 An independent community build by **Teutonick**, combining **Acly's Krita AI Diffusion
 1.53.0** with **FatGuy84's Krita AI Reloaded** and Krea 2 Edit V2 integration.
@@ -7,9 +7,9 @@ endorsed by their authors.
 
 ## Download
 
-- [Installable plugin ZIP](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.7/krita_ai_diffusion-1.53.0-reloaded.7.zip)
-- [Exact corresponding source](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.7/krita_ai_diffusion-1.53.0-reloaded.7-source.zip)
-- [SHA-256 checksums](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.7/SHA256SUMS-1.53.0-reloaded.7.txt)
+- [Installable plugin ZIP](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.8/krita_ai_diffusion-1.53.0-reloaded.8.zip)
+- [Exact corresponding source](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.8/krita_ai_diffusion-1.53.0-reloaded.8-source.zip)
+- [SHA-256 checksums](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.8/SHA256SUMS-1.53.0-reloaded.8.txt)
 
 Import the plugin ZIP through **Tools → Scripts → Import Python Plugin from File**,
 then fully restart Krita. Configure workloads and optional components in Managed Server.
@@ -25,6 +25,13 @@ then fully restart Krita. Configure workloads and optional components in Managed
 - Session-based media storage and startup cleanup of abandoned plugin-owned sessions.
 
 ## Fixes in this build
+
+- Resolve the remaining 409 Dependabot occurrences through compatible dependency updates and shared downgrade protection.
+- Preserve translation using an exact official Argos source revision where vulnerable Stanza is optional.
+- Apply a tested Accelerate shard-path/regular-file guard after managed dependency installs and in Docker.
+- Use verified Transformers consent-before-code-download behavior and compatible Diffusers/Hub/tokenizer versions.
+- Add an offline advisory regression fixture; keep GPU-specific package indexes intact.
+- See SECURITY-UPDATE.md for validation and the separately identified upstream Windows ROCm limitation.
 
 - Critical dependency fixes: Pillow 13.0.0, certifi 2026.10.18, PyJWT 2.14.0 and uv 0.13.4 across affected Python locks.
 - Shared minimum-version constraints apply to managed ComfyUI and custom-node dependency installation, preventing vulnerable downgrades.

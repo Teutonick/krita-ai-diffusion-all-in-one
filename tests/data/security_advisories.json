@@ -1,0 +1,1007 @@
+[
+  {
+    "id": "GHSA-6627-m3xw-93mp",
+    "package": "filelock",
+    "affected": ">= 3.30.0, <= 4.2.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-9c4x-gm8v-wgc4",
+    "package": "filelock",
+    "affected": ">= 3.30.0, <= 4.2.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-8mx5-7m5m-r77g",
+    "package": "filelock",
+    "affected": ">= 3.10.0, <= 4.2.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-cwqr-hh33-gh44",
+    "package": "filelock",
+    "affected": ">= 3.20.4, <= 4.2.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-rfpc-qcw5-3pc4",
+    "package": "filelock",
+    "affected": ">= 3.22.0, <= 4.2.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-69hj-f68j-2879",
+    "package": "filelock",
+    "affected": "<= 4.2.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-j8f7-rjxc-mr56",
+    "package": "filelock",
+    "affected": ">= 3.20.4, <= 4.0.8",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-m462-7rxw-wvpg",
+    "package": "filelock",
+    "affected": ">= 3.30.0, <= 4.2.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-fq56-3cx3-fjxp",
+    "package": "filelock",
+    "affected": ">= 3.22.0, <= 4.2.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-23mf-xhv8-69c2",
+    "package": "gitpython",
+    "affected": "<= 3.1.62",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-gq48-pqfc-9p58",
+    "package": "gitpython",
+    "affected": "< 3.2.0",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-f9j4-qggq-h239",
+    "package": "gitpython",
+    "affected": ">= 3.1.30, < 3.2.0",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-w8jc-g24h-crhw",
+    "package": "gitpython",
+    "affected": "<= 3.1.62",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-fx3j-rwgx-fr94",
+    "package": "gitpython",
+    "affected": "<= 3.1.62",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-m64x-33q8-m5h7",
+    "package": "gitpython",
+    "affected": "<= 3.1.62",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-9vhv-jxww-xfm5",
+    "package": "filelock",
+    "affected": ">= 3.20.4, <= 4.2.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-567q-5qvw-pf92",
+    "package": "filelock",
+    "affected": ">= 3.22.0, <= 4.2.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-v4x8-3wr5-3wq8",
+    "package": "filelock",
+    "affected": ">= 3.20.4, <= 4.2.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-xmj3-9gf7-h52w",
+    "package": "setuptools",
+    "affected": ">= 38.2.2, < 84.1.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-83vg-56qc-22m7",
+    "package": "gitpython",
+    "affected": "<= 3.2.0",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-f9xw-jh8m-3mwq",
+    "package": "aiohttp",
+    "affected": "<= 3.14.3",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-gx76-c99x-2c96",
+    "package": "aiohttp",
+    "affected": "<= 3.14.3",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-6cjc-53gc-5rqm",
+    "package": "aiohttp",
+    "affected": "<= 3.14.3",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-pqxq-w44r-73xw",
+    "package": "aiohttp",
+    "affected": "<= 3.14.3",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-9xw5-w5jj-pvcg",
+    "package": "aiohttp",
+    "affected": ">= 2.0.0, < 3.14.4",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-5wr8-gcqf-gqf3",
+    "package": "aiohttp",
+    "affected": "<= 3.14.3",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-494j-54xm-rwp3",
+    "package": "aiohttp",
+    "affected": "<= 3.14.3",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-2g87-pp6c-29x5",
+    "package": "aiohttp",
+    "affected": "<= 3.14.3",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-x33g-cr3x-6449",
+    "package": "pyjwt",
+    "affected": ">= 2.1.0, <= 2.14.0",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-5639-2j2p-m4mx",
+    "package": "mako",
+    "affected": "<= 1.4.1",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-54p9-h82j-f925",
+    "package": "multidict",
+    "affected": ">= 6.7.0, <= 6.9.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-59cr-6r3x-644w",
+    "package": "gitpython",
+    "affected": "<= 3.1.61",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-g5vv-9gxw-82hx",
+    "package": "gitpython",
+    "affected": "<= 3.1.59",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-whh4-5q6c-9v3x",
+    "package": "gitpython",
+    "affected": ">= 3.1.59, < 3.1.60",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-239g-whfq-7xj9",
+    "package": "gitpython",
+    "affected": "<= 3.1.59",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-42vr-xj54-vc7v",
+    "package": "pyjwt",
+    "affected": ">= 2.0.0a1, <= 2.14.0",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-gh4c-6fx4-qh6g",
+    "package": "urllib3",
+    "affected": ">= 2.6.2, < 2.8.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-vxq7-64xx-v4gw",
+    "package": "urllib3",
+    "affected": ">= 1.10.3, < 2.8.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-8988-9cw3-xx77",
+    "package": "urllib3",
+    "affected": ">= 1.26.0, < 2.8.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-h35f-9h28-mq5c",
+    "package": "setuptools",
+    "affected": "< 83.0.0",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-rrmf-rvhw-rf47",
+    "package": "torch",
+    "affected": "<= 2.12.1",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-v5jw-96jm-7h2c",
+    "package": "stanza",
+    "affected": "<= 1.12.1",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-7gcm-g887-7qv7",
+    "package": "protobuf",
+    "affected": "< 5.29.6",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-38vq-g6vr-w8wf",
+    "package": "sentencepiece",
+    "affected": "< 0.2.1",
+    "manifests": [
+      "ai_diffusion/backend/requirements/base.in",
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-x9r9-c232-4q39",
+    "package": "transformers",
+    "affected": ">= 4.49.0, <= 5.8.1",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-4j2p-28q2-5m79",
+    "package": "accelerate",
+    "affected": "<= 1.14.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-xrqw-3rrv-vx5w",
+    "package": "transformers",
+    "affected": "< 5.10.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-qwm4-qh6w-59xr",
+    "package": "pip",
+    "affected": "< 26.2.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-cq5v-8q36-5273",
+    "package": "aiohttp",
+    "affected": "<= 3.14.2",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-mfx4-hv73-q22v",
+    "package": "aiohttp",
+    "affected": "<= 3.14.1",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-mq44-7p77-q5h7",
+    "package": "aiohttp",
+    "affected": "<= 3.14.1",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-wf93-45jw-7689",
+    "package": "pip",
+    "affected": "< 26.1.2",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-xcgm-r5h9-7989",
+    "package": "aiohttp",
+    "affected": "<= 3.14.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-4m7w-qmgq-4wj5",
+    "package": "aiohttp",
+    "affected": "<= 3.14.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-9x8q-7h8h-wcw9",
+    "package": "aiohttp",
+    "affected": "<= 3.14.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-4fvr-rgm6-gqmc",
+    "package": "aiohttp",
+    "affected": "<= 3.14.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-g3cq-j2xw-wf74",
+    "package": "aiohttp",
+    "affected": "<= 3.14.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-63hw-fmq6-xxg2",
+    "package": "aiohttp",
+    "affected": "<= 3.14.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-hpj7-wq8m-9hgp",
+    "package": "aiohttp",
+    "affected": "<= 3.14.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-2fqr-mr3j-6wp8",
+    "package": "aiohttp",
+    "affected": "<= 3.14.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-m6qw-4cw2-hm4m",
+    "package": "aiohttp",
+    "affected": "<= 3.13.5",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-hg6j-4rv6-33pg",
+    "package": "aiohttp",
+    "affected": "< 3.14.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-jg22-mg44-37j8",
+    "package": "aiohttp",
+    "affected": "< 3.14.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-7wx4-6vff-v64p",
+    "package": "diffusers",
+    "affected": "< 0.38.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-98h9-4798-4q5v",
+    "package": "diffusers",
+    "affected": "< 0.38.0",
+    "manifests": [
+      "ai_diffusion/backend/server_requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-6q48-6c7w-9gw2",
+    "package": "certifi",
+    "affected": ">= 2019.03.09, < 2026.10.18",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-5x8w-8jj5-q52h",
+    "package": "pillow",
+    "affected": "<= 12.3.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-v9pv-5gc8-w2m6",
+    "package": "pillow",
+    "affected": ">= 11.0.0, < 13.0.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-332p-7hrc-92wf",
+    "package": "pillow",
+    "affected": ">= 2.0.0, < 13.0.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-w889-685w-c8fh",
+    "package": "pillow",
+    "affected": ">= 2.6.0, < 13.0.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-8g5g-8vmr-9782",
+    "package": "pillow",
+    "affected": "<= 12.3.0",
+    "manifests": [
+      "ai_diffusion/backend/requirements/linux-cpu.txt",
+      "ai_diffusion/backend/requirements/linux-cuda.txt",
+      "ai_diffusion/backend/requirements/linux-cuda126.txt",
+      "ai_diffusion/backend/requirements/linux-rocm.txt",
+      "ai_diffusion/backend/requirements/linux-xpu.txt",
+      "ai_diffusion/backend/requirements/macos-cpu.txt",
+      "ai_diffusion/backend/requirements/macos-mps.txt",
+      "ai_diffusion/backend/requirements/windows-cpu.txt",
+      "ai_diffusion/backend/requirements/windows-cuda.txt",
+      "ai_diffusion/backend/requirements/windows-cuda126.txt",
+      "ai_diffusion/backend/requirements/windows-rocm.txt",
+      "ai_diffusion/backend/requirements/windows-xpu.txt",
+      "ai_diffusion/backend/server_requirements.txt",
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-hq85-5cpj-mr62",
+    "package": "uv",
+    "affected": "< 0.13.4",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  },
+  {
+    "id": "GHSA-ffc3-869f-jxw9",
+    "package": "pyjwt",
+    "affected": "<= 2.13.0",
+    "manifests": [
+      "scripts/docker/requirements.txt"
+    ]
+  }
+]

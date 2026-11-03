@@ -62,8 +62,8 @@ matplotlib
 gguf
 
 # comfyui-tooling-nodes
-argostranslate
-# Version fixed because argostranslate requires it
-sentencepiece==0.2.0
+argostranslate @ https://github.com/argosopentech/argos-translate/archive/17ed1a9b055c5ba1b51d76b683bbb0c64e2a4a88.zip
+# Fixed version of the SentencePiece native parser
+sentencepiece>=0.2.1
 # argostranslate uses pip to install stuff on demand but doesn't depend on it
 pip

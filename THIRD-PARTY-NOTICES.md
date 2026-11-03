@@ -54,3 +54,17 @@ The source archive shipped with a release is the authoritative source snapshot f
 that release. `SOURCE-MANIFEST.json` is identical in the source and plugin archives
 and records the hashes of the included source files. Build scripts and dependency
 notices are included. The GPLv3 license and its warranty disclaimer accompany both.
+
+### Argos Translate source pin (.8)
+
+Translation uses the official MIT-licensed Argos Translate source at
+[17ed1a9b055c5ba1b51d76b683bbb0c64e2a4a88](https://github.com/argosopentech/argos-translate/tree/17ed1a9b055c5ba1b51d76b683bbb0c64e2a4a88),
+where Stanza is optional. The installer downloads this exact upstream snapshot; no
+translation model weights are bundled. Credit belongs to Argos Open Technologies and contributors.
+
+### Accelerate installation hardening (.8)
+
+Hugging Face Accelerate is Apache-2.0 licensed and installed separately. The included
+`dependency_security.py` applies a local checkpoint-path safety modification after
+dependency installation; the upstream package is not represented as unmodified or
+fully fixed by a version bump. See SECURITY-UPDATE.md for the change and its limits.

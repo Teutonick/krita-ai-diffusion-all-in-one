@@ -1,38 +1,55 @@
-# Critical dependency security update
+# Dependency security update — 1.53.0-reloaded.8
 
-Prepared 2026-11-03 for `1.53.0-reloaded.7`. No commit, push, alert dismissal or user-server modification performed.
+Prepared 2026-11-03. No commit, push, alert dismissal or user-server package modification performed.
 
-The GitHub snapshot contained 87 critical dependency occurrences representing 10 unique advisories. Every affected manifest occurrence has been checked against its advisory's first patched version. This is a source-manifest assessment, not proof that an existing installed server has already been updated.
+## Scope and result
 
-| Advisory | Package | Resolution |
-| --- | --- | --- |
-| [GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2) | certifi | 2026.10.18 |
-| [GHSA-5x8w-8jj5-q52h](https://github.com/advisories/GHSA-5x8w-8jj5-q52h) | pillow | 13.0.0 |
-| [GHSA-v9pv-5gc8-w2m6](https://github.com/advisories/GHSA-v9pv-5gc8-w2m6) | Pillow | 13.0.0 |
-| [GHSA-332p-7hrc-92wf](https://github.com/advisories/GHSA-332p-7hrc-92wf) | Pillow | 13.0.0 |
-| [GHSA-w889-685w-c8fh](https://github.com/advisories/GHSA-w889-685w-c8fh) | Pillow | 13.0.0 |
-| [GHSA-8g5g-8vmr-9782](https://github.com/advisories/GHSA-8g5g-8vmr-9782) | Pillow | 13.0.0 |
-| [GHSA-hq85-5cpj-mr62](https://github.com/advisories/GHSA-hq85-5cpj-mr62) | uv | 0.13.4 |
-| [GHSA-ffc3-869f-jxw9](https://github.com/advisories/GHSA-ffc3-869f-jxw9) | PyJWT | 2.14.0 |
-| [GHSA-26w7-cxv4-gfx2](https://github.com/advisories/GHSA-26w7-cxv4-gfx2) | astro | 7.4.5 (with compatible Starlight 0.42.8) |
-| [GHSA-23hp-3jrh-7fpw](https://github.com/advisories/GHSA-23hp-3jrh-7fpw) | tar | Removed from the resolved documentation dependency tree; override prevents reintroduction below 7.5.19. |
+The new GitHub snapshot contained **409 open occurrences, representing 65 unique advisories**: 124 high, 225 medium and 60 low. All affected manifest versions now fall outside those recorded vulnerable ranges. The previous critical fixes are retained and regression-tested alongside them. GitHub status itself will change only after these changes are pushed and dependency analysis runs again.
 
-## Installation and retained protection
+This is a check against a dated advisory snapshot, not a guarantee that every dependency or platform is free of vulnerabilities. In particular, two advisories have no official patched-version field, so their code paths were reviewed and tested rather than relying only on version comparisons.
 
-- All affected backend platform locks, legacy server requirements and Docker requirements use patched pins.
-- `requirements/security.in` supplies minimum versions for managed ComfyUI and custom-node installs through both uv and pip. Backend input requirements also use these constraints.
-- The managed installer replaces uv versions below 0.13.4, uses a versioned installer cache, and requests the normal managed-server upgrade through the new installation version. The upgrade path retains models.
-- Docker bootstraps uv 0.13.4; development requirements inherit the same security floors.
-- Documentation now requires Node >=22.12.0 and uses a compatible Astro/Starlight dependency tree. No --force or --legacy-peer-deps was used.
-- Official model-license snapshots are protected from Git newline conversion, preserving their SHA-256 checks across Windows checkouts.
+## Updated dependencies
 
-## Validation and limits
+- aiohttp 3.14.5, filelock 4.2.1, GitPython 3.2.1, Mako 1.4.2, multidict 6.9.1, pip 26.2.0, Protobuf 5.29.6 or newer compatible existing pins, PyJWT 2.15.0, SentencePiece 0.2.1, setuptools 84.1.0, Stanza 1.12.2 and urllib3 2.8.0.
+- Diffusers 0.38.0 and Transformers 5.22.1; compatible tokenizers and Hugging Face Hub versions are locked. Hub is kept below 2 for Diffusers compatibility.
+- Docker now uses PyTorch 2.13.0 with torchvision 0.28.0 and a resolver-selected compatible CUDA dependency tree. Other backend GPU indexes and wheels retain their original hardware targets.
+- Critical fixes from .7 remain: Pillow 13.0.0, certifi 2026.10.18 and uv 0.13.4 (plus the newer PyJWT update above).
+- Shared constraints apply both when installing the backend and when adding custom-node requirements, preventing vulnerable dependency downgrades.
 
-- All 87 original critical manifest occurrences checked: zero remaining; tar is absent rather than merely hidden.
-- Full dependency resolution: 11 backend platform locks and Docker passed. Linux ROCm timed out streaming the pre-existing PyTorch wheel; it remains unvalidated.
-- npm audit: zero vulnerabilities across all severities in the updated documentation tree. Production static build: 16 pages.
-- Available Python CI under Pillow 13: 345 passed, 111 skipped, 9 deselected. The excluded cases require a separate live server or working standalone PyQt TLS. Ruff check/format and Pyright passed.
-- Fresh installer integration attempted; standalone PyQt TLS failed downloading ComfyUI. A complete fresh Krita installation and GPU inference were not validated.
-- Existing user-server packages were not modified. Install the updated plugin, restart Krita and complete the offered managed-server update to apply these dependency changes there.
-- High/medium/low Python advisories outside this critical scope have not all been remediated. No claim of a completely vulnerability-free backend is made.
-- GitHub alert status will change only after the changes are pushed and dependency analysis runs again.
+## Argos translation compatibility
+
+The released Argos Translate 1.11.0 pins vulnerable Stanza 1.10.1. Instead of forcing an incompatible dependency override, this build uses the official upstream source at commit `17ed1a9b055c5ba1b51d76b683bbb0c64e2a4a88` (version 1.11.1), where Stanza is optional and MiniSBD remains the default. The source URL is fixed in all affected manifests and shared constraints. Translation functionality is retained; the updated package was built and imported in the isolated compatibility check.
+
+Source: https://github.com/argosopentech/argos-translate/tree/17ed1a9b055c5ba1b51d76b683bbb0c64e2a4a88
+
+## Advisories requiring code verification
+
+### Accelerate: GHSA-4j2p-28q2-5m79
+
+Accelerate 1.15.0 is outside the advisory's recorded affected range, but source inspection showed that its loader still joins untrusted shard paths without containment validation. A version bump alone is insufficient.
+
+The installer now applies a narrowly scoped source hardening after dependency installation. It rejects absolute paths, parent-directory escapes and non-regular shard files before loading them. Ordinary nested shard paths and regular-file Hub-cache symlinks remain usable. The transformation is atomic, idempotent and refuses unknown upstream source layouts rather than claiming protection. Docker applies the same helper. A real Accelerate load against a malicious index was rejected before shard loading.
+
+This protection addresses model-supplied index paths and non-regular files; it is not a sandbox against a local attacker concurrently modifying the model directory.
+
+### Transformers: GHSA-x9r9-c232-4q39
+
+The advisory has no patched-version field. The inspected 5.15.1 implementation still downloaded a generation module before trust consent. Version 5.22.1 checks file existence without downloading it, obtains trust consent, and only then downloads the module. The real API was exercised with trust disabled and a download spy: no code download occurred.
+
+## Validation
+
+- All 409 remaining manifest occurrences are checked against the original advisory ranges. The earlier critical advisory snapshot is also covered by the offline regression fixture.
+- Full dependency resolution passed for all 12 backend platform locks, Docker and the legacy requirements.
+- Real isolated CPU imports passed with PyTorch 2.13.0+cu130, Transformers 5.22.1, Accelerate 1.15.0, Diffusers 0.38.0 and the pinned Argos source.
+- Accelerate's path protection and Transformers' consent-before-download ordering were exercised using the actual installed libraries.
+- Isolated managed ComfyUI started successfully with the final dependency overlay; both bundled Krea workflows imported (26 and 23 nodes). The test server stopped and its temporary session was removed. Existing user-server packages and processes were not modified.
+- Python CI: 354 passed, 112 skipped, 9 deselected. Ruff check/format and Pyright passed. POSIX FIFO execution is skipped on Windows; a non-regular-file rejection case runs there.
+- Documentation dependencies are unchanged from the verified .7 update: npm audit reported zero vulnerabilities and the static site built successfully.
+
+## Applying the update and limits
+
+Install the .8 plugin ZIP, restart Krita and complete the offered Managed Server update. Replacing plugin files alone does not update packages already installed in the server. The normal upgrade path retains model files.
+
+Fresh installer integration was attempted; standalone PyQt failed TLS initialization downloading ComfyUI. Complete fresh installation in Krita, GPU inference and an actual Docker image build are not claimed as validated.
+
+**Windows ROCm limitation:** AMD's official 7.2.1 Windows wheel repository still provides PyTorch 2.9.1, while GHSA-rrmf-rvhw-rf47 lists PyTorch <=2.12.1 as affected. These direct-URL wheels were not part of the GitHub alert occurrences being remediated. They have not been silently replaced with incompatible CUDA/CPU wheels or disabled. Windows ROCm therefore retains this separate upstream risk; the NVIDIA/CPU/Linux locks and updated Docker use PyTorch 2.13.0. An appropriate patched AMD Windows build is still needed.

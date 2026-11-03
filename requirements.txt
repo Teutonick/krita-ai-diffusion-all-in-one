@@ -20,6 +20,7 @@ python-dotenv
 markdown
 numpy
 pytest
+packaging
 pytest-asyncio
 psutil
 tqdm

@@ -34,6 +34,10 @@ def copy_scripts():
             repo_dir / "ai_diffusion" / "presets",
         ),
         (root_dir / "scripts" / "download_models.py", repo_dir / "scripts"),
+        (
+            root_dir / "ai_diffusion" / "backend" / "dependency_security.py",
+            repo_dir / "ai_diffusion" / "backend",
+        ),
     ]:
         target_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy(source_file, target_dir)

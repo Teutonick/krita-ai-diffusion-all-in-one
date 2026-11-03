@@ -37,7 +37,8 @@ RUN uv venv /venv --python python3.12
 
 # Install Python dependencies
 COPY ./requirements.txt /requirements.txt
-RUN uv pip install --no-cache -r requirements.txt
+COPY ./krita-ai-diffusion/ai_diffusion/backend/dependency_security.py /dependency_security.py
+RUN uv pip install --no-cache -r requirements.txt && python /dependency_security.py
 
 # Install ComfyUI
 COPY ./ComfyUI /ComfyUI/

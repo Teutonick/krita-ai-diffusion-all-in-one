@@ -1,6 +1,6 @@
 # Combined build report
 
-Version: `1.53.0-reloaded.7`. Prepared 2026-11-03. No commit or publication performed.
+Version: `1.53.0-reloaded.8`. Prepared 2026-11-03. No commit or publication performed.
 
 This is Teutonick's unofficial combined fork of Acly's Krita AI Diffusion 1.53.0 and FatGuy84's Reloaded improvements, with Krea 2 integration. See THIRD-PARTY-NOTICES.md and SOURCE-MANIFEST.json for attribution and exact source provenance.
 
@@ -18,7 +18,7 @@ This is Teutonick's unofficial combined fork of Acly's Krita AI Diffusion 1.53.0
 ## Validation
 
 - Ruff check and format passed. Pyright: zero errors.
-- Available CI suite: 345 passed, 111 skipped, 9 deselected. Windows TEMP/TMP redirected into the working copy. Seven deselected cases require a dedicated live test-server fixture; two require working standalone PyQt TLS.
+- Available CI suite: 354 passed, 112 skipped, 9 deselected. Windows TEMP/TMP redirected into the working copy. Seven deselected cases require a dedicated live test-server fixture; two require working standalone PyQt TLS.
 - Real isolated ComfyUI CPU startup passed with an occupied default port and two concurrent start requests: exactly one server process started. Dedicated session database arguments were applied. Both bundled Krea workflows imported against actual node definitions (26 and 23 nodes). The test server stopped and its session directory was removed.
 - Qt terms dialog checked: both acknowledgements are required, and withdrawing either disables acceptance. Dialog rendered and visually reviewed.
 - Existing Identity V2 weights on the user's server were checked in full: SHA-256 c53843f9451963a6cb3c22dc4975205056b93a6575fb9347dd2bc6e055ef9877 matches the pinned official artifact. No re-download is required for that file.
@@ -42,4 +42,8 @@ Late Python-property updates now check Qt receiver lifetime before invoking a se
 
 All 87 critical Dependabot occurrences from the 2026-11-03 snapshot are addressed in the affected manifests (10 unique advisories). Pillow, certifi, PyJWT and uv use patched versions, and shared constraints protect managed dependency installation from vulnerable downgrades. The server installation version is bumped so existing managed installations are offered an update; old uv binaries are replaced and installer scripts use a version-specific cache. The user server itself was not modified.
 
-Full dependency resolution passed for 11 of 12 platform locks plus Docker. Linux ROCm resolution timed out while fetching a large pre-existing PyTorch wheel; no incompatibility was reported, but that platform is not fully validated. Documentation was migrated to compatible patched Astro/Starlight versions: npm audit reports zero vulnerabilities, and the static build generated 16 pages. Available CI passed with Pillow 13: 345 passed, 111 skipped, 9 deselected; Ruff and Pyright passed. Fresh installer integration was attempted and blocked by standalone PyQt TLS initialization while fetching ComfyUI. See SECURITY-UPDATE.md for advisory mapping and validation limits.
+Full dependency resolution passed for 11 of 12 platform locks plus Docker. Linux ROCm resolution timed out while fetching a large pre-existing PyTorch wheel; no incompatibility was reported, but that platform is not fully validated. Documentation was migrated to compatible patched Astro/Starlight versions: npm audit reports zero vulnerabilities, and the static build generated 16 pages. Available CI passed with Pillow 13: 354 passed, 112 skipped, 9 deselected; Ruff and Pyright passed. Fresh installer integration was attempted and blocked by standalone PyQt TLS initialization while fetching ComfyUI. See SECURITY-UPDATE.md for advisory mapping and validation limits.
+
+## Remaining dependency advisories (.8)
+
+The remaining snapshot contains 409 occurrences / 65 unique advisories. Every affected manifest now uses versions outside the recorded vulnerable ranges, with offline regression coverage. All 12 backend platform locks plus Docker and legacy requirements resolve. Real CPU imports and isolated ComfyUI startup/workflow import passed with the updated libraries. Accelerate receives an installer-applied path/regular-file guard because its newer release still contains the vulnerable code; real Transformers 5.22.1 was verified to refuse untrusted generation code before downloading it. See SECURITY-UPDATE.md for complete scope, Argos source provenance, Windows ROCm upstream risk and fresh-install validation limits.

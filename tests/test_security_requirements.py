@@ -1,8 +1,12 @@
+import json
 import re
 from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
+from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version
 
 from ai_diffusion.backend import server as server_module
 from ai_diffusion.backend.server import Server
@@ -39,7 +43,29 @@ async def test_every_dependency_install_applies_security_constraints(tmp_path, m
     monkeypatch.setattr(server_module, "_execute_process", execute)
     await server._pip_install("test", ["-r", "requirements.txt"], lambda *args: None)
     assert execute.await_args is not None
-    cmd = execute.await_args.args[1]
+    cmd = execute.await_args_list[0].args[1]
     assert "--constraint" in cmd
     path = Path(cmd[cmd.index("--constraint") + 1])
     assert path.read_text().count("Pillow>=13.0.0") == 1
+
+    assert execute.await_count == 2
+    assert str(execute.await_args_list[1].args[1][-1]).endswith("dependency_security.py")
+
+
+def test_manifest_versions_are_outside_all_reported_vulnerable_ranges():
+    advisories = json.loads((root / "tests/data/security_advisories.json").read_text())
+    for advisory in advisories:
+        affected = SpecifierSet(advisory["affected"].replace(" ", ""))
+        for name in advisory["manifests"]:
+            versions = []
+            for line in (root / name).read_text().splitlines():
+                if not line or line[0].isspace() or line.startswith(("#", "-")):
+                    continue
+                requirement = Requirement(line)
+                if requirement.name.lower() != advisory["package"]:
+                    continue
+                versions.extend(
+                    Version(s.version) for s in requirement.specifier if s.operator in ("==", ">=")
+                )
+            assert versions, (name, advisory["id"], "Missing explicit safe version")
+            assert not any(v in affected for v in versions), (name, advisory["id"], versions)

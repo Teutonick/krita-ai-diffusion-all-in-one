@@ -297,7 +297,7 @@ class Server:
                 pip_ver = await get_python_version_string(self._python_cmd, "-m", "pip")
                 log.info(f"Using pip: {pip_ver}")
 
-    def _pip_install(self, name: str, args: list[str], cb: InternalCB):
+    async def _pip_install(self, name: str, args: list[str], cb: InternalCB):
         env = None
         if self._uv_cmd is not None:
             env = {"VIRTUAL_ENV": str(self.path / "venv")}
@@ -309,7 +309,11 @@ class Server:
             cmd = [self._python_cmd, "-su", "-m", "pip", "install", *args]
         constraints = Path(__file__).parent / "requirements" / "security.in"
         cmd += ["--constraint", str(constraints)]
-        return _execute_process(name, cmd, self.path, cb, env=env)
+        await _execute_process(name, cmd, self.path, cb, env=env)
+        fixes = Path(__file__).parent / "dependency_security.py"
+        await _execute_process(
+            "Dependency security", [self._python_cmd, "-su", str(fixes)], self.path, cb
+        )
 
     async def _install_uv(self, network: QNetworkAccessManager, cb: InternalCB):
         script_ext = ".ps1" if is_windows else ".sh"
