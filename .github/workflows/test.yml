@@ -1,6 +1,9 @@
 name: Lint, Typecheck and Test
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-22.04
