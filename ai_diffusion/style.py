@@ -244,6 +244,27 @@ class Style(QObject):
                 return found
         return "not-found"
 
+    @property
+    def edit_kind(self):
+        names = [
+            str(l.get("name", "")).replace("\\", "/").lower()
+            for l in self.loras
+            if l.get("enabled", True)
+        ]
+        if any("krea2_general_edit" in name for name in names):
+            return (
+                "general"
+                if any("krea2_general_edit_v2" in name for name in names)
+                else "general_legacy"
+            )
+        if any("krea2_identity_edit" in name for name in names):
+            return (
+                "identity"
+                if any("krea2_identity_edit_v2" in name for name in names)
+                else "identity_legacy"
+            )
+        return "edit" if self.architecture.is_edit else ""
+
     def get_models(self, available_checkpoints: Iterable[str]):
         return CheckpointInput(
             checkpoint=self.preferred_checkpoint(available_checkpoints),

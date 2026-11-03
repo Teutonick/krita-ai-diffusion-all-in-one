@@ -1,4 +1,9 @@
-# 1.53.0-reloaded.9 — Unofficial Combined Build
+# 1.53.0-reloaded.11 — Unofficial Combined Build
+
+- LoRA Add to Prompt now targets the active Generate/Edit prompt.
+- Scan server refreshes existing LoRAs and retrieves missing triggers and base-model data by CivitAI hash. Browser metadata caches remain in RAM only.
+- Base-model filtering now excludes unknown and other architectures; Any still shows all local files.
+
 
 An independent community build by **Teutonick**, combining **Acly's Krita AI Diffusion
 1.53.0** with **FatGuy84's Krita AI Reloaded** and Krea 2 Edit V2 integration.
@@ -7,9 +12,9 @@ endorsed by their authors.
 
 ## Download
 
-- [Installable plugin ZIP](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.9/krita_ai_diffusion-1.53.0-reloaded.9.zip)
-- [Exact corresponding source](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.9/krita_ai_diffusion-1.53.0-reloaded.9-source.zip)
-- [SHA-256 checksums](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.9/SHA256SUMS-1.53.0-reloaded.9.txt)
+- [Installable plugin ZIP](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.11/krita_ai_diffusion-1.53.0-reloaded.11.zip)
+- [Exact corresponding source](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.11/krita_ai_diffusion-1.53.0-reloaded.11-source.zip)
+- [SHA-256 checksums](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.11/SHA256SUMS-1.53.0-reloaded.11.txt)
 
 Import the plugin ZIP through **Tools → Scripts → Import Python Plugin from File**,
 then fully restart Krita. Configure workloads and optional components in Managed Server.
@@ -25,6 +30,12 @@ then fully restart Krita. Configure workloads and optional components in Managed
 - Session-based media storage and startup cleanup of abandoned plugin-owned sessions.
 
 ## Fixes in this build
+
+- Add explicit Generate/Edit controls, a primary source selector and a Use active layer action.
+- Add layer-context actions for editing and named prompt references, plus history actions to create a layer and edit/reference it.
+- Fix Krea Turbo linked Edit preset resolution, including legacy display-name links; selecting a V2 Edit preset activates Edit mode and same-architecture extra LoRAs are retained.
+- Preserve source selection by layer ID, reject missing/empty sources and report excess Krea input images instead of silently dropping them.
+- Wrap full style-card names, label each task, add a task filter and keep long selected names from widening the dock.
 
 - Build archives, checksums and source manifests now live under `builds/<version>/`, outside tracked source files.
 - Packaging uses temporary staging with automatic cleanup and includes only the runtime WebSocket library and its license in the plugin ZIP.

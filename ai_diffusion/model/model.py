@@ -151,6 +151,7 @@ class DocumentModel(QObject, ObservableProperties):
     strength = Property(1.0, persist=True)
     region_only = Property(False, persist=True)
     edit_mode = Property(False, persist=True)
+    edit_source_layer_id = Property("", persist=True)
     batch_count = Property(1, persist=True)
     loop_generate = Property(False, setter="set_loop_generate")
     seed = Property(0, persist=True)
@@ -170,6 +171,7 @@ class DocumentModel(QObject, ObservableProperties):
     strength_changed = pyqtSignal(float)
     region_only_changed = pyqtSignal(bool)
     edit_mode_changed = pyqtSignal(bool)
+    edit_source_layer_id_changed = pyqtSignal(str)
     batch_count_changed = pyqtSignal(int)
     loop_generate_changed = pyqtSignal(bool)
     seed_changed = pyqtSignal(int)
@@ -354,7 +356,15 @@ class DocumentModel(QObject, ObservableProperties):
         )
 
         if mask is not None or workflow_kind is WorkflowKind.refine:
-            image = self._get_current_image(bounds) if not dryrun else DummyImage(bounds.extent)
+            image = (
+                (
+                    self._get_edit_image(bounds)
+                    if self.is_editing
+                    else self._get_current_image(bounds)
+                )
+                if not dryrun
+                else DummyImage(bounds.extent)
+            )
 
         if mask is not None:
             if workflow_kind is WorkflowKind.generate:
@@ -400,7 +410,7 @@ class DocumentModel(QObject, ObservableProperties):
             self._performance_settings(client),
             mask=mask,
             strength=strength,
-            loras=loras,
+            loras=self._edit_loras(loras),
             inpaint=inpaint,
             layer_count=self.layer_count,
         )
@@ -738,6 +748,122 @@ class DocumentModel(QObject, ObservableProperties):
             return False
         else:
             return input
+
+    def set_editing(self, enabled: bool, previous: RootRegion | Region | None = None):
+        previous = self.active_regions.active_or_root if previous is None else previous
+        self.edit_mode = enabled
+        current = self.active_regions.active_or_root
+        if current is not previous and not current.positive:
+            if len(current.control) == 0:
+                for source in previous.control:
+                    if source.mode is ControlMode.reference:
+                        target = current.control.emplace()
+                        for field in (
+                            "layer_id",
+                            "mode",
+                            "preset_value",
+                            "use_custom_strength",
+                            "strength",
+                            "start",
+                            "end",
+                            "name",
+                        ):
+                            setattr(target, field, getattr(source, field))
+            current.positive = previous.positive
+            if isinstance(current, RootRegion) and isinstance(previous, RootRegion):
+                current.negative = previous.negative
+
+    def _edit_loras(self, prompt_loras):
+        if (
+            self.is_editing
+            and self.active_style is not self.style
+            and resolve_arch(self.style, self._connection.client_if_connected) is self.arch
+        ):
+            return self.style.get_models([]).loras + prompt_loras
+        return prompt_loras
+
+    def _get_edit_image(self, bounds: Bounds):
+        if not self.edit_source_layer_id:
+            return self._get_current_image(bounds)
+        layer = self.layers.updated().find(QUuid(self.edit_source_layer_id))
+        if layer is None:
+            raise PluginError(_("The edit source layer was removed. Choose another source."))
+        if not layer.type.is_image or layer.bounds.is_zero:
+            raise PluginError(_("The edit source must be a non-empty image layer or group."))
+        return layer.get_pixels(bounds)
+
+    def edit_layer(self, layer: Layer):
+        if not layer.type.is_image or layer.bounds.is_zero:
+            raise PluginError(_("Choose a non-empty image layer or group."))
+        if not self.can_edit:
+            raise PluginError(_("Choose an edit-capable style and install its edit models first."))
+        if self._layer is not None and layer.id == self._layer.id:
+            layer = self.layers.create(
+                "[Input] " + trim_text(layer.name, 80), layer.get_pixels(), layer.bounds
+            )
+        self.set_editing(True)
+        self.edit_source_layer_id = layer.id_string
+
+    def add_layer_reference(self, layer: Layer, region: RootRegion | Region | None = None):
+        if not layer.type.is_image or layer.bounds.is_zero:
+            raise PluginError(_("Choose a non-empty image layer or group for the reference."))
+        if self._layer is not None and layer.id == self._layer.id:
+            layer = self.layers.create(
+                "[Reference] " + trim_text(layer.name, 80), layer.get_pixels(), layer.bounds
+            )
+        region = self.active_regions.active_or_root if region is None else region
+        control = next(
+            (
+                c
+                for c in region.control
+                if c.layer_id == layer.id and c.mode is ControlMode.reference
+            ),
+            None,
+        )
+        if control is None:
+            control = region.control.emplace()
+            control.layer_id = layer.id
+            control.mode = ControlMode.reference
+        if not control.name:
+            base = sanitize_reference_name(layer.name)[:32] or "reference"
+            existing = {c.name.lower() for c in region.control if c is not control}
+            name, index = base, 2
+            while name.lower() in existing:
+                name = f"{base}-{index}"
+                index += 1
+            control.name = name
+        token = f"@{control.name}"
+        if control.name.lower() not in {
+            m.lower() for m in extract_reference_mentions(region.positive)
+        }:
+            region.positive = (region.positive.rstrip() + " " + token).strip()
+        return token
+
+    def history_result_to_layer(self, job_id: str, index: int, reference=False):
+        job = self.jobs.find(job_id)
+        if job is None or not 0 <= index < len(job.results):
+            raise PluginError(_("The generated image is no longer available."))
+        region = self.active_regions.active_or_root
+        prompt = region.positive
+        image = job.results[index]
+        bounds = Bounds(*job.params.bounds.offset, *image.extent)
+        layer = self.layers.create(
+            ("[Reference] " if reference else "[Input] ") + trim_text(job.params.name, 80),
+            image,
+            bounds,
+        )
+        if self._layer:
+            self._layer.remove()
+            self._layer = None
+        self.jobs.selection = []
+        self.jobs.notify_used(job_id, index)
+        if reference:
+            self.add_layer_reference(layer, region)
+        else:
+            self.edit_layer(layer)
+            if not self.active_regions.active_or_root.positive:
+                self.active_regions.active_or_root.positive = prompt
+        return layer
 
     def _get_current_image(self, bounds: Bounds, exclude_internal=True):
         exclude = []
@@ -1108,13 +1234,18 @@ class DocumentModel(QObject, ObservableProperties):
 
     def set_style(self, style: Style):
         if style is not self._style:
+            previous = self.active_regions.active_or_root
             if self._style_connection:
                 QObject.disconnect(self._style_connection)
             self._style = style
             self._style_connection = style.changed.connect(self._handle_style_changed)
             self.style_changed.emit(style)
             self.modified.emit(self, "style")
-            self.edit_mode = self.is_editing
+            self.set_editing(
+                bool(style.edit_kind)
+                or resolve_arch(style, self._connection.client_if_connected).is_edit,
+                previous,
+            )
 
     def _handle_style_changed(self):
         self.style_changed.emit(self.style)
@@ -1372,6 +1503,15 @@ class DocumentModel(QObject, ObservableProperties):
 
         if self.arch.supports_edit:
             self._add_mentioned_layers(cond)
+        if self.arch is Arch.krea2:
+            references = sum(c.mode.is_ip_adapter for c in cond.control)
+            references += sum(c.mode.is_ip_adapter for r in cond.regions for c in r.control)
+            if references + int(cond.edit_reference) > 2:
+                raise PluginError(
+                    _(
+                        "Krea 2 accepts at most two input images: the edit source and one additional reference. Remove extra references."
+                    )
+                )
         return cond, layers
 
     def _add_mentioned_layers(self, cond: ConditioningInput):
@@ -1414,7 +1554,7 @@ class DocumentModel(QObject, ObservableProperties):
 
     @property
     def active_regions(self):
-        is_edit = self.workspace in (Workspace.generation, Workspace.live) and self.edit_mode
+        is_edit = self.workspace in (Workspace.generation, Workspace.live) and self.is_editing
         return self.edit_regions if is_edit else self.regions
 
     @property
@@ -1479,13 +1619,20 @@ class DocumentModel(QObject, ObservableProperties):
 
     @property
     def edit_style(self) -> Style | None:
-        style_arch = resolve_arch(self.style, self._connection.client_if_connected)
-        if style_arch.supports_edit:
+        client = self._connection.client_if_connected
+        style_arch = resolve_arch(self.style, client)
+        if self.style.edit_kind or style_arch.is_edit:
             return self.style
-        if style_id := self.style.linked_edit_style:
-            if style := Styles.list().find(style_id):
-                if is_style_supported(style, self._connection.client_if_connected):
-                    return style
+        styles = Styles.list()
+        linked = styles.find(self.style.linked_edit_style) if self.style.linked_edit_style else None
+        if linked is None and self.style.linked_edit_style:
+            linked = next((s for s in styles if s.name == self.style.linked_edit_style), None)
+        if linked is None and style_arch is Arch.krea2:
+            linked = styles.find("built-in/krea2-identity-edit.json")
+        if linked is not None and is_style_supported(linked, client):
+            return linked
+        if style_arch.supports_edit and style_arch is not Arch.krea2:
+            return self.style
         return None
 
     @property
@@ -1495,11 +1642,11 @@ class DocumentModel(QObject, ObservableProperties):
     @property
     def can_toggle_edit(self):
         style_arch = resolve_arch(self.style, self._connection.client_if_connected)
-        return not style_arch.is_edit and self.can_edit
+        return not style_arch.is_edit and not self.style.edit_kind and self.can_edit
 
     @property
     def is_editing(self):
-        return self.arch.is_edit or (self.can_edit and self.edit_mode)
+        return bool(self.style.edit_kind) or self.arch.is_edit or (self.can_edit and self.edit_mode)
 
 
 class CustomInpaint(QObject, ObservableProperties):

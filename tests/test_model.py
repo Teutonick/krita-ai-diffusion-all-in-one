@@ -13,7 +13,7 @@ from krita import Document as MockKritaDocument
 from krita import Krita, Selection
 from PyQt5.QtCore import QByteArray, Qt
 
-from ai_diffusion.backend.api import WorkflowInput, WorkflowKind
+from ai_diffusion.backend.api import ConditioningInput, WorkflowInput, WorkflowKind
 from ai_diffusion.backend.client import CheckpointInfo, ClientEvent, ClientMessage
 from ai_diffusion.backend.resources import Arch, ControlMode
 from ai_diffusion.document import KritaDocument
@@ -24,7 +24,7 @@ from ai_diffusion.model.custom_workflow import WorkflowCollection
 from ai_diffusion.model.jobs import Job, JobKind, JobParams, JobRegion, JobState
 from ai_diffusion.model.model import DocumentModel, ErrorKind, ProgressKind, no_error
 from ai_diffusion.settings import ApplyBehavior, ApplyRegionBehavior
-from ai_diffusion.style import Style
+from ai_diffusion.style import Style, Styles
 
 from .conftest import qtapp
 from .mock.client import MockClient
@@ -742,3 +742,137 @@ async def test_apply_region_group(workflows_dir: Path):
         assert isinstance(r2_right, tuple) and r2_right[3] == 0, (
             "result2: right side must be transparent"
         )
+
+
+def _configure_krea(model: DocumentModel, client: MockClient):
+    checkpoint = "krea2_turbo_int8_convrot.safetensors"
+    client.models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, Arch.krea2)
+    style = _make_style(checkpoint)
+    style.architecture = Arch.krea2
+    style.linked_edit_style = "Krea 2 Identity Edit"
+    model.style = style
+    return style
+
+
+@qtapp
+async def test_krea_edit_uses_linked_v2_and_retains_extra_loras(workflows_dir: Path):
+    doc = Krita.instance().openDocument("test")
+    async with _model_env(doc, workflows_dir) as (model, client):
+        await asyncio.sleep(0)
+        style = _configure_krea(model, client)
+        style.loras = [{"name": "extra.safetensors", "strength": 0.7}]
+        model.regions.positive = "Add sunglasses"
+        model.set_editing(True)
+        assert model.active_style is Styles.list().find("built-in/krea2-identity-edit.json")
+        assert model.active_style.edit_kind == "identity"
+        assert model.edit_regions.positive == "Add sunglasses"
+        assert [(l.name, l.strength) for l in model._edit_loras([])] == [("extra.safetensors", 0.7)]
+        general = Styles.list().find("built-in/krea2-general-edit.json")
+        assert general is not None
+        model.style = general
+        assert model.is_editing
+        assert model.active_style.edit_kind == "general"
+
+
+@qtapp
+async def test_edit_source_is_stable_layer_not_visible_composite(workflows_dir: Path):
+    doc = Krita.instance().openDocument("test")
+    async with _model_env(doc, workflows_dir) as (model, client):
+        await asyncio.sleep(0)
+        _configure_krea(model, client)
+        bounds = Bounds(0, 0, 64, 64)
+        image = Image.create(bounds.extent, fill=Qt.GlobalColor.red)
+        source = model.layers.create("Subject", image, bounds)
+        model.layers.create(
+            "Other visible layer", Image.create(bounds.extent, fill=Qt.GlobalColor.blue), bounds
+        )
+        model.edit_layer(source)
+        source.name = "Renamed subject"
+        assert Image.compare(model._get_edit_image(bounds), image) < 0.01
+        source.remove()
+        with pytest.raises(Exception, match="source layer was removed"):
+            model._get_edit_image(bounds)
+
+
+@qtapp
+async def test_layer_reference_is_named_unique_and_survives_rename(workflows_dir: Path):
+    doc = Krita.instance().openDocument("test")
+    async with _model_env(doc, workflows_dir) as (model, client):
+        await asyncio.sleep(0)
+        _configure_krea(model, client)
+        model.set_editing(True)
+        bounds = Bounds(0, 0, 64, 64)
+        layer = model.layers.create("Face reference", Image.create(bounds.extent), bounds)
+        token = model.add_layer_reference(layer)
+        assert token == "@Face_reference"
+        assert model.add_layer_reference(layer) == token
+        assert len(model.edit_regions.control) == 1
+        layer.name = "Renamed"
+        assert model.edit_regions.control[0].layer_id == layer.id
+        assert model.edit_regions.positive.count(token) == 1
+        _, mapping = model._add_reference_layers(ConditioningInput(model.edit_regions.positive))
+        assert not mapping
+        second = model.layers.create("Face reference", Image.create(bounds.extent), bounds)
+        assert model.add_layer_reference(second) == "@Face_reference-2"
+
+
+@pytest.mark.parametrize("reference", [False, True])
+@qtapp
+async def test_history_image_becomes_persistent_edit_input_or_reference(
+    workflows_dir: Path, reference
+):
+    doc = Krita.instance().openDocument("test")
+    async with _model_env(doc, workflows_dir) as (model, client):
+        await asyncio.sleep(0)
+        _configure_krea(model, client)
+        image = Image.create(_DOC_EXTENT, fill=_RED)
+        job = _make_finished_job(model, [image])
+        assert job.id is not None
+        layer = model.history_result_to_layer(job.id, 0, reference)
+        assert _layer_matches(layer, image, _DOC_BOUNDS)
+        if reference:
+            assert len(model.active_regions.control) == 1
+            assert "@" in model.active_regions.positive
+        else:
+            assert model.is_editing
+            assert model.edit_source_layer_id == layer.id_string
+
+
+@qtapp
+async def test_krea_rejects_references_which_would_be_silently_ignored(workflows_dir: Path):
+    doc = Krita.instance().openDocument("test")
+    async with _model_env(doc, workflows_dir) as (model, client):
+        await asyncio.sleep(0)
+        _configure_krea(model, client)
+        model.set_editing(True)
+        bounds = Bounds(0, 0, 64, 64)
+        for name in ["one", "two"]:
+            layer = model.layers.create(name, Image.create(bounds.extent), bounds)
+            model.add_layer_reference(layer)
+        with pytest.raises(Exception, match="at most two input images"):
+            model._add_reference_layers(ConditioningInput(model.edit_regions.positive))
+
+
+@qtapp
+async def test_krea_workflow_receives_selected_pixels_edit_lora_and_extra_lora(workflows_dir: Path):
+    doc = Krita.instance().openDocument("test")
+    async with _model_env(doc, workflows_dir) as (model, client):
+        await asyncio.sleep(0)
+        style = _configure_krea(model, client)
+        style.loras = [{"name": "extra.safetensors", "strength": 0.7}]
+        client.models.loras = ["krea2_identity_edit_v2.safetensors", "extra.safetensors"]
+        image = Image.create(_DOC_EXTENT, fill=_RED)
+        source = model.layers.create("Input subject", image, _DOC_BOUNDS)
+        model.layers.create("Other layer", Image.create(_DOC_EXTENT, fill=_GREEN), _DOC_BOUNDS)
+        model.regions.positive = "Add sunglasses"
+        model.edit_layer(source)
+        input, *_ = model._prepare_workflow()
+        assert input.kind is WorkflowKind.refine
+        assert input.conditioning is not None and input.conditioning.edit_reference
+        assert input.models is not None
+        assert {l.name for l in input.models.loras} >= {
+            "krea2_identity_edit_v2.safetensors",
+            "extra.safetensors",
+        }
+        assert input.images is not None and input.images.initial_image is not None
+        assert Image.compare(input.images.initial_image, image) < 0.01

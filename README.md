@@ -2,7 +2,7 @@
 
 **Acly's foundation. Reloaded's workflow tools. Krea 2 Edit V2 integration.**
 
-[![Version](https://img.shields.io/badge/build-1.53.0--reloaded.9-blue)](https://github.com/Teutonick/krita-ai-diffusion/releases)
+[![Version](https://img.shields.io/badge/build-1.53.0--reloaded.11-blue)](https://github.com/Teutonick/krita-ai-diffusion/releases)
 [![Code license](https://img.shields.io/badge/plugin_code-GPLv3-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-unofficial_fork-orange)](#credits)
 
@@ -46,7 +46,7 @@ See the [security update report](SECURITY-UPDATE.md) for fixes and validation li
 
 ## Install once, choose your components
 
-1. Download `krita_ai_diffusion-1.53.0-reloaded.9.zip` from this fork's release assets.
+1. Download `krita_ai_diffusion-1.53.0-reloaded.11.zip` from this fork's release assets.
 2. In Krita, choose **Tools → Scripts → Import Python Plugin from File**.
 3. Restart Krita and enable the plugin if prompted.
 4. Open the plugin settings, choose **Managed Server**, and select your workloads.
@@ -59,6 +59,41 @@ Previously downloaded official weights are reused.
 **Eagle:** the optional setup action downloads and opens the official Eagle installer.
 Complete Eagle's own installation, trial/license activation and library selection;
 keep Eagle running locally for **Save to Eagle**.
+
+## Generate or edit with Krea 2
+
+**A style preset is a bundle: checkpoint + sampler settings + LoRAs.** Identity Edit V2
+and General Edit V2 use Krea 2 Turbo weights with their matching Edit LoRA; they are
+not separate base-model downloads. The preset already includes the required Edit LoRA.
+Optional extra LoRAs must be trained for Krea 2.
+
+1. **New image:** choose a Krea 2 Turbo preset and **Task → Generate**. Describe the
+   image. Strength below 100% retains the existing canvas refinement behavior.
+2. **Change a layer:** right-click the layer and choose **Edit This Layer with AI**, or
+   choose **Task → Edit image**, then select it in the source dropdown. **Use active
+   layer** selects the active layer as that source. Write a change, for example:
+   `Add sunglasses. Keep the face and composition unchanged.`
+3. **Change a generated preview:** right-click its history thumbnail and choose
+   **Create Layer and Edit This Image**. This creates a permanent document layer and
+   selects it as the primary input. The temporary `[Preview]` layer is excluded from
+   ordinary canvas input; it must be applied or explicitly chosen before editing.
+4. **Use another image as a reference:** choose **Add Layer Reference to AI Prompt**
+   in the Layers menu, or **Create Layer and Add Reference to Prompt** on a history
+   thumbnail. The plugin adds a named reference control and an `@reference_name`
+   mention. Its layer ID remains linked if the layer is renamed.
+
+**The primary source needs no tag.** In Edit mode it is image 1. References are
+additional images, not a replacement for the source. Krea 2 accepts at most two
+images total: the edit source plus one extra reference. Extra inputs now produce a
+clear error instead of being silently ignored.
+
+The panel shows the effective Edit preset and its LoRAs. Switching Krea Turbo to Edit
+uses its linked Identity Edit V2 preset and retains compatible same-architecture LoRAs
+from the generation style. To use General Edit V2 instead, choose that preset explicitly;
+selecting an Edit preset activates Edit mode. Results remain in history until applied.
+
+The style browser has an **All tasks / Generate / Edit** filter, wrapped full names,
+operation labels and tooltips with checkpoint/LoRA details.
 
 ## Krea 2 Edit V2: read the model terms
 
@@ -109,8 +144,8 @@ document autosave and backup settings continue to apply.
 
 Each release includes both:
 
-- **Installable plugin:** `krita_ai_diffusion-1.53.0-reloaded.9.zip`
-- **Corresponding source:** `krita_ai_diffusion-1.53.0-reloaded.9-source.zip`
+- **Installable plugin:** `krita_ai_diffusion-1.53.0-reloaded.11.zip`
+- **Corresponding source:** `krita_ai_diffusion-1.53.0-reloaded.11-source.zip`
 
 The source snapshot includes the modified code, bundled dependency sources, license
 notices and build scripts. `SOURCE-MANIFEST.json` records SHA-256 hashes of the snapshot's

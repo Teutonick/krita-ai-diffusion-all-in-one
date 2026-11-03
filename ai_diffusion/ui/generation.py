@@ -65,6 +65,7 @@ from ..text import create_mode_label
 from ..util import client_logger as log
 from ..util import ensure, flatten, sequence_equal
 from . import actions, theme
+from .editing import EditControls
 from .region import RegionPromptWidget
 from .widget import (
     ErrorBox,
@@ -805,12 +806,24 @@ class HistoryWidget(QListWidget):
         if item is not None and item.flags() == Qt.ItemFlag.NoItemFlags:
             self._show_batch_context_menu(item, pos)
         elif item is not None:
-            job = self._model.jobs.find(self._item_data(item).job)
+            result_item = self._item_data(item)
+            job = self._model.jobs.find(result_item.job)
             menu = theme.style_menu(QMenu(self))
             # Shortcut hints go into every entry that has one (after a tab, which Qt
             # right-aligns): the keys are handled in event() rather than by QAction,
             # so without the hint there is nothing to discover them from.
             menu.addAction(_("Apply to Canvas") + "\tEnter", self._activate_selection)
+            edit_action = ensure(
+                menu.addAction(
+                    _("Create Layer and Edit This Image"),
+                    lambda: self._create_input_layer(result_item.job, result_item.image, False),
+                )
+            )
+            edit_action.setEnabled(self._model.can_edit)
+            menu.addAction(
+                _("Create Layer and Add Reference to Prompt"),
+                lambda: self._create_input_layer(result_item.job, result_item.image, True),
+            )
             menu.addAction(_("Apply Prompt to Field") + "\tP", self._apply_prompt_to_field)
             menu.addAction(
                 _("Apply Prompt (Evaluated) to Field"), self._apply_prompt_evaluated_to_field
@@ -889,6 +902,12 @@ class HistoryWidget(QListWidget):
         pos = self._context_button.pos()
         pos.setY(pos.y() + self._context_button.height())
         self._show_context_menu(pos)
+
+    def _create_input_layer(self, job_id: str, index: int, reference: bool):
+        try:
+            self._model.history_result_to_layer(job_id, index, reference)
+        except Exception as e:
+            self._model.report_error(str(e))
 
     def _apply_prompt_to_field(self, evaluated=False):
         if job := self.selected_job:
@@ -1353,6 +1372,9 @@ class GenerationWidget(QWidget):
         style_layout.addWidget(self.workspace_select)
         style_layout.addWidget(self.style_select)
         layout.addLayout(style_layout)
+        self.edit_controls = EditControls(self)
+        self.edit_controls.model = self._model
+        layout.addWidget(self.edit_controls)
 
         self.region_prompt = RegionPromptWidget(self)
         layout.addWidget(self.region_prompt)
@@ -1616,6 +1638,7 @@ class GenerationWidget(QWidget):
                 bind_toggle(model, "loop_generate", self.loop_button),
                 model.jobs.count_changed.connect(self._update_skip_button),
             ]
+            self.edit_controls.model = model
             self.region_prompt.regions = model.active_regions
             self.custom_inpaint.model = model
             self.generate_button.model = model
@@ -1857,6 +1880,7 @@ class GenerationWidget(QWidget):
         has_active_region = regions.is_linked(self.model.layers.active)
         is_region_only = has_regions and has_active_region and self.model.region_only
         is_edit = self.model.is_editing
+        self.region_prompt.set_editing_hint(is_edit)
         self.region_mask_button.setVisible(has_regions)
         self.region_mask_button.setEnabled(has_active_region)
         self.region_mask_button.setIcon(_region_mask_button_icons[is_region_only])

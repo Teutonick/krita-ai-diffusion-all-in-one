@@ -11,6 +11,7 @@ from .model.root import root
 from .settings import settings
 from .ui import actions
 from .ui.diffusion import ImageDiffusionWidget
+from .ui.editing import LayerPromptActions
 from .ui.settings import SettingsDialog
 from .util import client_logger as log
 
@@ -45,6 +46,7 @@ class AIToolsExtension(Extension):
         settings.load()
         root.init()
         self._settings_dialog = SettingsDialog(root.server)
+        self._layer_prompt_actions = LayerPromptActions(self)
 
         notifier = Krita.instance().notifier()
         notifier.setActive(True)

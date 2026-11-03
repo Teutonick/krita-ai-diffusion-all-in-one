@@ -1133,6 +1133,13 @@ class RegionPromptWidget(QWidget):
         self._regions = regions
         self._setup_bindings()
 
+    def set_editing_hint(self, enabled: bool):
+        self._prompt.positive.setPlaceholderText(
+            _("Describe the change, e.g. add sunglasses; keep the face and composition unchanged.")
+            if enabled
+            else _("Describe the content you want to see, or leave empty.")
+        )
+
     def open_prompt_picker_with(self, text: str, negative: str, image):
         self._prompt.open_prompt_picker_with(text, negative, image)
 

@@ -80,7 +80,7 @@ def toggle_workspace():
 
 def toggle_edit_mode():
     if model := root.model_for_active_document():
-        model.edit_mode = not model.edit_mode
+        model.set_editing(not model.edit_mode)
 
 
 def select_subject():

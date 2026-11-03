@@ -6,7 +6,7 @@ import ipaddress
 import json
 import time
 import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import quote, urlparse
@@ -20,12 +20,7 @@ if TYPE_CHECKING:
 
 _STRIP_SUFFIXES = (".safetensors", ".pt", ".ckpt", ".bin")
 _CACHE_MAX_AGE = 6 * 3600  # seconds
-# Bump when the cached data shape/semantics change, to invalidate old caches
-# written before a fix (e.g. the favorite flag used to always be False, or the
-# commercial-use flag counting a "Sell"-only license as permission to sell images).
-_CACHE_VERSION = 8
-
-# In-memory copy of the disk cache, so opening the browser doesn't re-parse ~10k entries
+# Session-only metadata; online enrichment is never written to disk.
 _memory_cache: dict[str, tuple[float, list[LoraInfo]]] = {}
 _preload_tasks: dict[str, asyncio.Task] = {}
 
@@ -151,37 +146,52 @@ def load_cached_loras(base_url: str) -> list[LoraInfo] | None:
         if time.time() - timestamp <= _CACHE_MAX_AGE:
             return list(loras)
         del _memory_cache[base_url]
-    path = _cache_path(base_url)
-    try:
-        if not path.exists():
-            return None
-        data = json.loads(path.read_text(encoding="utf-8"))
-        if data.get("version") != _CACHE_VERSION:
-            return None
-        timestamp = data.get("timestamp", 0)
-        if time.time() - timestamp > _CACHE_MAX_AGE:
-            return None
-        loras = [LoraInfo(**item) for item in data.get("loras", [])]
-        _memory_cache[base_url] = (timestamp, loras)
-        return list(loras)
-    except Exception as e:
-        log.warning(f"Could not load LoRA cache: {e}")
-        return None
+    return None
 
 
 def save_lora_cache(base_url: str, loras: list[LoraInfo]):
-    timestamp = time.time()
-    _memory_cache[base_url] = (timestamp, list(loras))
-    path = _cache_path(base_url)
+    _memory_cache[base_url] = (time.time(), list(loras))
+
+
+async def fetch_lora_online_metadata(lora: LoraInfo):
+    from ..settings import settings
+    from . import civitai
+
+    if not lora.sha256:
+        return
     try:
-        data = {
-            "version": _CACHE_VERSION,
-            "timestamp": timestamp,
-            "loras": [asdict(l) for l in loras],
-        }
-        path.write_text(json.dumps(data), encoding="utf-8")
+        data = await civitai.requests().get(
+            f"{civitai.api_url()}/model-versions/by-hash/{quote(lora.sha256)}",
+            timeout=15.0,
+            bearer=settings.civitai_api_key or None,
+        )
+        if isinstance(data, (bytes, bytearray)):
+            data = json.loads(data)
+        if not isinstance(data, dict):
+            return
+        words = data.get("trainedWords")
+        if isinstance(words, list):
+            lora.trigger_words = [word for word in words if isinstance(word, str) and word.strip()]
+        lora.base_model = data.get("baseModel") or lora.base_model
+        lora.version = data.get("name") or lora.version
+        lora.civitai_model_id = data.get("modelId") or lora.civitai_model_id
+        images = data.get("images") or []
+        if not is_remote_preview(lora.preview_url):
+            lora.preview_url = next(
+                (i.get("url", "") for i in images if is_remote_preview(i.get("url", ""))), ""
+            )
     except Exception as e:
-        log.warning(f"Could not save LoRA cache: {e}")
+        log.warning(f"Could not resolve online metadata for {lora.name}: {e}")
+
+
+async def enrich_lora_metadata(loras: list[LoraInfo]):
+    limit = asyncio.Semaphore(4)
+
+    async def enrich(lora):
+        async with limit:
+            await fetch_lora_online_metadata(lora)
+
+    await asyncio.gather(*(enrich(lora) for lora in loras if not lora.trigger_words))
 
 
 async def _fetch_favorite_hashes(requests: RequestManager, base: str) -> set[str]:
@@ -518,17 +528,7 @@ async def fetch_model_preview_bytes(lora: LoraInfo) -> bytes | None:
     if not is_remote_preview(lora.preview_url):
         try:
             if lora.sha256:
-                data = await civitai.requests().get(
-                    f"{civitai.api_url()}/model-versions/by-hash/{quote(lora.sha256)}",
-                    timeout=15.0,
-                    bearer=settings.civitai_api_key or None,
-                )
-                if isinstance(data, (bytes, bytearray)):
-                    data = json.loads(data)
-                images = data.get("images") or [] if isinstance(data, dict) else []
-                lora.preview_url = next(
-                    (i.get("url", "") for i in images if is_remote_preview(i.get("url", ""))), ""
-                )
+                await fetch_lora_online_metadata(lora)
             elif lora.civitai_model_id:
                 lora.preview_url, lora.nsfw_level = await civitai.fetch_model_preview(
                     lora.civitai_model_id, settings.civitai_api_key

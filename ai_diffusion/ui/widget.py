@@ -447,6 +447,7 @@ class StyleSelectWidget(QWidget):
         self.setLayout(layout)
 
         self._button = QPushButton(self)
+        self._button.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self._button.clicked.connect(self.open_picker)
         self._update_button()
         layout.addWidget(self._button, 3)
@@ -471,7 +472,17 @@ class StyleSelectWidget(QWidget):
         client = root.connection.client_if_connected
         icon = theme.checkpoint_icon(resolve_arch(self._value, client))
         self._button.setIcon(icon)
-        self._button.setText(self._value.name)
+        width = max(40, self._button.width() - self._button.iconSize().width() - 24)
+        self._button.setText(
+            self._button.fontMetrics().elidedText(
+                self._value.name, Qt.TextElideMode.ElideRight, width
+            )
+        )
+        self._button.setToolTip(self._value.name)
+
+    def resizeEvent(self, a0):
+        super().resizeEvent(a0)
+        self._update_button()
 
     def open_picker(self):
         from .style_picker import StylePickerDialog

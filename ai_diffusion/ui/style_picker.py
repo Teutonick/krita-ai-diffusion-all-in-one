@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PyQt5.QtCore import QEvent, QObject, QSize, Qt, QTimer, pyqtSignal
+from PyQt5.QtCore import QEvent, QObject, QRect, QSize, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QIcon, QKeyEvent, QPainter, QPixmap
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -47,6 +47,16 @@ _VIEW_LIST = "list"
 _VIEW_GRID = "grid"
 _SORT_NAME = "name"
 _SORT_DATE = "date"
+
+
+def _style_task(style: Style, client=None):
+    return {
+        "identity": _("Identity Edit V2"),
+        "general": _("General Edit V2"),
+        "identity_legacy": _("Identity Edit (legacy)"),
+        "general_legacy": _("General Edit (legacy)"),
+        "edit": _("Edit"),
+    }.get(style.edit_kind, _("Edit") if resolve_arch(style, client).is_edit else _("Generate"))
 
 
 def _tint_pixmap(pixmap: QPixmap, color) -> QPixmap:
@@ -205,7 +215,6 @@ class StyleBrowser(QWidget):
         self._set_bar = GenerateSetBar("style_sets", self._selected_keys, self._apply_set, self)
 
         bottom = QHBoxLayout()
-        bottom.addWidget(self._set_bar)
         bottom.addStretch(1)
         bottom.addWidget(seed_label)
         bottom.addWidget(self._seed_input)
@@ -214,15 +223,29 @@ class StyleBrowser(QWidget):
         bottom.addWidget(self._favorite_btn)
         bottom.addWidget(self._delete_btn)
 
+        self._task_combo = QComboBox(self)
+        self._task_combo.addItem(_("All tasks"), "all")
+        self._task_combo.addItem(_("Generate"), "generate")
+        self._task_combo.addItem(_("Edit"), "edit")
+        self._task_combo.currentIndexChanged.connect(self._apply_filter)
+        task_row = QHBoxLayout()
+        task_row.addWidget(QLabel(_("Task:"), self))
+        task_row.addWidget(self._task_combo)
+        task_hint = QLabel(_("A preset includes its model, sampler and LoRAs."), self)
+        task_hint.setWordWrap(True)
+        task_row.addWidget(task_hint, 1)
+
         self._status = QLabel(self)
         self._status.setStyleSheet(f"color: {theme.grey}; font-style: italic;")
 
         layout = QVBoxLayout()
         layout.addLayout(row1)
         layout.addLayout(row2)
+        layout.addLayout(task_row)
         layout.addWidget(self._list, 1)
         layout.addWidget(self._status)
         layout.addWidget(hint)
+        layout.addWidget(self._set_bar)
         layout.addLayout(bottom)
         self.setLayout(layout)
 
@@ -243,6 +266,8 @@ class StyleBrowser(QWidget):
         # safe in grid mode, list mode mixes in shorter section-header rows
         self._list.setLayoutMode(QListWidget.LayoutMode.Batched)
         self._list.setBatchSize(100)
+        self._list.setTextElideMode(Qt.TextElideMode.ElideNone)
+        self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         if self._view == _VIEW_GRID:
             self._list.setViewMode(QListWidget.ViewMode.IconMode)
             self._list.setFlow(QListWidget.Flow.LeftToRight)
@@ -259,7 +284,7 @@ class StyleBrowser(QWidget):
             self._list.setWrapping(False)
             self._list.setResizeMode(QListWidget.ResizeMode.Fixed)
             self._list.setMovement(QListWidget.Movement.Static)
-            self._list.setWordWrap(False)
+            self._list.setWordWrap(True)
             self._list.setSpacing(0)
             self._list.setIconSize(QSize(size, size))
             # now safe: headers and content rows are both given the same sizeHint
@@ -431,6 +456,23 @@ class StyleBrowser(QWidget):
         self._list.clear()
         section = None  # None | "favorites" | "recent" | "all"
         shown = 0
+        cell_width = max(180, self._thumb_size + 24)
+        text_height = max(
+            (
+                self._list
+                .fontMetrics()
+                .boundingRect(
+                    QRect(0, 0, cell_width - 16, 10000),
+                    Qt.TextFlag.TextWordWrap,
+                    style.name + "\n" + _style_task(style, client),
+                )
+                .height()
+                for style in self._styles
+            ),
+            default=40,
+        )
+        cell_size = QSize(cell_width, self._thumb_size + text_height + 20)
+        self._list.setGridSize(cell_size if self._view == _VIEW_GRID else QSize())
 
         # group into contiguous sections (favorites > recent > all) so each
         # header appears exactly once - favorites can be scattered through the
@@ -459,6 +501,9 @@ class StyleBrowser(QWidget):
         for style in sorted(self._styles, key=full_key):
             arch = resolve_arch(style, client)
             if family_filter and style.effective_family(arch) != family_filter:
+                continue
+            task = "edit" if style.edit_kind or arch.is_edit else "generate"
+            if self._task_combo.currentData() not in ("all", task):
                 continue
             is_fav = self._is_favorite(style)
             if self._favorites_only and not is_fav:
@@ -497,13 +542,22 @@ class StyleBrowser(QWidget):
                     icon = _favorite_icon(icon)
                 pixmap = _with_tag(icon.pixmap(self._thumb_size, self._thumb_size), family_label)
                 icon = QIcon(pixmap)
-            item = QListWidgetItem(icon, style.name)
+            item = QListWidgetItem(icon, style.name + "\n" + _style_task(style, client))
+            loras = ", ".join(str(l.get("name", "")) for l in style.loras if l.get("enabled", True))
+            item.setToolTip(
+                style.name
+                + "\n"
+                + _style_task(style, client)
+                + "\n"
+                + "\n".join(style.checkpoints)
+                + ("\nLoRA: " + loras if loras else "")
+            )
             item.setData(Qt.ItemDataRole.UserRole, style.filename)
             item.setData(Qt.ItemDataRole.UserRole + 1, stem)
             item.setData(Qt.ItemDataRole.UserRole + 2, applied)
             item.setData(Qt.ItemDataRole.UserRole + 3, family_label)
             if self._view == _VIEW_GRID:
-                item.setSizeHint(QSize(self._thumb_size + 16, self._thumb_size + 40))
+                item.setSizeHint(cell_size)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
             else:
                 item.setSizeHint(QSize(9999, self._thumb_size + 8))

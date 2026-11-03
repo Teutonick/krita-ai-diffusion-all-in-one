@@ -28,10 +28,10 @@ from .. import eventloop
 from ..backend.lora_manager import (
     LoraInfo,
     arch_for_base_model,
+    enrich_lora_metadata,
     fetch_commercial_use,
     fetch_loras_pages,
     fetch_model_preview_bytes,
-    fetch_new_loras,
     load_cached_loras,
     lora_preload_task,
     save_lora_cache,
@@ -455,10 +455,6 @@ class LoraBrowser(QWidget):
         self._load_loras(force_refresh=True)
 
     def _rescan_server(self):
-        # Look for LoRA files added since the list was loaded. ComfyUI only re-reads
-        # its file lists (no model inspection - LoRAs don't need it), and Lora Manager
-        # is asked for its newest entries until nothing new turns up, instead of
-        # reloading every LoRA. "Reload list" stays the full reload.
         if root.connection.client_if_connected is None:
             self._status.setText(_("Not connected to ComfyUI"))
             return
@@ -477,29 +473,25 @@ class LoraBrowser(QWidget):
         if client is None or self._loading:  # a full load already brings in new files
             self._rescan_btn.setEnabled(True)
             return
-        if not self._all_loras:
-            self._rescan_btn.setEnabled(True)
-            self._load_loras(force_refresh=True)
-            return
-        eventloop.run(self._merge_new_loras(client))
+        eventloop.run(self._scan_lora_metadata(client))
 
-    async def _merge_new_loras(self, client):
+    async def _scan_lora_metadata(self, client):
+        self._loading = True
         try:
-            new = await fetch_new_loras(client._requests, client.url, self._all_loras)
-        finally:
-            self._rescan_btn.setEnabled(True)
-        if new is None:  # files were removed or the answer was unexpected
-            self._load_loras(force_refresh=True)
-            return
-        if new:
-            self._all_loras = new + self._all_loras
-            save_lora_cache(client.url, self._all_loras)
+            loras = []
+            async for batch in fetch_loras_pages(client._requests, client.url):
+                loras.extend(batch)
+            self._status.setText(_("Loading online LoRA triggers and previews…"))
+            await enrich_lora_metadata(loras)
+            self._all_loras = loras
+            save_lora_cache(client.url, loras)
             self._rebuild_filters()
             self._apply_filter()
-        self._status.setText(
-            _("{n} new LoRAs").format(n=len(new))
-            + f" - {len(self._filtered)} / {len(self._all_loras)} LoRAs"
-        )
+            self._on_selection_changed()
+            self._status.setText(f"{len(self._filtered)} / {len(loras)} LoRAs")
+        finally:
+            self._loading = False
+            self._rescan_btn.setEnabled(True)
 
     def shutdown(self):
         # drop the pending scan callback so it doesn't fire on a destroyed browser.
@@ -561,14 +553,8 @@ class LoraBrowser(QWidget):
                 return False
             if nsfw_mode == _NSFW_HIDE_EXPLICIT and lora.nsfw_level >= 16:  # X/XXX
                 return False
-            if arch:
-                if lora.base_model.lower() not in ("", "unknown", "other", "none"):
-                    # has base_model info: must match, even if we don't recognize
-                    # the string (otherwise unmapped models like "NoobAI" would
-                    # bypass every arch filter)
-                    if arch_for_base_model(lora.base_model) != arch:
-                        return False
-                # else: no base_model info at all -> can't tell, show anyway
+            if arch and arch_for_base_model(lora.base_model) != arch:
+                return False
             if active_tag and active_tag != _TAG_ALL:
                 if active_tag not in lora.tags:
                     return False
@@ -721,6 +707,9 @@ class LoraBrowser(QWidget):
         if client is None:
             return
         data = await fetch_model_preview_bytes(lora)
+        selected = self._grid.selectedItems()
+        if selected and selected[0].data(Qt.ItemDataRole.UserRole) is lora:
+            self._on_selection_changed()
         is_video = _is_video_url(lora.preview_url)
         if data is None:
             item.setToolTip(
@@ -871,7 +860,7 @@ class LoraBrowser(QWidget):
         if position == _POS_CURSOR and self._insert_at_cursor(addition):
             return
 
-        region = model.regions.active_or_root
+        region = model.active_regions.active_or_root
         current = region.positive
         if position == _POS_START:
             region.positive = addition + "\n" + current.lstrip("\n")
