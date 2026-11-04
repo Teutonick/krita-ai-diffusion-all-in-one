@@ -69,9 +69,12 @@ class AutoUpdate(QObject, ObservableProperties):
         if self.state is UpdateState.restart_required:
             return
 
-        if "-reloaded." in self.current_version and self.api_url == self.default_api_url:
+        if (
+            any(tag in self.current_version for tag in ("-reloaded.", "-all-in-one."))
+            and self.api_url == self.default_api_url
+        ):
             self.error = (
-                "Install updates from your fork's ZIP to preserve Reloaded and Krea features."
+                "Install updates from the all-in-one project ZIP to preserve fork features."
             )
             self.state = UpdateState.failed_check
             return

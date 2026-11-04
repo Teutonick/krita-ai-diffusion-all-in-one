@@ -1,5 +1,6 @@
-# 1.53.0-reloaded.11 — Unofficial Combined Build
+# 1.53.0-all-in-one.2 — krita-ai-diffusion-all-in-one
 
+- New all-in-one logo for the plugin headers.
 - LoRA Add to Prompt now targets the active Generate/Edit prompt.
 - Scan server refreshes existing LoRAs and retrieves missing triggers and base-model data by CivitAI hash. Browser metadata caches remain in RAM only.
 - Base-model filtering now excludes unknown and other architectures; Any still shows all local files.
@@ -10,11 +11,11 @@ An independent community build by **Teutonick**, combining **Acly's Krita AI Dif
 This is not an official release of either upstream project or Krea, and is not
 endorsed by their authors.
 
-## Download
+## Build artifacts
 
-- [Installable plugin ZIP](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.11/krita_ai_diffusion-1.53.0-reloaded.11.zip)
-- [Exact corresponding source](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.11/krita_ai_diffusion-1.53.0-reloaded.11-source.zip)
-- [SHA-256 checksums](https://github.com/Teutonick/krita-ai-diffusion/releases/download/v1.53.0-reloaded.11/SHA256SUMS-1.53.0-reloaded.11.txt)
+The local build provides `krita_ai_diffusion-1.53.0-all-in-one.2.zip`, the corresponding
+source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.2/`. Published releases,
+when available, are listed on the [project releases page](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases).
 
 Import the plugin ZIP through **Tools → Scripts → Import Python Plugin from File**,
 then fully restart Krita. Configure workloads and optional components in Managed Server.
@@ -107,7 +108,7 @@ and to **FatGuy84 and the Krita AI Reloaded contributors** for the workflow and 
 improvements. Credit also belongs to Lars Bouaraba / conradlocke, willmiao and the
 contributors to the integrated components.
 
-Report combined-build issues to [this fork](https://github.com/Teutonick/krita-ai-diffusion/issues).
+Report combined-build issues to [this fork](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/issues).
 Please reproduce an issue in the official build before reporting it upstream.
 
 Modified on **2026-11-03**. Validation details and remaining acceptance limits are

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -66,7 +67,7 @@ def build_source(root: Path, version: str, output_dir: Path | None = None):
     manifest = {
         "format": "krita-ai-diffusion-source-v1",
         "version": version,
-        "modified_date": "2026-11-03",
+        "modified_date": datetime.now(timezone.utc).date().isoformat(),
         "snapshot": "Exact working-copy sources; file hashes are authoritative, including uncommitted changes.",
         "provenance": {
             "Acly/krita-ai-diffusion": "0217cd2197fcadbd70d7e63af25e29cc21cb7c8b",

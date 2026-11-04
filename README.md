@@ -1,12 +1,12 @@
-# Krita AI Diffusion · Unofficial Combined Build
+# krita-ai-diffusion-all-in-one
 
 **Acly's foundation. Reloaded's workflow tools. Krea 2 Edit V2 integration.**
 
-[![Version](https://img.shields.io/badge/build-1.53.0--reloaded.11-blue)](https://github.com/Teutonick/krita-ai-diffusion/releases)
+[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.2-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
 [![Code license](https://img.shields.io/badge/plugin_code-GPLv3-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-unofficial_fork-orange)](#credits)
 
-Maintained in [Teutonick/krita-ai-diffusion](https://github.com/Teutonick/krita-ai-diffusion).
+Maintained in [Teutonick/krita-ai-diffusion-all-in-one](https://github.com/Teutonick/krita-ai-diffusion-all-in-one).
 This is an independent community fork, not an official release of Krita AI Diffusion,
 Krita AI Reloaded or Krea. It is not affiliated with or endorsed by Acly, FatGuy84 or Krea.
 
@@ -46,7 +46,7 @@ See the [security update report](SECURITY-UPDATE.md) for fixes and validation li
 
 ## Install once, choose your components
 
-1. Download `krita_ai_diffusion-1.53.0-reloaded.11.zip` from this fork's release assets.
+1. Download `krita_ai_diffusion-1.53.0-all-in-one.2.zip` from this fork’s release assets when published, or use the locally built archive.
 2. In Krita, choose **Tools → Scripts → Import Python Plugin from File**.
 3. Restart Krita and enable the plugin if prompted.
 4. Open the plugin settings, choose **Managed Server**, and select your workloads.
@@ -144,8 +144,8 @@ document autosave and backup settings continue to apply.
 
 Each release includes both:
 
-- **Installable plugin:** `krita_ai_diffusion-1.53.0-reloaded.11.zip`
-- **Corresponding source:** `krita_ai_diffusion-1.53.0-reloaded.11-source.zip`
+- **Installable plugin:** `krita_ai_diffusion-1.53.0-all-in-one.2.zip`
+- **Corresponding source:** `krita_ai_diffusion-1.53.0-all-in-one.2-source.zip`
 
 The source snapshot includes the modified code, bundled dependency sources, license
 notices and build scripts. `SOURCE-MANIFEST.json` records SHA-256 hashes of the snapshot's

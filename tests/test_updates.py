@@ -118,3 +118,12 @@ async def test_authorization(cloud_service: CloudService):
         # Upload requires authorization
         async with session.put("/plugin/upload/1.2.3") as response:
             assert response.status == 401
+
+
+@qtapp
+@pytest.mark.parametrize("version", ["1.53.0-reloaded.11", "1.53.0-all-in-one.1"])
+async def test_fork_does_not_install_upstream_updates(version: str):
+    updater = AutoUpdate(current_version=version)
+    await updater._check()
+    assert updater.state is UpdateState.failed_check
+    assert "all-in-one" in updater.error

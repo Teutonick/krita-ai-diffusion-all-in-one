@@ -1299,7 +1299,7 @@ class AboutSettings(SettingsTab):
 
 _links_text = """
 <b>Unofficial combined build by Teutonick</b><br>
-<a href='https://github.com/Teutonick/krita-ai-diffusion'>Fork, source and releases</a><br><br>
+<a href='https://github.com/Teutonick/krita-ai-diffusion-all-in-one'>Fork, source and releases</a><br><br>
 Based on <a href='https://github.com/Acly/krita-ai-diffusion'>Acly's Krita AI Diffusion</a><br>
 with <a href='https://github.com/FatGuy84/krita-ai-reloaded'>FatGuy84's Krita AI Reloaded</a> improvements.<br><br>
 Plugin code: GPLv3. Model licenses apply separately.<br>
@@ -1308,7 +1308,7 @@ Not affiliated with or endorsed by the upstream projects.<br><br>
 """
 
 _contact_text = """
-<a href='https://github.com/Teutonick/krita-ai-diffusion/issues'>Report a fork issue</a><br><br>
+<a href='https://github.com/Teutonick/krita-ai-diffusion-all-in-one/issues'>Report a fork issue</a><br><br>
 <a href='https://github.com/sponsors/Acly'>Support Acly</a><br><br>
 <a href='https://ko-fi.com/fatguy84'>Support FatGuy84</a>
 """

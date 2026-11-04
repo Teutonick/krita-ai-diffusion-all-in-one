@@ -3,9 +3,11 @@ import shutil
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from zipfile import is_zipfile
 
 import pytest
-from PyQt5.QtNetwork import QNetworkAccessManager
+from aiohttp import web
+from PyQt5.QtNetwork import QNetworkAccessManager, QSslSocket
 
 from ai_diffusion.backend import network, resources, server
 from ai_diffusion.backend.resources import VerificationState
@@ -30,13 +32,56 @@ workload_sd15 += [resources.default_checkpoints[0].id.string]
 @qtapp
 async def test_download(mode):
     net = QNetworkAccessManager()
+    content = bytes(range(256)) * 1024
+    requests = []
+
+    async def serve(request):
+        offset = 0
+        headers = {"Accept-Ranges": "bytes"}
+        requested_range = request.headers.get("Range")
+        requests.append(requested_range)
+        if requested_range:
+            offset = int(requested_range.removeprefix("bytes=").removesuffix("-"))
+            headers["Content-Range"] = f"bytes {offset}-{len(content) - 1}/{len(content)}"
+        return web.Response(
+            body=content[offset:], status=206 if requested_range else 200, headers=headers
+        )
+
+    app = web.Application()
+    app.router.add_get("/test.zip", serve)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    try:
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        port = runner.addresses[0][1]
+        await _check_download(net, f"http://127.0.0.1:{port}/test.zip", content, mode)
+        assert requests == (["bytes=10-"] if mode == "resume" else [None])
+    finally:
+        await runner.cleanup()
+
+
+@qtapp
+async def test_https_download(pytestconfig):
+    if pytestconfig.getoption("--ci"):
+        pytest.skip("External HTTPS integration is disabled on CI")
+    assert QSslSocket.supportsSsl(), "The test Python's Qt runtime cannot load OpenSSL"
+    await _check_download(
+        QNetworkAccessManager(),
+        "https://files.interstice.cloud/plugin/krita_ai_diffusion-1.25.0.zip",
+        None,
+        "from_scratch",
+    )
+
+
+async def _check_download(net, url, content, mode):
     with TemporaryDirectory() as tmp:
-        url = "https://files.interstice.cloud/plugin/krita_ai_diffusion-1.25.0.zip"
         path = Path(tmp) / "test.zip"
         if mode == "resume":
+            assert content is not None
             part = Path(tmp) / "test.zip.part"
             part.touch()
-            part.write_bytes(b"1234567890")
+            part.write_bytes(content[:10])
         got_finished = False
         async for progress in network.download(net, url, path):
             if progress and progress.total > 0:
@@ -47,6 +92,10 @@ async def test_download(mode):
             elif progress and progress.total == 0:
                 assert progress.value == -1
         assert got_finished and path.exists() and path.stat().st_size > 0
+        if content is not None:
+            assert path.read_bytes() == content
+        else:
+            assert is_zipfile(path)
 
 
 def clear_test_server():

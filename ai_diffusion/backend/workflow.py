@@ -1247,6 +1247,10 @@ def refine(
     latent_batch = setup_latent_layers(w, latent_batch, extent.desired, misc.layer_count)
     prompt = encode_prompt(w, cond, clip, regions, in_image)
     model, prompt = apply_control(w, model, prompt, cond.all_control, extent.desired, vae, models)
+    if models.arch is Arch.krea2:
+        model = apply_krea2_edit_patch(
+            w, model, in_image, latent, cond, vae, latent_batch, checkpoint.tiled_vae
+        )
     prompt = apply_reference_conditioning(
         w, prompt, in_image, latent, cond, vae, models.arch, checkpoint.tiled_vae
     )
@@ -1303,6 +1307,11 @@ def refine_region(
         )
         latent = w.set_latent_noise_mask(latent, initial_mask)
         inpaint_model = model
+
+    if models.arch is Arch.krea2:
+        inpaint_model = apply_krea2_edit_patch(
+            w, inpaint_model, in_image, latent, cond, vae, latent, checkpoint.tiled_vae
+        )
 
     latent = w.batch_latent(latent, misc.batch_count)
     sampler_params = _sampler_params(sampling, extent.initial)

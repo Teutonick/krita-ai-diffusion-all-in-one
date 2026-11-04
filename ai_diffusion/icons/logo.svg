@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#222a43"/><stop offset="1" stop-color="#101522"/></linearGradient>
+    <linearGradient id="ribbon" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#ffae69"/><stop offset=".48" stop-color="#ff70a1"/><stop offset="1" stop-color="#a783ff"/></linearGradient>
+    <linearGradient id="brush" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#76e7e2"/><stop offset="1" stop-color="#f5fbff"/></linearGradient>
+  </defs>
+  <rect x="1" y="1" width="126" height="126" rx="30" fill="url(#bg)"/>
+  <rect x="2" y="2" width="124" height="124" rx="29" fill="none" stroke="#ffffff" stroke-opacity=".10" stroke-width="2"/>
+  <path d="M27 70 C27 46 44 28 66 28 C79 28 91 34 98 45" fill="none" stroke="url(#ribbon)" stroke-width="9" stroke-linecap="round"/>
+  <path d="M100 59 C103 81 88 100 65 101 C48 102 35 94 29 82" fill="none" stroke="url(#ribbon)" stroke-width="9" stroke-linecap="round"/>
+  <path d="M44 84 C49 79 52 74 55 68 L77 40 C79 37 82 37 84 39 C86 41 86 44 84 47 L63 76 C59 81 52 85 44 84Z" fill="url(#brush)"/>
+  <path d="M43 84 C42 90 38 92 34 93 C42 96 51 94 55 88 L57 83 C52 85 47 85 43 84Z" fill="#68d9d7"/>
+  <path d="M90 24 L92.5 30.5 L99 33 L92.5 35.5 L90 42 L87.5 35.5 L81 33 L87.5 30.5Z" fill="#ffe3a2"/>
+  <path d="M102 77 L103.6 81.4 L108 83 L103.6 84.6 L102 89 L100.4 84.6 L96 83 L100.4 81.4Z" fill="#b5eefa"/>
+  <circle cx="40" cy="42" r="2.2" fill="#f8d4ab"/>
+</svg>

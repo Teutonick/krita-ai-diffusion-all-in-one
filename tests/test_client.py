@@ -30,7 +30,9 @@ from .conftest import qtapp
 
 
 @pytest.fixture(scope="session")
-def comfy_server(qtapp):
+def comfy_server(qtapp, pytestconfig):
+    if pytestconfig.getoption("--ci"):
+        pytest.skip("ComfyUI integration is disabled on CI")
     backend = ServerBackend.cpu
     if len(get_cuda_devices()) > 0:
         backend = ServerBackend.cuda
@@ -56,7 +58,7 @@ def make_default_work(size=512, steps=20):
 
 
 @qtapp
-async def test_connect_bad_url(comfy_server):
+async def test_connect_bad_url():
     client = ComfyClient("bad_url")
     with pytest.raises(NetworkError):
         await client.connect()

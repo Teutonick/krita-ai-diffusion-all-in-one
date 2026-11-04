@@ -11,6 +11,7 @@ from typing import Any
 
 import aiohttp
 import psutil
+import PyQt5
 import pytest
 from PyQt5.QtCore import QCoreApplication
 
@@ -26,6 +27,8 @@ from .config import result_dir
 # (e.g. PoseLayers in document.py), and Qt requires QCoreApplication to exist
 # before any timer can be started.
 _qt_app = QCoreApplication.instance() or QCoreApplication([])
+# PyQt5's generated Qt prefix can contain question marks in non-ASCII Windows paths.
+_qt_app.addLibraryPath(str(Path(PyQt5.__file__).parent / "Qt5" / "plugins"))
 eventloop.setup()
 
 root_dir = Path(__file__).parent.parent

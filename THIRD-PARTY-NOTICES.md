@@ -3,7 +3,7 @@
 ## Plugin code
 
 This is an unofficial combined build maintained in
-[Teutonick/krita-ai-diffusion](https://github.com/Teutonick/krita-ai-diffusion).
+[Teutonick/krita-ai-diffusion-all-in-one](https://github.com/Teutonick/krita-ai-diffusion-all-in-one).
 The combined plugin is distributed under the GNU General Public License, version 3;
 see [LICENSE](LICENSE). Modified on 2026-11-03. Original copyright, license and
 warranty notices remain applicable. No endorsement by the upstream authors is implied.
