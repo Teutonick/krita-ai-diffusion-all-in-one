@@ -144,6 +144,25 @@ def _base_model_label(base_model: str) -> str:
     return _ARCH_LABELS.get(arch, base_model)
 
 
+def _with_favorite_badge(pixmap: QPixmap) -> QPixmap:
+    result = QPixmap(pixmap)
+    painter = QPainter(result)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    size = max(14, min(28, result.width() // 4))
+    margin = max(1, size // 10)
+    rect = QRect(result.width() - size - margin, margin, size, size)
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(QColor(35, 35, 35, 220))
+    painter.drawEllipse(rect)
+    font = painter.font()
+    font.setPixelSize(max(10, int(size * 0.72)))
+    painter.setFont(font)
+    painter.setPen(QColor(255, 211, 90))
+    painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "★")
+    painter.end()
+    return result
+
+
 def _with_badges(pixmap: QPixmap, favorite: bool, commercial: str, base_model: str = "") -> QPixmap:
     """Overlay a favorite star (top-right), a commercial-use $ square (bottom-right):
     green = commercial image use allowed, red = not allowed, grey = unknown, and a
@@ -166,20 +185,9 @@ def _with_badges(pixmap: QPixmap, favorite: bool, commercial: str, base_model: s
     painter.setFont(font)
     painter.drawText(QRect(x, y, b, b), Qt.AlignmentFlag.AlignCenter, "$")
 
-    # favorite star, top-right
-    if favorite:
-        sb = max(14, w // 5)
-        star_font = painter.font()
-        star_font.setPixelSize(sb)
-        painter.setFont(star_font)
-        rect = QRect(w - sb - 2, 0, sb, sb + 2)
-        painter.setPen(QColor(0, 0, 0, 160))  # subtle outline for contrast
-        painter.drawText(rect.translated(1, 1), Qt.AlignmentFlag.AlignCenter, "★")
-        painter.setPen(QColor(240, 200, 60))
-        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "★")
-
     painter.end()
-    return _with_tag(result, base_model)
+    result = _with_tag(result, base_model)
+    return _with_favorite_badge(result) if favorite else result
 
 
 def _visible_range(grid, overscan: int = 24) -> range:
@@ -304,6 +312,8 @@ class LoraBrowser(QWidget):
         self._grid.setGridSize(QSize(self._preview_size + 16, self._preview_size + 40))
         self._grid.setResizeMode(QListWidget.ResizeMode.Adjust)
         self._grid.setMovement(QListWidget.Movement.Static)
+        self._grid.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
+        ensure(self._grid.verticalScrollBar()).setSingleStep(max(1, (self._preview_size + 40) // 6))
         self._grid.setWordWrap(True)
         self._grid.setSpacing(4)
         self._grid.itemSelectionChanged.connect(self._on_selection_changed)
@@ -640,6 +650,7 @@ class LoraBrowser(QWidget):
         self._preview_size = value
         self._grid.setIconSize(QSize(value, value))
         self._grid.setGridSize(QSize(value + 16, value + 40))
+        ensure(self._grid.verticalScrollBar()).setSingleStep(max(1, (value + 40) // 6))
         for i in range(self._grid.count()):
             item = ensure(self._grid.item(i))
             lora: LoraInfo = item.data(Qt.ItemDataRole.UserRole)

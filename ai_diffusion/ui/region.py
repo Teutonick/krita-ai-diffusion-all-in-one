@@ -859,7 +859,6 @@ class ActiveRegionWidget(QFrame):
                     if task is EnhanceTask.structure
                     else profile.system_for(task)
                 ),
-                model=profile.model_for(task),
                 temperature=ollama.temperature_for(task),
                 images=images,
             )

@@ -334,19 +334,12 @@ class Profile:
     id: str
     name: str
     system: str = ""  # empty: keep the system prompt baked into the Ollama model
-    model: str = ""  # empty: use the model selected in the settings
     describe: str = ""  # system prompt for image description, empty: reuse `system`
-    describe_model: str = ""  # vision model, empty: fall back to `model`
 
     def system_for(self, task: EnhanceTask) -> str:
         if task is EnhanceTask.describe and self.describe:
             return self.describe
         return self.system
-
-    def model_for(self, task: EnhanceTask) -> str:
-        if task is EnhanceTask.describe:
-            return self.describe_model or self.model
-        return self.model
 
 
 class Profiles:
@@ -364,9 +357,7 @@ class Profiles:
                 key,
                 value.get("name", key),
                 value.get("system", ""),
-                value.get("model", ""),
                 value.get("describe", ""),
-                value.get("describe_model", ""),
             )
             for key, value in (data.get("profiles") or {}).items()
         }

@@ -254,7 +254,6 @@ class PromptBatchDialog(QDialog):
             text = await self._job.run(
                 request,
                 system=profile.system,
-                model=profile.model,
                 seed=random.randint(0, 2**31 - 1),
                 keep_alive=0 if last else 300,
             )

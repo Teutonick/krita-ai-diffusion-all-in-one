@@ -194,7 +194,6 @@ class WildcardGenerator(QWidget):
             text = await self._job.run(
                 ollama.build_terms_prompt(category, min(max(missing, 5), 25), self._results),
                 system=ollama.terms_system_prompt(),
-                model=profile.model,
                 seed=random.randint(0, 2**31 - 1),
                 keep_alive=300,
             )

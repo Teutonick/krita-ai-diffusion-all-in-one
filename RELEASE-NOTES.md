@@ -1,5 +1,8 @@
-# 1.53.0-all-in-one.2 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.3 — krita-ai-diffusion-all-in-one
 
+- AI commands now use the Ollama model selected in settings, including image description.
+- Favorite badges retain thumbnail size and share a consistent appearance across styles and LoRAs.
+- LoRA browsing scrolls in smaller steps.
 - New all-in-one logo for the plugin headers.
 - LoRA Add to Prompt now targets the active Generate/Edit prompt.
 - Scan server refreshes existing LoRAs and retrieves missing triggers and base-model data by CivitAI hash. Browser metadata caches remain in RAM only.
@@ -13,8 +16,8 @@ endorsed by their authors.
 
 ## Build artifacts
 
-The local build provides `krita_ai_diffusion-1.53.0-all-in-one.2.zip`, the corresponding
-source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.2/`. Published releases,
+The local build provides `krita_ai_diffusion-1.53.0-all-in-one.3.zip`, the corresponding
+source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.3/`. Published releases,
 when available, are listed on the [project releases page](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases).
 
 Import the plugin ZIP through **Tools → Scripts → Import Python Plugin from File**,

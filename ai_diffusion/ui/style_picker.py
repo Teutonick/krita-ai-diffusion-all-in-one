@@ -39,6 +39,7 @@ from .generate_across import AcrossOptions, generate_across_styles
 from .generate_sets import GenerateSetBar
 from .lora_picker import (
     _visible_range,
+    _with_favorite_badge,
     _with_tag,
 )
 
@@ -71,26 +72,6 @@ def _tint_pixmap(pixmap: QPixmap, color) -> QPixmap:
 
 
 _star_pixmap = _tint_pixmap(QPixmap(str(theme.icon_path / "star.png")), Qt.GlobalColor.white)
-
-
-def _favorite_icon(base: QIcon) -> QIcon:
-    """Overlay a white star badge on the bottom-right corner of a checkpoint icon."""
-    size = 16
-    pixmap = base.pixmap(size, size)
-    if pixmap.isNull():
-        pixmap = QPixmap(size, size)
-        pixmap.fill(Qt.GlobalColor.transparent)
-    badge_size = max(7, size // 2)
-    star = _star_pixmap.scaled(
-        badge_size,
-        badge_size,
-        Qt.AspectRatioMode.KeepAspectRatio,
-        Qt.TransformationMode.SmoothTransformation,
-    )
-    painter = QPainter(pixmap)
-    painter.drawPixmap(pixmap.width() - badge_size, pixmap.height() - badge_size, star)
-    painter.end()
-    return QIcon(pixmap)
 
 
 class StyleBrowser(QWidget):
@@ -319,7 +300,7 @@ class StyleBrowser(QWidget):
     def _style_stem(self, style: Style) -> str:
         return Path(style.checkpoints[0]).stem if style.checkpoints else ""
 
-    def _scaled_icon(self, pixmap: QPixmap, label: str = "") -> QIcon:
+    def _scaled_icon(self, pixmap: QPixmap, label: str = "", favorite: bool = False) -> QIcon:
         # pre-scale to the icon size - handing QListWidget a full-resolution pixmap
         # makes it rescale on every repaint, which is what killed scroll performance
         s = self._thumb_size
@@ -328,7 +309,7 @@ class StyleBrowser(QWidget):
         )
         if label:
             scaled = _with_tag(scaled, label)
-        return QIcon(scaled)
+        return QIcon(_with_favorite_badge(scaled) if favorite else scaled)
 
     def _load_checkpoint_previews(self):
         client = self._client()
@@ -366,7 +347,13 @@ class StyleBrowser(QWidget):
                 continue
             if stem in self._preview_cache:
                 family_label = item.data(Qt.ItemDataRole.UserRole + 3) or ""
-                item.setIcon(self._scaled_icon(self._preview_cache[stem], family_label))
+                item.setIcon(
+                    self._scaled_icon(
+                        self._preview_cache[stem],
+                        family_label,
+                        bool(item.data(Qt.ItemDataRole.UserRole + 4)),
+                    )
+                )
                 item.setData(Qt.ItemDataRole.UserRole + 2, True)
                 continue
             if stem in self._pending_previews:
@@ -393,7 +380,11 @@ class StyleBrowser(QWidget):
         # cache when they next scroll into view (see _load_visible_previews)
         try:
             family_label = item.data(Qt.ItemDataRole.UserRole + 3) or ""
-            item.setIcon(self._scaled_icon(pixmap, family_label))
+            item.setIcon(
+                self._scaled_icon(
+                    pixmap, family_label, bool(item.data(Qt.ItemDataRole.UserRole + 4))
+                )
+            )
             item.setData(Qt.ItemDataRole.UserRole + 2, True)
         except RuntimeError:
             pass  # item was removed (list rebuilt) before the fetch finished
@@ -534,14 +525,12 @@ class StyleBrowser(QWidget):
             family_label = style.effective_family(arch)
             applied = False
             if stem in self._preview_cache:  # real checkpoint thumbnail if we have it
-                icon = self._scaled_icon(self._preview_cache[stem], family_label)
+                icon = self._scaled_icon(self._preview_cache[stem], family_label, is_fav)
                 applied = True
             else:
                 icon = theme.checkpoint_icon(arch, client=client)
-                if is_fav:
-                    icon = _favorite_icon(icon)
                 pixmap = _with_tag(icon.pixmap(self._thumb_size, self._thumb_size), family_label)
-                icon = QIcon(pixmap)
+                icon = QIcon(_with_favorite_badge(pixmap) if is_fav else pixmap)
             item = QListWidgetItem(icon, style.name + "\n" + _style_task(style, client))
             loras = ", ".join(str(l.get("name", "")) for l in style.loras if l.get("enabled", True))
             item.setToolTip(
@@ -556,6 +545,7 @@ class StyleBrowser(QWidget):
             item.setData(Qt.ItemDataRole.UserRole + 1, stem)
             item.setData(Qt.ItemDataRole.UserRole + 2, applied)
             item.setData(Qt.ItemDataRole.UserRole + 3, family_label)
+            item.setData(Qt.ItemDataRole.UserRole + 4, is_fav)
             if self._view == _VIEW_GRID:
                 item.setSizeHint(cell_size)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
