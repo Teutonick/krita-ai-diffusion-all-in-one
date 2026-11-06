@@ -15,6 +15,24 @@ This build combines upstream **1.53.0**, the interface and workflow improvements
 It also adds managed component installation, protection against accidental mouse-wheel
 changes in settings, and a policy for temporary media storage.
 
+## Highlights
+
+- **Krea 2, ready to create and edit** — generate with Krea 2 Turbo or transform images
+  with Identity Edit V2 and General Edit V2, using up to two input images. See the
+  [model terms](#krea-2-edit-v2-read-the-model-terms) before use.
+- **A visual LoRA library and CivitAI downloads** — find LoRAs by preview, search and
+  filter your collection, reuse recipes, and discover and download LoRAs and checkpoints
+  from CivitAI without leaving Krita. Full features use the optional LoRA Manager.
+- **Smarter prompts and named references** — enhance and vary prompts, describe an image
+  or selection, and create motion-focused video prompts from an image with Prompt AI.
+  Mention reference images and Krita layers by name with `@Name`; use wildcards to
+  explore variations. Image description requires a vision model in Ollama.
+- **Isolated temporary media and security hardening** — plugin-managed temporary media
+  lives in isolated sessions and is cleaned up; explicitly saved files remain. Dependency
+  security updates and additional protections are detailed in the
+  [security report](SECURITY-UPDATE.md). See [temporary media](#media-stays-temporary-until-you-choose-to-save)
+  for external-server and cleanup limitations.
+
 ## Built from these projects
 
 **This fork combines existing open-source work. The original authors deserve the credit
