@@ -1,5 +1,10 @@
-# 1.53.0-all-in-one.3 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.9 — krita-ai-diffusion-all-in-one
 
+- Animation prompts can be modified in their own window and suggest subtle motion for relevant scene elements.
+- Added a subtle live VRAM usage indicator to the queue button.
+- Animation prompt for image describes the canvas and opens a copyable image-to-video prompt in the official MiniMax H3 I2VA syntax.
+- Consecutive matching generations are grouped together in history.
+- Modify with instruction focuses the text field when opened.
 - AI commands now use the Ollama model selected in settings, including image description.
 - Favorite badges retain thumbnail size and share a consistent appearance across styles and LoRAs.
 - LoRA browsing scrolls in smaller steps.
@@ -16,8 +21,8 @@ endorsed by their authors.
 
 ## Build artifacts
 
-The local build provides `krita_ai_diffusion-1.53.0-all-in-one.3.zip`, the corresponding
-source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.3/`. Published releases,
+The local build provides `krita_ai_diffusion-1.53.0-all-in-one.9.zip`, the corresponding
+source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.9/`. Published releases,
 when available, are listed on the [project releases page](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases).
 
 Import the plugin ZIP through **Tools → Scripts → Import Python Plugin from File**,

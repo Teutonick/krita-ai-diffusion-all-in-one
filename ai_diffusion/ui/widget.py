@@ -257,9 +257,6 @@ class QueuePopup(QMenu):
         )
         self._update_vram(None)
         root.connection.vram_changed.connect(self._update_vram)
-        self._vram_timer = QTimer(self)
-        self._vram_timer.setInterval(2000)
-        self._vram_timer.timeout.connect(root.connection.update_vram)
         unload_layout = QHBoxLayout()
         unload_layout.addWidget(self._vram_bar, 1)
         unload_layout.addWidget(self._unload_models)
@@ -342,11 +339,6 @@ class QueuePopup(QMenu):
     def showEvent(self, a0):
         super().showEvent(a0)
         root.connection.update_vram()
-        self._vram_timer.start()
-
-    def hideEvent(self, a0):
-        self._vram_timer.stop()
-        super().hideEvent(a0)
 
     def _update_resolution_multiplier(self):
         slider_value = round(self.model.resolution_multiplier * 10)
@@ -378,6 +370,11 @@ class QueueButton(QToolButton):
 
         self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self._vram_color = QColor(125, 125, 125, 160)
+        root.connection.vram_changed.connect(self._update_vram_indicator)
+        self._vram_timer = QTimer(self)
+        self._vram_timer.setInterval(2000)
+        self._vram_timer.timeout.connect(root.connection.update_vram)
         self._connect_model()
 
     @property
@@ -426,11 +423,38 @@ class QueueButton(QToolButton):
 
     def sizeHint(self) -> QSize:
         original = super().sizeHint()
-        width = original.height() * 0.75 + self.fontMetrics().width(" 99 ") + 20
+        width = original.height() * 0.75 + self.fontMetrics().width(" 99 ") + 31
         return QSize(int(width), original.height())
+
+    def _update_vram_indicator(self, usage: tuple[int, int] | None):
+        ratio = usage[0] / usage[1] if usage is not None and usage[1] > 0 else 0
+        if ratio > 0.85:
+            color = QColor(192, 101, 101, 180)
+        elif ratio > 0.10:
+            color = QColor(108, 165, 119, 180)
+        else:
+            color = QColor(125, 125, 125, 160)
+        if color != self._vram_color:
+            self._vram_color = color
+            self.update()
+
+    def showEvent(self, a0):
+        super().showEvent(a0)
+        root.connection.update_vram()
+        self._vram_timer.start()
+
+    def hideEvent(self, a0):
+        self._vram_timer.stop()
+        super().hideEvent(a0)
 
     def paintEvent(self, a0):
         _paint_tool_drop_down(self, self.text())
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(self._vram_color)
+        painter.drawEllipse(self.width() - 25, (self.height() - 6) // 2, 6, 6)
+        painter.end()
 
 
 class StyleSelectWidget(QWidget):

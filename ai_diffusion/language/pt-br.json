@@ -1159,6 +1159,11 @@
     "Krea 2 accepts at most two input images: the edit source and one additional reference. Remove extra references.": null,
     "Generate: describe a new image. To change an existing image, select Edit image and choose its source.": null,
     "Missing source layer — choose another": null,
-    "Loading online LoRA triggers and previews…": null
+    "Loading online LoRA triggers and previews…": null,
+    "Animation prompt for image": null,
+    "The language model did not return a valid animation prompt": null,
+    "Modify animation with instruction": null,
+    "Generating...": null,
+    "Describe the change to the animation...": null
   }
 }

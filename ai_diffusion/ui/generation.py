@@ -238,14 +238,14 @@ class HistoryWidget(QListWidget):
         self.rebuild()
         self.update_selection()
 
-    def _same_batch(self, a: JobParams | None, b: JobParams) -> bool:
+    @staticmethod
+    def _same_batch(a: JobParams | None, b: JobParams) -> bool:
         if a is None:
             return False
-        if a.batch_id and b.batch_id:
-            # jobs from the same enqueue_jobs() call always share one batch, even
-            # if wildcards make their evaluated prompt differ per item
-            return a.batch_id == b.batch_id
-        return JobParams.equal_ignore_seed(a, b)  # fallback for pre-batch_id history
+        if a.batch_id and a.batch_id == b.batch_id:
+            # Wildcards can produce different prompts within the same batch.
+            return True
+        return JobParams.equal_ignore_seed(a, b)
 
     def add(self, job: Job):
         if not self.is_finished(job):

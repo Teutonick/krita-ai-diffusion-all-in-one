@@ -23,6 +23,7 @@ from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMenu,
     QPlainTextEdit,
     QPushButton,
@@ -669,6 +670,10 @@ class ActiveRegionWidget(QFrame):
         )
         menu.addSeparator()
         menu.addAction(_("Describe the image"), partial(self._enhance, EnhanceTask.describe))
+        menu.addAction(
+            _("Animation prompt for image"),
+            partial(self._enhance, EnhanceTask.describe, animation_prompt=True),
+        )
         self._describe_selection_action = ensure(
             menu.addAction(
                 _("Describe current selection"),
@@ -780,6 +785,7 @@ class ActiveRegionWidget(QFrame):
         use_selection: bool = False,
         canvas_selection: bool = False,
         to_negative: bool = False,
+        animation_prompt: bool = False,
     ):
         if self._enhance_running:
             return
@@ -789,7 +795,9 @@ class ActiveRegionWidget(QFrame):
             )
             return
         eventloop.run(
-            self._run_enhance(task, instruction, use_selection, canvas_selection, to_negative)
+            self._run_enhance(
+                task, instruction, use_selection, canvas_selection, to_negative, animation_prompt
+            )
         )
 
     def _report_error(self, message: str):
@@ -805,6 +813,7 @@ class ActiveRegionWidget(QFrame):
         use_selection: bool = False,
         canvas_selection: bool = False,
         to_negative: bool = False,
+        animation_prompt: bool = False,
     ):
         region = self.region
         model = root.active_model
@@ -835,7 +844,7 @@ class ActiveRegionWidget(QFrame):
         try:
             family = model.active_style.effective_family(model.arch)
             profile = ollama.Profiles.instance().for_family(family)
-            if profile is None:
+            if profile is None and not animation_prompt:
                 self._report_error(_("No prompt profile found for") + f" {family}")
                 return
 
@@ -853,11 +862,13 @@ class ActiveRegionWidget(QFrame):
 
             self._enhance_job = ollama.Generation()
             response = await self._enhance_job.run(
-                request,
+                "Describe the visible first frame." if animation_prompt else request,
                 system=(
-                    ollama.structure_system_prompt()
+                    ollama.animation_frame_system
+                    if animation_prompt
+                    else ollama.structure_system_prompt()
                     if task is EnhanceTask.structure
-                    else profile.system_for(task)
+                    else ensure(profile).system_for(task)
                 ),
                 temperature=ollama.temperature_for(task),
                 images=images,
@@ -872,6 +883,23 @@ class ActiveRegionWidget(QFrame):
                 if not response:
                     self._report_error(_("The language model returned an empty response"))
                     return
+
+            if animation_prompt:
+                self._enhance_job = ollama.Generation()
+                prompt = await self._enhance_job.run(
+                    f"First-frame description:\n{response}",
+                    system=ollama.animation_prompt_system,
+                    temperature=0.2,
+                    output_schema=ollama.animation_prompt_schema,
+                )
+                prompt = ollama.format_animation_prompt(prompt)
+                if not prompt:
+                    self._report_error(
+                        _("The language model did not return a valid animation prompt")
+                    )
+                elif root.active_model is model:
+                    self._show_animation_prompt(prompt)
+                return
 
             if task is EnhanceTask.variations:
                 lines = [line.strip(" -*\t") for line in response.splitlines()]
@@ -924,6 +952,105 @@ class ActiveRegionWidget(QFrame):
             self._enhance_running = False
             self._enhance_job = None
             self._end_enhance_progress()
+
+    def _show_animation_prompt(self, prompt: str):
+        dialog = QDialog(self)
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        dialog.setWindowTitle(_("Animation prompt for image"))
+        layout = QVBoxLayout(dialog)
+        editor = QPlainTextEdit(prompt, dialog)
+        editor.setReadOnly(True)
+        layout.addWidget(editor)
+
+        instruction = QLineEdit(dialog)
+        instruction.setPlaceholderText(_("Describe the change to the animation..."))
+        layout.addWidget(instruction)
+        status = QLabel(dialog)
+        status.setWordWrap(True)
+        layout.addWidget(status)
+        modify = QPushButton(_("Modify animation with instruction"), dialog)
+        layout.addWidget(modify)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        copy = QPushButton(_("Copy"), dialog)
+        copy.clicked.connect(editor.selectAll)
+        copy.clicked.connect(editor.copy)
+        buttons.addWidget(copy)
+        close = QPushButton(_("Close"), dialog)
+        close.clicked.connect(dialog.reject)
+        buttons.addWidget(close)
+        layout.addLayout(buttons)
+
+        job: ollama.Generation | None = None
+        closed = False
+
+        def on_finished(_result):
+            nonlocal closed
+            closed = True
+            if job is not None:
+                job.cancel()
+
+        dialog.finished.connect(on_finished)
+
+        async def apply_instruction():
+            nonlocal job
+            change = instruction.text().strip()
+            if not change or job is not None:
+                return
+            if not settings.ollama_model:
+                status.setText(
+                    _("No language model selected. Configure one in Settings -> Prompt AI.")
+                )
+                return
+            original = editor.toPlainText()
+            modify.setEnabled(False)
+            instruction.setEnabled(False)
+            status.setText(_("Generating..."))
+            job = ollama.Generation()
+            try:
+                response = await job.run(
+                    f"Current animation prompt:\n{original}\n\nChange requested:\n{change}",
+                    system=(
+                        ollama.animation_prompt_system
+                        + " Modify the existing animation prompt according to the requested change. "
+                        "Keep every unrelated detail and the first-frame reference unchanged. "
+                        "Remove details that contradict the requested change. Return both fields "
+                        "as JSON; do not include explanations."
+                    ),
+                    temperature=0.2,
+                    output_schema=ollama.animation_prompt_schema,
+                )
+                if closed:
+                    return
+                result = ollama.format_animation_prompt(response)
+                if result:
+                    editor.setPlainText(result)
+                    instruction.clear()
+                    status.clear()
+                else:
+                    status.setText(_("The language model did not return a valid animation prompt"))
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                if not closed:
+                    log.exception("Animation prompt modification failed")
+                    status.setText(_("Prompt enhancement failed") + f": {e}")
+            finally:
+                job = None
+                if not closed:
+                    modify.setEnabled(True)
+                    instruction.setEnabled(True)
+                    instruction.setFocus()
+
+        def start_modification():
+            if instruction.text().strip() and job is None:
+                eventloop.run(apply_instruction())
+
+        modify.clicked.connect(start_modification)
+        instruction.returnPressed.connect(start_modification)
+        dialog.resize(560, 330)
+        dialog.show()
 
     def _open_lora_picker(self):
         if self._lora_dialog is None:
@@ -1069,6 +1196,10 @@ class InstructionDialog(QDialog):
         self.adjustSize()
         self.resize(QSize(min(self.width(), 300), min(self.height(), 130)))
         self._center_on_parent(parent)
+
+    def showEvent(self, a0):
+        super().showEvent(a0)
+        self._edit.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _center_on_parent(self, parent: QWidget):
         window = parent.window()
