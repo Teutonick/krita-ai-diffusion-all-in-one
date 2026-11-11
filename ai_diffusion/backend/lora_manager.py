@@ -103,6 +103,10 @@ class LoraInfo:
 # Longer/more specific keys must come before shorter ones they overlap with
 # (e.g. "illustrious" before "sd xl", "flux kontext" before "flux").
 _BASE_MODEL_MAP = [
+    ("minimax h3", "minimax_h3_image"),
+    ("minimax-h3", "minimax_h3_image"),
+    ("minimax_h3", "minimax_h3_image"),
+    ("minimaxh3", "minimax_h3_image"),
     ("illustrious", "illu"),
     ("pony", "sdxl"),
     ("sdxl", "sdxl"),

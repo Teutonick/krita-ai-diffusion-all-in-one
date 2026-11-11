@@ -2,7 +2,7 @@
 
 **Acly's foundation. Reloaded's workflow tools. Krea 2 Edit V2 integration.**
 
-[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.2-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
+[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.16-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
 [![Code license](https://img.shields.io/badge/plugin_code-GPLv3-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-unofficial_fork-orange)](#credits)
 
@@ -20,6 +20,8 @@ changes in settings, and a policy for temporary media storage.
 - **Krea 2, ready to create and edit** — generate with Krea 2 Turbo or transform images
   with Identity Edit V2 and General Edit V2, using up to two input images. See the
   [model terms](#krea-2-edit-v2-read-the-model-terms) before use.
+- **MiniMax H3 Image** — generate, edit, or apply an edit to a Krita selection. The
+  [setup guide](docs/MINIMAX-H3-IMAGE.md) covers the Standard and experimental pDMD presets.
 - **A visual LoRA library and CivitAI downloads** — find LoRAs by preview, search and
   filter your collection, reuse recipes, and discover and download LoRAs and checkpoints
   from CivitAI without leaving Krita. Full features use the optional LoRA Manager.
@@ -64,7 +66,7 @@ See the [security update report](SECURITY-UPDATE.md) for fixes and validation li
 
 ## Install once, choose your components
 
-1. Download `krita_ai_diffusion-1.53.0-all-in-one.2.zip` from this fork’s release assets when published, or use the locally built archive.
+1. Download `krita_ai_diffusion-1.53.0-all-in-one.16.zip` from this fork’s release assets when published, or use the locally built archive.
 2. In Krita, choose **Tools → Scripts → Import Python Plugin from File**.
 3. Restart Krita and enable the plugin if prompted.
 4. Open the plugin settings, choose **Managed Server**, and select your workloads.
@@ -162,8 +164,8 @@ document autosave and backup settings continue to apply.
 
 Each release includes both:
 
-- **Installable plugin:** `krita_ai_diffusion-1.53.0-all-in-one.2.zip`
-- **Corresponding source:** `krita_ai_diffusion-1.53.0-all-in-one.2-source.zip`
+- **Installable plugin:** `krita_ai_diffusion-1.53.0-all-in-one.16.zip`
+- **Corresponding source:** `krita_ai_diffusion-1.53.0-all-in-one.16-source.zip`
 
 The source snapshot includes the modified code, bundled dependency sources, license
 notices and build scripts. `SOURCE-MANIFEST.json` records SHA-256 hashes of the snapshot's

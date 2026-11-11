@@ -675,7 +675,20 @@ class StylePresets(SettingsTab):
         self._checkpoint_warning = QLabel(self)
         self._checkpoint_warning.setStyleSheet(f"font-style: italic; color: {theme.yellow};")
         self._checkpoint_warning.setVisible(False)
+        self._checkpoint_warning.setWordWrap(True)
         self._layout.addWidget(self._checkpoint_warning, alignment=Qt.AlignmentFlag.AlignRight)
+
+        self._h3_image_info = QLabel(
+            _(
+                "MiniMax H3 Image: choose Standard (6 steps) or experimental pDMD (2 steps) "
+                "by selecting its checkpoint. The checkpoint sets the sampling schedule. "
+                "In Edit mode, a Krita selection limits where the result is applied."
+            ),
+            self,
+        )
+        self._h3_image_info.setWordWrap(True)
+        self._h3_image_info.hide()
+        self._layout.addWidget(self._h3_image_info)
 
         checkpoint_advanced = ExpanderButton(_("Checkpoint configuration (advanced)"), self)
         checkpoint_advanced.toggled.connect(self._toggle_checkpoint_advanced)
@@ -838,7 +851,37 @@ class StylePresets(SettingsTab):
                 warn.append(_("The checkpoint used by this style is not installed."))
 
             arch = resolve_arch(self.current_style, client)
-            if file and not client.supports_arch(arch):
+            if arch is Arch.minimax_h3_image and (missing := client.missing_resources):
+                extra = []
+                for resource in missing.get(arch):
+                    if not isinstance(resource, ResourceId) or resource.arch is not arch:
+                        extra.append(resource.name)
+                    elif resource.kind is ResourceKind.node:
+                        warn.append(
+                            _(
+                                "This ComfyUI server cannot run MiniMax H3 Image. Connect to a newer ComfyUI with MiniMaxH3ImageConditioning. There is no separate Workload checkbox."
+                            )
+                        )
+                    elif resource.kind is ResourceKind.vae:
+                        warn.append(
+                            _(
+                                "This server cannot find the MiniMax H3 Image VAE. Put it in this server's models/vae folder and refresh the connection."
+                            )
+                        )
+                    elif resource.kind is ResourceKind.text_encoder:
+                        warn.append(
+                            _(
+                                "This server cannot find a compatible MiniMax H3 Image text encoder. Put one in this server's models/text_encoders folder and refresh the connection."
+                            )
+                        )
+                if extra:
+                    warn.append(
+                        _(
+                            "The connected ComfyUI server is also missing: {resources}",
+                            resources=", ".join(extra),
+                        )
+                    )
+            elif file and not client.supports_arch(arch):
                 warn.append(
                     _(
                         "This is a {version} checkpoint, but the {version} workload has not been installed.",
@@ -846,7 +889,7 @@ class StylePresets(SettingsTab):
                     )
                 )
 
-            if file and file.format is FileFormat.diffusion:
+            if file and file.format is FileFormat.diffusion and arch is not Arch.minimax_h3_image:
                 vae_id = ResourceId(ResourceKind.vae, arch, "default")
                 if client.models.resources.get(vae_id.string) is None:
                     paths = search_paths.get(vae_id.string, [])
@@ -927,6 +970,10 @@ class StylePresets(SettingsTab):
 
     def _enable_checkpoint_advanced(self):
         arch = resolve_arch(self.current_style, root.connection.client_if_connected)
+        is_h3_image = arch is Arch.minimax_h3_image
+        self._h3_image_info.setVisible(is_h3_image)
+        self._default_sampler.setVisible(not is_h3_image)
+        self._live_sampler.setVisible(not is_h3_image)
         if arch.is_sdxl_like:
             valid_archs = (Arch.auto, Arch.sdxl, Arch.illu, Arch.illu_v)
         elif arch.is_flux_like:

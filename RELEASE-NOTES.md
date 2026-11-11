@@ -1,5 +1,12 @@
-# 1.53.0-all-in-one.9 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.16 — krita-ai-diffusion-all-in-one
 
+- Consecutive runs with the same prompt and settings now share a history row even when they take different amounts of time.
+- Added a MiniMax H3 filter in the LoRA browser. Video LoRAs are experimental on H3 Image.
+- Fixed JSON submission of MiniMax H3 Image jobs and a false checkpoint warning for supported H3 styles.
+- Managed Server now upgrades to ComfyUI v0.45.0 with native MiniMax H3 Image support.
+- MiniMax H3 Image style warnings now identify missing server support or model files.
+- Added plain-language guidance to the MiniMax H3 Image package list: a starting setup, smaller downloads, and a two-step draft option.
+- Added MiniMax H3 Image generation, source and selection edits, and separate Standard (6 steps) and experimental pDMD (2 steps) presets. Requires a ComfyUI server with native H3 Image support.
 - Animation prompts can be modified in their own window and suggest subtle motion for relevant scene elements.
 - Added a subtle live VRAM usage indicator to the queue button.
 - Animation prompt for image describes the canvas and opens a copyable image-to-video prompt in the official MiniMax H3 I2VA syntax.
@@ -21,8 +28,8 @@ endorsed by their authors.
 
 ## Build artifacts
 
-The local build provides `krita_ai_diffusion-1.53.0-all-in-one.9.zip`, the corresponding
-source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.9/`. Published releases,
+The local build provides `krita_ai_diffusion-1.53.0-all-in-one.16.zip`, the corresponding
+source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.16/`. Published releases,
 when available, are listed on the [project releases page](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases).
 
 Import the plugin ZIP through **Tools → Scripts → Import Python Plugin from File**,

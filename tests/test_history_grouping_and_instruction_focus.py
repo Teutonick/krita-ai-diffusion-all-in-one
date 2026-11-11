@@ -9,11 +9,18 @@ from ai_diffusion.ui.region import InstructionDialog
 
 
 def test_history_groups_matching_runs_and_wildcard_batch():
-    first = JobParams(Bounds(0, 0, 64, 64), "prompt", metadata={"steps": 20}, seed=1, batch_id="a")
-    same = replace(first, seed=2, batch_id="b")
-    different = replace(same, metadata={"steps": 30})
+    first = JobParams(
+        Bounds(0, 0, 64, 64),
+        "prompt",
+        metadata={"steps": 20, "duration": 41.2},
+        seed=1,
+        batch_id="a",
+    )
+    same = replace(first, metadata={"steps": 20, "duration": 8.3}, seed=2, batch_id="b")
+    different = replace(same, metadata={"steps": 30, "duration": 8.3})
     wildcard = replace(first, name="different evaluated prompt", batch_id="a")
     assert HistoryWidget._same_batch(first, same)
+    assert HistoryWidget._same_batch(first, replace(same, metadata={"steps": 20}))
     assert not HistoryWidget._same_batch(first, different)
     assert HistoryWidget._same_batch(first, wildcard)
     assert HistoryWidget._same_batch(first, replace(same, batch_id=""))

@@ -230,7 +230,14 @@ class CivitaiBrowser(QWidget):
         self._arch_combo = QComboBox(self)
         self._arch_combo.addItem(_("Any base model"), _ARCH_ANY)
         for arch in sorted(civitai.civitai_base_models, key=lambda a: _ARCH_LABELS.get(a, a)):
-            self._arch_combo.addItem(_ARCH_LABELS.get(arch, arch), arch)
+            if arch == "minimax_h3_image":
+                if self._kind == _KIND_CHECKPOINT:
+                    continue
+                self._arch_combo.addItem(
+                    _("MiniMax H3 (video LoRAs, experimental for Image)"), arch
+                )
+            else:
+                self._arch_combo.addItem(_ARCH_LABELS.get(arch, arch), arch)
         index = self._arch_combo.findData(current_arch)
         self._arch_combo.setCurrentIndex(max(index, 0))
         self._arch_combo.currentIndexChanged.connect(self._start_search)
@@ -701,6 +708,15 @@ class CivitaiBrowser(QWidget):
         if model.creator:
             lines.append(f"{_('By')}: {model.creator}")
         lines.append(f"{_('Type')}: {model.type} · {version.base_model or '?'}")
+        if (
+            self._kind != _KIND_CHECKPOINT
+            and arch_for_base_model(version.base_model) == "minimax_h3_image"
+        ):
+            lines.append(
+                _(
+                    "Video LoRAs are experimental on H3 Image. Start with a style or character LoRA; avoid motion and video turbo LoRAs."
+                )
+            )
         if size := _size_label(version.size_mb):
             lines.append(f"{_('Version')}: {version.name or '?'} · {size}")
         lines.append(f"{_('Downloads')}: {model.downloads}")

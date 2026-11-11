@@ -80,6 +80,7 @@ _KNOWN_ARCHES = [
     "ernie",
     "krea2",
     "moss",
+    "minimax_h3_image",
 ]
 # full names for the base-model filter, matching the labels in the style editor
 _ARCH_LABELS = {
@@ -96,6 +97,7 @@ _ARCH_LABELS = {
     "ernie": "ERNIE Image",
     "krea2": "Krea 2",
     "moss": "MOSS-Image",
+    "minimax_h3_image": "MiniMax H3",
 }
 _VIDEO_EXTENSIONS = (".mp4", ".webm", ".mov")
 
@@ -563,8 +565,12 @@ class LoraBrowser(QWidget):
                 return False
             if nsfw_mode == _NSFW_HIDE_EXPLICIT and lora.nsfw_level >= 16:  # X/XXX
                 return False
-            if arch and arch_for_base_model(lora.base_model) != arch:
-                return False
+            if arch:
+                model_arch = arch_for_base_model(lora.base_model)
+                if not model_arch and arch == "minimax_h3_image":
+                    model_arch = arch_for_base_model(lora.name)
+                if model_arch != arch:
+                    return False
             if active_tag and active_tag != _TAG_ALL:
                 if active_tag not in lora.tags:
                     return False

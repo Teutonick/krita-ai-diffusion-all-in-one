@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from ..backend.resources import Arch
 from ..image import Extent, Image
 from ..localization import translate as _
 from ..model.model import DocumentModel
@@ -262,6 +263,7 @@ class LiveWidget(QWidget):
                 model.live.has_result_changed.connect(self.apply_layer_button.setEnabled),
                 self.random_seed_button.clicked.connect(model.generate_seed),
                 model.edit_mode_changed.connect(self.update_edit_mode),
+                model.style_changed.connect(self._update_strength_visibility),
                 model.progress_changed.connect(self.update_progress),
                 model.live.result_available.connect(self.show_result),
                 model.active_regions.active_changed.connect(self.update_region),
@@ -272,11 +274,15 @@ class LiveWidget(QWidget):
             self.prompt_widget.region = model.active_regions
             self.region_widget.root = model.active_regions
             self.strength_slider.model = model
+            self._update_strength_visibility()
             self.update_edit_mode()
             self.update_region()
             self.update_is_active()
             self.update_is_recording()
             self.preview_area.clear()
+
+    def _update_strength_visibility(self, *_args):
+        self.strength_slider.setVisible(self.model.arch is not Arch.minimax_h3_image)
 
     def toggle_active(self):
         self.model.live.is_active = not self.model.live.is_active

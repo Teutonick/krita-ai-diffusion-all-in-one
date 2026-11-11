@@ -434,6 +434,96 @@
   ],
   "optional": [
     {
+      "id": "checkpoint-int8-minimax_h3_image",
+      "name": "MiniMax H3 Image (INT8)",
+      "files": [
+        {
+          "path": "models/diffusion_models/minimax_h3_image_pruned_int8_convrot.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MiniMax-H3-Image/resolve/main/diffusion_models/minimax_h3_image_pruned_int8_convrot.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "checkpoint-w4a8-minimax_h3_image",
+      "name": "MiniMax H3 Image (W4A8)",
+      "files": [
+        {
+          "path": "models/diffusion_models/minimax_h3_image_pruned_w4a8.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MiniMax-H3-Image/resolve/main/diffusion_models/minimax_h3_image_pruned_w4a8.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "checkpoint-bf16-minimax_h3_image",
+      "name": "MiniMax H3 Image (BF16)",
+      "files": [
+        {
+          "path": "models/diffusion_models/minimax_h3_image_pruned_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MiniMax-H3-Image/resolve/main/diffusion_models/minimax_h3_image_pruned_bf16.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "checkpoint-pdmd-minimax_h3_image",
+      "name": "MiniMax H3 Image pDMD (2 steps, experimental)",
+      "files": [
+        {
+          "path": "models/diffusion_models/minimax_h3_image_pdmd_2step_bf16.safetensors",
+          "url": "https://huggingface.co/akhaliq/minimax-h3-image-pdmd-2step/resolve/main/minimax_h3_image_pdmd_2step_bf16.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "text_encoder-h3_qwen3vl-minimax_h3_image",
+      "name": "MiniMax H3 Image: official Qwen3-VL 32B NVFP4",
+      "files": [
+        {
+          "path": "models/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MiniMax-H3-Image/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "text_encoder-official_int8-minimax_h3_image",
+      "name": "MiniMax H3 Image: official Qwen3-VL 32B INT8",
+      "files": [
+        {
+          "path": "models/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MiniMax-H3-Image/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "text_encoder-heretic_int8-minimax_h3_image",
+      "name": "MiniMax H3 Image: Qwen3-VL Heretic INT8 (community, experimental)",
+      "files": [
+        {
+          "path": "models/text_encoders/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
+          "url": "https://huggingface.co/ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot/resolve/e8967f6/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "text_encoder-heretic-minimax_h3_image",
+      "name": "MiniMax H3 Image: Qwen3-VL Heretic (community, experimental)",
+      "files": [
+        {
+          "path": "models/text_encoders/qwen3vl_32b_heretic_minimax_h3_nvfp4.safetensors",
+          "url": "https://huggingface.co/Momoking/Qwen3-VL-32B-Heretic-MiniMax-H3-NVFP4/resolve/main/qwen3vl_32b_heretic_minimax_h3_nvfp4.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "vae-default-minimax_h3_image",
+      "name": "MiniMax H3 Image VAE",
+      "files": [
+        {
+          "path": "models/vae/minimax_h3_image_vae_fp16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MiniMax-H3-Image/resolve/main/vae/minimax_h3_image_vae_fp16.safetensors"
+        }
+      ]
+    },
+    {
       "id": "controlnet-scribble-sd15",
       "name": "ControlNet Scribble",
       "files": [

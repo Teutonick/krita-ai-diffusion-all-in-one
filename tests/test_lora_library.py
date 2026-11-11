@@ -1,5 +1,6 @@
 from typing import cast
 from unittest.mock import AsyncMock
+from urllib.parse import parse_qs, urlsplit
 
 from ai_diffusion.backend.lora_manager import LoraInfo, fetch_loras_pages
 
@@ -142,3 +143,18 @@ def test_base_model_filter_excludes_unknown_and_other_architectures():
     browser._arch_combo.currentData = lambda: lora_picker._ARCH_ANY
     lora_picker.LoraBrowser._apply_filter(cast(lora_picker.LoraBrowser, browser))
     assert len(browser._filtered) == 4
+
+
+@qtapp
+async def test_civitai_h3_lora_filter_uses_video_base_label(monkeypatch):
+    from ai_diffusion.backend import civitai
+    from ai_diffusion.backend.lora_manager import arch_for_base_model
+
+    request = AsyncMock()
+    request.get.return_value = {"items": []}
+    monkeypatch.setattr(civitai, "requests", lambda: request)
+    await civitai.search_models(base_models=civitai.civitai_base_models["minimax_h3_image"])
+    url = request.get.call_args.args[0]
+    assert parse_qs(urlsplit(url).query)["baseModels"] == ["MiniMax H3"]
+    assert arch_for_base_model("MiniMax H3 (FL2VA)") == "minimax_h3_image"
+    assert arch_for_base_model("minimax_h3_image") == "minimax_h3_image"

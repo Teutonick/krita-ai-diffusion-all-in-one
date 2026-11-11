@@ -697,6 +697,15 @@ class ComfyClient(Client):
             if node in nodes
             for name in nodes.options(node, input)
         }
+        if "MiniMaxH3ImageConditioning" in nodes:
+            for name, fmt in on_server.items():
+                if (
+                    fmt is FileFormat.diffusion
+                    and Arch.from_string("unknown", filename=name) is Arch.minimax_h3_image
+                ):
+                    models.checkpoints.setdefault(
+                        name, CheckpointInfo(name, Arch.minimax_h3_image, fmt)
+                    )
         for style in Styles.list():
             if style.architecture is Arch.auto:
                 continue
@@ -825,12 +834,20 @@ class ComfyClient(Client):
             if id.arch is not Arch.all and id.arch is not sdver:
                 continue
             if models.find(id) is None:
+                if sdver is Arch.minimax_h3_image and id.identifier == "h3_qwen3vl":
+                    if models.for_arch(sdver).text_encoder.find("h3_heretic"):
+                        continue
                 missing.append(id)
         has_checkpoint = any(cp.arch is sdver for cp in models.checkpoints.values())
         if not has_checkpoint and sdver is Arch.illu:  # Illu checkpoints are detected as SDXL
             has_checkpoint = any(cp.arch is Arch.sdxl for cp in models.checkpoints.values())
         if not has_checkpoint:
             missing.append(ResourceId(ResourceKind.checkpoint, sdver, "model"))
+        if (
+            sdver is Arch.minimax_h3_image
+            and "MiniMaxH3ImageConditioning" not in models.node_inputs
+        ):
+            missing.append(ResourceId(ResourceKind.node, sdver, "MiniMaxH3ImageConditioning"))
         if len(missing) > 0:
             log.info(f"{sdver.value}: missing {len(missing)} models")
         return missing
@@ -928,6 +945,8 @@ def _find_text_encoder_models(model_list: Sequence[str]):
         "qwen_3vl_4b",
         "qwen_3.5_9b",
         "ministral",
+        "h3_qwen3vl",
+        "h3_heretic",
     ]
     return {
         resource_id(kind, Arch.all, te): _find_model(model_list, kind, Arch.all, te) for te in tes

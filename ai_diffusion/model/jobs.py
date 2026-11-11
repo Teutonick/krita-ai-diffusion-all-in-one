@@ -90,8 +90,15 @@ class JobParams:
     def equal_ignore_seed(cls, a: JobParams | None, b: JobParams | None):
         if a is None or b is None:
             return a is b
-        field_names = (f.name for f in fields(cls) if f.name not in ("seed", "batch_id"))
-        return all(getattr(a, name) == getattr(b, name) for name in field_names)
+        field_names = (
+            f.name for f in fields(cls) if f.name not in ("seed", "batch_id", "metadata")
+        )
+        if any(getattr(a, name) != getattr(b, name) for name in field_names):
+            return False
+        # Duration is recorded when a job finishes, so it is not a generation setting.
+        return {k: v for k, v in a.metadata.items() if k != "duration"} == {
+            k: v for k, v in b.metadata.items() if k != "duration"
+        }
 
     def set_style(self, style: Style, checkpoint: str):
         self.metadata["style"] = style.filename

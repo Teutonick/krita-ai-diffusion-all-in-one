@@ -168,6 +168,8 @@ def load_checkpoint_with_lora(w: ComfyWorkflow, checkpoint: CheckpointInput, mod
                 clip = w.load_clip(te["ministral"], type="flux2")
             case Arch.krea2:
                 clip = w.load_clip(te["qwen_3vl_4b"], type="krea2")
+            case Arch.minimax_h3_image:
+                clip = w.load_clip(te.find("h3_heretic") or te["h3_qwen3vl"], type="minimax")
             case Arch.moss:
                 clip = w.load_clip(te["qwen_3.5_9b"], type="moss_image")
             case _:
@@ -191,10 +193,12 @@ def load_checkpoint_with_lora(w: ComfyWorkflow, checkpoint: CheckpointInput, mod
     if arch is Arch.sd3:
         model = w.model_sampling_sd3(model)
 
-    if checkpoint.v_prediction_zsnr:
+    if checkpoint.v_prediction_zsnr and arch is not Arch.minimax_h3_image:
         model = w.model_sampling_discrete(model, "v_prediction", zsnr=True)
 
-    is_zsnr = checkpoint.v_prediction_zsnr or arch is Arch.illu_v
+    is_zsnr = (
+        checkpoint.v_prediction_zsnr or arch is Arch.illu_v
+    ) and arch is not Arch.minimax_h3_image
     if is_zsnr and checkpoint.rescale_cfg > 0:
         model = w.rescale_cfg(model, checkpoint.rescale_cfg)
 
@@ -1823,6 +1827,8 @@ def build_instructions(cond: ConditioningInput, arch: Arch, inpaint: InpaintMode
     offset = 2 if cond.edit_reference else 1
     for i, control in enumerate(cond.control):
         if instruction := _control_instructions.get(control.mode):
+            if arch is Arch.minimax_h3_image:
+                instruction = instruction.replace("image {}", "<Picture {}>")
             instructions += instruction.format(offset + i) + "\n"
             control.mode = ControlMode.reference
 
@@ -1865,6 +1871,7 @@ def prepare_prompts(
         Arch.flux2_9b: "image {}",
         Arch.qwen_e_p: "Picture {}",
         Arch.krea2: "image {}",
+        Arch.minimax_h3_image: "<Picture {}>",
     }.get(arch, "")
 
     cond.style = style.style_prompt
@@ -1877,6 +1884,8 @@ def prepare_prompts(
     cond.positive += _collect_lora_triggers(models.loras, files)
     if arch.is_flux2 or arch is Arch.krea2:
         cond.positive = build_instructions(cond, arch, inpaint)
+    elif arch is Arch.minimax_h3_image:
+        cond.positive = build_instructions(cond, arch, None)
     ref_names = _reference_names(cond)
     cond.positive = replace_reference_names(cond.positive, ref_names, layer_replace)
     if cond.positive == "" and inpaint is InpaintMode.remove_object:
@@ -1954,13 +1963,34 @@ def prepare(
 
     model_set = models.for_arch(arch)
     has_ip_adapter = model_set.ip_adapter.find(ControlMode.reference) is not None
-    i.models.loras += _get_sampling_lora(style, is_live, model_set, models)
-    all_control = cond.control + [c for r in cond.regions for c in r.control]
-    face_weight = median_or_zero(c.strength for c in all_control if c.mode is ControlMode.face)
-    if face_weight > 0:
-        i.models.loras.append(LoraInput(model_set.lora["face"], 0.65 * face_weight))
+    if arch is not Arch.minimax_h3_image:
+        i.models.loras += _get_sampling_lora(style, is_live, model_set, models)
+        all_control = cond.control + [c for r in cond.regions for c in r.control]
+        face_weight = median_or_zero(c.strength for c in all_control if c.mode is ControlMode.face)
+        if face_weight > 0:
+            i.models.loras.append(LoraInput(model_set.lora["face"], 0.65 * face_weight))
 
-    if kind is WorkflowKind.generate:
+    if arch is Arch.minimax_h3_image and kind in _h3_image_kinds:
+        i.sampling = SamplingInput(
+            "euler", "simple", 1.0, _h3_steps(i.models.checkpoint), seed=seed
+        )
+        target = canvas if isinstance(canvas, Extent) else canvas.extent
+        render = resolution.apply_resolution_settings(target, perf)
+        if style.preferred_resolution:
+            pixels = style.preferred_resolution**2
+            if perf.max_pixel_count > 0:
+                pixels = min(pixels, int(perf.max_pixel_count * 10**6))
+            render = render.scale_to_pixel_count(pixels)
+        render = render.multiple_of(32)
+        i.images = ImageInput(
+            ExtentInput(target, render, render, target),
+            initial_image=canvas if isinstance(canvas, Image) else None,
+            hires_mask=mask.to_image(target) if mask else None,
+        )
+        i.inpaint = InpaintParams.clamped(inpaint) if inpaint else None
+        i.batch_count = 1
+
+    elif kind is WorkflowKind.generate:
         assert isinstance(canvas, Extent)
         i.images, i.batch_count = resolution.prepare_extent(
             canvas, arch, ensure(style), perf, downscale=not is_live
@@ -2075,6 +2105,90 @@ def prepare_create_control_image(
     return i
 
 
+_h3_image_kinds = (
+    WorkflowKind.generate,
+    WorkflowKind.refine,
+    WorkflowKind.inpaint,
+    WorkflowKind.refine_region,
+)
+
+
+def _h3_steps(checkpoint: str):
+    filename = checkpoint.replace("\\", "/").rsplit("/", 1)[-1].lower()
+    return 2 if filename == "minimax_h3_image_pdmd_2step_bf16.safetensors" else 6
+
+
+def minimax_h3_image(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
+    if models.node_inputs and "MiniMaxH3ImageConditioning" not in models.node_inputs:
+        raise ValueError(_("Update ComfyUI to a version with MiniMaxH3ImageConditioning."))
+
+    checkpoint, images = ensure(i.models), ensure(i.images)
+    cond, sampling = ensure(i.conditioning), ensure(i.sampling)
+    model, clip, vae = load_checkpoint_with_lora(w, checkpoint, models)
+    steps = _h3_steps(checkpoint.checkpoint)
+    if steps == 2:
+        if models.node_inputs and "MiniMaxH3SigmaShift" not in models.node_inputs:
+            raise ValueError(_("MiniMax H3 Image pDMD requires MiniMaxH3SigmaShift in ComfyUI."))
+        model = w.add("MiniMaxH3SigmaShift", 1, model=model, shift_video=12.0, shift_audio=3.0)
+    source = w.load_image(images.initial_image) if images.initial_image is not None else None
+    references = [source] if source is not None else []
+    controls = cond.control + [c for region in cond.regions for c in region.control]
+    for control in controls:
+        if control.mode.is_ip_adapter and control.image is not None:
+            references.append(w.load_image(control.image))
+
+    prompt = merge_prompt(cond.positive, cond.style, cond.language)
+    mask = w.load_mask(images.hires_mask) if images.hires_mask is not None else None
+    if mask is not None:
+        assert source is not None
+        references.append(w.mask_to_image(mask))
+        prompt = (
+            f"Edit <Picture 1> only where the corresponding pixels in "
+            f"<Picture {len(references)}> are white. Keep the rest of <Picture 1> unchanged. "
+            f"Do not render the mask. {prompt}"
+        )
+    elif source is not None:
+        prompt = f"Edit <Picture 1>. {prompt}"
+
+    if len(references) > 100:
+        raise ValueError(
+            _("MiniMax H3 Image accepts up to 100 input pictures, including the selection guide.")
+        )
+    extent = images.extent.initial
+    positive, latent = w.add(
+        "MiniMaxH3ImageConditioning",
+        2,
+        clip=clip.model,
+        vae=vae,
+        prompt=w.translate(prompt) if cond.language and cond.positive else prompt,
+        width=extent.width,
+        height=extent.height,
+        **{f"images.image_{n}": image for n, image in enumerate(references, 1)},
+    )
+    latent = w.ksampler(
+        model,
+        ConditioningOutput(positive, positive),
+        latent,
+        sampler="euler",
+        scheduler="simple",
+        steps=steps,
+        cfg=1.0,
+        seed=sampling.seed,
+    )
+    result = w.vae_decode(vae, latent)
+    result = w.nsfw_filter(result, sensitivity=i.nsfw_filter)
+    if extent != images.extent.target:
+        result = w.scale_image(result, images.extent.target)
+    if mask is not None:
+        bounds = ensure(i.inpaint).target_bounds
+        if bounds != Bounds(0, 0, *images.extent.target):
+            result = w.crop_image(result, bounds)
+            mask = w.crop_mask(mask, bounds)
+        result = w.apply_mask(result, mask)
+    w.send_image(result)
+    return w
+
+
 def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.server) -> ComfyWorkflow:
     """
     Takes a WorkflowInput object and creates the corresponding ComfyUI workflow prompt.
@@ -2083,6 +2197,12 @@ def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.serve
     workflow = ComfyWorkflow(models.node_inputs, comfy_mode)
     layer_count = i.images.layer_count if i.images else 1
     misc = MiscParams(i.batch_count, layer_count, i.color_match, i.nsfw_filter)
+
+    if i.models and i.models.version is Arch.minimax_h3_image:
+        if i.kind in _h3_image_kinds:
+            return minimax_h3_image(workflow, i, models)
+        if i.kind is WorkflowKind.upscale_tiled:
+            raise ValueError(_("MiniMax H3 Image does not support tiled diffusion upscale."))
 
     if i.kind is WorkflowKind.generate:
         return generate(

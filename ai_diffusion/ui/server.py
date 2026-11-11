@@ -72,11 +72,13 @@ class PackageGroupWidget(QWidget):
         is_expanded=True,
         is_checkable=False,
         parent=None,
+        package_labels: dict[str, str] | None = None,
     ):
         super().__init__(parent)
         self._workloads: list[Arch] = []
         self._backend = settings.server_backend
         self._is_checkable = False
+        self._package_labels = package_labels or {}
 
         self._layout = QGridLayout()
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -132,10 +134,15 @@ class PackageGroupWidget(QWidget):
         item = PackageItem(
             package=package,
             state=PackageState.available,
-            label=QLabel(self._package_name(package), self),
+            label=QLabel(
+                self._package_labels.get(self._package_id(package), self._package_name(package)),
+                self,
+            ),
             status=QCheckBox(_("Install"), self) if self.is_checkable else QLabel(self),
         )
         item.label.setContentsMargins(20, 0, 0, 0)
+        if self._package_labels:
+            item.label.setWordWrap(True)
         if self.is_checkable:
             item.status.setChecked(False)
             item.status.toggled.connect(self._handle_checkbox_toggle)
@@ -394,6 +401,54 @@ class CustomPackageTab(QWidget):
                 is_expanded=False,
                 parent=self,
             ),
+            "minimax_h3_image": PackageGroupWidget(
+                _("MiniMax H3 Image models"),
+                [m for m in optional_models if m.arch is Arch.minimax_h3_image],
+                description="<br><br>".join((
+                    _(
+                        "Start here: choose one image model, one prompt reader and the required image decoder. If a prompt reader is already installed and works, keep it."
+                    ),
+                    _(
+                        "Everyday work: start with INT8 and the Standard style. Short on memory? Try W4A8 with the compact NVFP4 prompt reader if your server supports them. If H3 still runs out of memory, lower the render resolution or use a lighter model family."
+                    ),
+                    _(
+                        "Quick drafts: try the experimental pDMD style if the larger model fits. Two steps can help, but loading the larger weights can cancel the speed gain."
+                    ),
+                    _(
+                        "GB labels show download sizes. Video memory use depends on resolution, server and hardware. A recent ComfyUI with MiniMaxH3ImageConditioning is required."
+                    ),
+                )),
+                package_labels={
+                    "checkpoint-int8-minimax_h3_image": _(
+                        "Image model: everyday choice (INT8) · 21 GB"
+                    ),
+                    "checkpoint-w4a8-minimax_h3_image": _(
+                        "Image model: smallest option (W4A8) · 12.5 GB"
+                    ),
+                    "checkpoint-bf16-minimax_h3_image": _(
+                        "Image model: higher precision (BF16) · 40.2 GB"
+                    ),
+                    "checkpoint-pdmd-minimax_h3_image": _(
+                        "Image model: 2-step drafts (experimental) · 40.2 GB"
+                    ),
+                    "text_encoder-h3_qwen3vl-minimax_h3_image": _(
+                        "Prompt reader: official, compact (NVFP4) · 15.7 GB"
+                    ),
+                    "text_encoder-official_int8-minimax_h3_image": _(
+                        "Prompt reader: official (INT8) · 27.1 GB"
+                    ),
+                    "text_encoder-heretic_int8-minimax_h3_image": _(
+                        "Prompt reader: Heretic community option (INT8)"
+                    ),
+                    "text_encoder-heretic-minimax_h3_image": _(
+                        "Prompt reader: Heretic community option (NVFP4)"
+                    ),
+                    "vae-default-minimax_h3_image": _("Image decoder: required (VAE) · 1.2 GB"),
+                },
+                is_checkable=True,
+                is_expanded=False,
+                parent=self,
+            ),
             "krea2": PackageGroupWidget(
                 _("Krea 2 models"),
                 [m for m in optional_models if m.arch is Arch.krea2],
@@ -403,7 +458,7 @@ class CustomPackageTab(QWidget):
             ),
         }
 
-        for group in ["upscalers", "sd15", "sdxl", "illu", "flux", "flux2", "zimage", "krea2"]:
+        for group in self._packages:
             self._packages[group].changed.connect(self._change_models)
             layout.addWidget(self._packages[group])
 

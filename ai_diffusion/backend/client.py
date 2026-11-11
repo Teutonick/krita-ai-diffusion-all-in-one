@@ -363,6 +363,8 @@ class ModelDict:
     def has_te_vae(self):
         if self._models.find(ResourceId(ResourceKind.vae, self.arch, "default")) is None:
             return False
+        if self.arch is Arch.minimax_h3_image and self.text_encoder.find("h3_heretic"):
+            return True
         for te in self.arch.text_encoders:
             if self._models.find(ResourceId(ResourceKind.text_encoder, self.arch, te)) is None:
                 return False

@@ -312,7 +312,7 @@ class DocumentModel(QObject, ObservableProperties):
         arch = self.arch
         workflow_kind = WorkflowKind.generate
         strength = self.strength
-        if arch is Arch.qwen_l:
+        if arch in (Arch.qwen_l, Arch.minimax_h3_image):
             strength = 1.0
         if strength < 1.0 or self.is_editing:
             workflow_kind = WorkflowKind.refine
@@ -347,7 +347,9 @@ class DocumentModel(QObject, ObservableProperties):
         seed = self.seed if (self.fixed_seed or self.seed_increment) else workflow.generate_seed()
         ref_layers: dict[str, int] | None = None
         if not dryrun:
-            conditioning, ref_layers = self._add_reference_layers(conditioning)
+            conditioning, ref_layers = self._add_reference_layers(
+                conditioning, use_source=arch is Arch.minimax_h3_image and mask is not None
+            )
 
         original_conditioning = conditioning
         inpaint_instruction = inpaint_mode if strength == 1.0 else None
@@ -607,7 +609,8 @@ class DocumentModel(QObject, ObservableProperties):
         eventloop.run(_report_errors(self, self._generate_live(input, job_params)))
 
     def _prepare_live_workflow(self):
-        strength = self.live.strength
+        is_h3_image = self.arch is Arch.minimax_h3_image
+        strength = 1.0 if is_h3_image else self.live.strength
         workflow_kind = WorkflowKind.generate
         if strength < 1.0 or self.is_editing:
             workflow_kind = WorkflowKind.refine
@@ -636,12 +639,19 @@ class DocumentModel(QObject, ObservableProperties):
         if mask is not None:
             workflow_kind = WorkflowKind.refine_region
             bounds, mask.bounds = compute_relative_bounds(mask.bounds, mask.bounds)
+            if is_h3_image:
+                inpaint.target_bounds = mask.bounds
         if mask is not None or workflow_kind is WorkflowKind.refine:
-            image = self._get_current_image(bounds, exclude_internal=False)
+            if is_h3_image and self.is_editing:
+                image = self._get_edit_image(bounds)
+            else:
+                image = self._get_current_image(bounds, exclude_internal=False)
 
         conditioning, job_regions = process_regions(regions, bounds)
         conditioning.language = self.prompt_translation_language
-        conditioning, ref_layers = self._add_reference_layers(conditioning)
+        conditioning, ref_layers = self._add_reference_layers(
+            conditioning, use_source=is_h3_image and mask is not None
+        )
         conditioning, loras, _ = workflow.prepare_prompts(
             conditioning, self.style, self.seed, self.arch, None, ref_layers, is_live=True
         )
@@ -656,7 +666,7 @@ class DocumentModel(QObject, ObservableProperties):
             FileLibrary.instance(),
             self._performance_settings(client),
             mask=mask,
-            strength=self.live.strength,
+            strength=strength,
             loras=loras,
             inpaint=inpaint if mask else None,
             is_live=True,
@@ -1482,7 +1492,7 @@ class DocumentModel(QObject, ObservableProperties):
             return InpaintMode.fill
         return self.inpaint.mode
 
-    def _add_reference_layers(self, cond: ConditioningInput):
+    def _add_reference_layers(self, cond: ConditioningInput, use_source=False):
         def add_refs(control: list[ControlInput], layer_names: dict[str, int]):
             layers_sorted = sorted(layer_names.items(), key=lambda x: x[1])
             for layer_name, __ in layers_sorted:
@@ -1492,7 +1502,7 @@ class DocumentModel(QObject, ObservableProperties):
                 ctrl = ControlLayer(self, ControlMode.reference, uid, 0)
                 control.append(ctrl.to_api())
 
-        cond.edit_reference = self.is_editing
+        cond.edit_reference = self.is_editing or use_source
         layers = extract_layers(cond)
         add_refs(cond.control, layers)
 
@@ -2199,6 +2209,8 @@ def _dlss5_name_prefix(metadata: dict[str, Any]):
 def get_selection_modifiers(
     arch: Arch | InpaintContext, inpaint_mode: InpaintMode, strength: float, min_size=256
 ):
+    if arch is Arch.minimax_h3_image:
+        return SelectionModifiers(pad_rel=settings.selection_padding / 100, size_min_px=min_size)
     if arch is InpaintContext.mask_bounds:  # use exact bounds, no padding
         return SelectionModifiers(multiple=1)
 

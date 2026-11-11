@@ -118,6 +118,11 @@ class EditControls(QWidget):
                 if model.arch is Arch.krea2
                 else _("The source is image 1; @references add other images.")
             )
+            if model.arch is Arch.minimax_h3_image:
+                reference_hint = _(
+                    "Select an area in Krita to apply the edit only there. "
+                    "Without a selection, the edit applies to the whole image."
+                )
             self.task.setToolTip(
                 _("Edit preset:")
                 + " "

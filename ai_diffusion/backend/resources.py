@@ -10,10 +10,10 @@ from typing import Any, NamedTuple
 
 # Version identifier for all the resources defined here. This is used as the server version.
 # It usually follows the plugin version, but not all new plugin versions also require a server update.
-version = "1.53.0-reloaded.8"
+version = "1.53.0-all-in-one.13"
 
 comfy_url = "https://github.com/comfyanonymous/ComfyUI"
-comfy_version = "4da9e2dbead52fc1e68beae33fe3d7ad63b63241"
+comfy_version = "989d93d0d968e704c589ce0146bb18c77f6b50cc"
 
 
 class CustomNode(NamedTuple):
@@ -111,6 +111,7 @@ class Arch(Enum):
     ernie = "ERNIE Image"
     krea2 = "Krea 2"
     moss = "MOSS-Image"
+    minimax_h3_image = "MiniMax H3 Image"
 
     auto = "Automatic"
     all = "All"
@@ -157,12 +158,19 @@ class Arch(Enum):
             string == "unknown" and "krea2" in filename
         ):
             return Arch.krea2
+        if string in {"minimax_h3_image", "minimax-h3-image"} or (
+            string in {"unknown", "minimax", "minimax_h3", "minimax-h3"}
+            and "minimax_h3_image" in filename.lower().replace("-", "_")
+        ):
+            return Arch.minimax_h3_image
         if string == "moss_image" or (string == "unknown" and "moss_image" in filename):
             return Arch.moss
         return None
 
     @staticmethod
     def from_checkpoint_name(checkpoint: str):
+        if Arch.from_string("unknown", filename=checkpoint) is Arch.minimax_h3_image:
+            return Arch.minimax_h3_image
         if Arch.sdxl.matches(checkpoint):
             return Arch.sdxl
         return Arch.sd15
@@ -189,7 +197,7 @@ class Arch(Enum):
 
     def resolve(self, checkpoint: str):
         if self is Arch.auto:
-            return Arch.sdxl if Arch.sdxl.matches(checkpoint) else Arch.sd15
+            return Arch.from_checkpoint_name(checkpoint)
         return self
 
     @property
@@ -214,7 +222,7 @@ class Arch(Enum):
 
     @property
     def supports_cfg(self):
-        return self not in [Arch.flux, Arch.flux_k]
+        return self not in (Arch.flux, Arch.flux_k, Arch.minimax_h3_image)
 
     @property
     def is_edit(self):  # edit models make changes to input images
@@ -222,7 +230,7 @@ class Arch(Enum):
 
     @property
     def supports_edit(self):  # includes text-to-image models that can also edit
-        return self.is_edit or self.is_flux2 or self is Arch.krea2
+        return self.is_edit or self.is_flux2 or self in (Arch.krea2, Arch.minimax_h3_image)
 
     @property
     def is_sdxl_like(self):
@@ -268,6 +276,8 @@ class Arch(Enum):
                 return ["ministral"]
             case Arch.krea2:
                 return ["qwen_3vl_4b"]
+            case Arch.minimax_h3_image:
+                return ["h3_qwen3vl"]
             case Arch.moss:
                 return ["qwen_3.5_9b"]
             case _:
@@ -295,6 +305,7 @@ class Arch(Enum):
             Arch.ernie,
             Arch.krea2,
             Arch.moss,
+            Arch.minimax_h3_image,
         ]
 
 
@@ -751,6 +762,18 @@ def is_required(kind: ResourceKind, arch: Arch, identifier: ControlMode | Upscal
 
 # fmt: off
 search_paths: dict[str, list[str]] = {
+    resource_id(ResourceKind.text_encoder, Arch.all, "h3_qwen3vl"): [
+        "qwen3vl_32b_minimax_h3_int8_convrot",
+        "qwen3vl_32b_minimax_h3_nvfp4_awq",
+    ],
+    resource_id(ResourceKind.text_encoder, Arch.all, "h3_heretic"): [
+        "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot",
+        "qwen3vl_32b_minimax_h3_ultra_uncensored_heretic_int8_convrot",
+        "qwen3vl_32b_heretic_minimax_h3_nvfp4",
+    ],
+    resource_id(ResourceKind.vae, Arch.minimax_h3_image, "default"): [
+        "minimax_h3_image_vae_fp16",
+    ],
     resource_id(ResourceKind.controlnet, Arch.sd15, ControlMode.inpaint): ["control_v11p_sd15_inpaint"],
     resource_id(ResourceKind.controlnet, Arch.flux, ControlMode.inpaint): ["flux.1-dev-controlnet-inpaint"],
     resource_id(ResourceKind.controlnet, Arch.illu, ControlMode.inpaint): ["noobaiinpainting"],
@@ -903,6 +926,8 @@ required_resource_ids = {
     ResourceId(ResourceKind.vae, Arch.krea2, "default"),
     ResourceId(ResourceKind.text_encoder, Arch.moss, "qwen_3.5_9b"),
     ResourceId(ResourceKind.vae, Arch.moss, "default"),
+    ResourceId(ResourceKind.text_encoder, Arch.minimax_h3_image, "h3_qwen3vl"),
+    ResourceId(ResourceKind.vae, Arch.minimax_h3_image, "default"),
 }
 
 recommended_resource_ids = [

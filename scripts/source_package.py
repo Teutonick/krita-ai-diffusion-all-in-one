@@ -30,6 +30,8 @@ source_folders = {"ai_diffusion", "scripts", "tests", "custom_workflows", "brand
 def allowed(path: Path):
     if len(path.parts) == 1:
         return path.name in root_files
+    if path.as_posix() == "docs/MINIMAX-H3-IMAGE.md":
+        return True
     if path.parts[0] not in source_folders:
         return False
     if any(part.startswith(".") or part in ("__pycache__", "debugpy") for part in path.parts):

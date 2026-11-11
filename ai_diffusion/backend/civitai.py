@@ -39,6 +39,7 @@ civitai_base_models = {
     "ernie": ["Ernie"],
     "krea2": ["Krea 2"],
     "moss": [],
+    "minimax_h3_image": ["MiniMax H3"],
 }
 
 # CivitAI model types which can hold a LoRA-style file. LoCon/DoRA load through the

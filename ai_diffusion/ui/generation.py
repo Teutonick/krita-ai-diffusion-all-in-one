@@ -1870,7 +1870,7 @@ class GenerationWidget(QWidget):
             return
 
         arch = self.model.arch
-        self.strength_slider.setVisible(arch is not Arch.qwen_l)
+        self.strength_slider.setVisible(arch not in (Arch.qwen_l, Arch.minimax_h3_image))
         self.layer_count_widget.setVisible(arch is Arch.qwen_l)
 
         regions = self.model.active_regions

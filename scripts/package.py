@@ -113,6 +113,9 @@ def build_package():
             copy(root / name, plugin_dst)
         copy(build_dir / "SOURCE-MANIFEST.json", plugin_dst)
         convert_markdown_to_html(root / "README.md", plugin_dst / "manual.html")
+        guide = plugin_dst / "docs" / "MINIMAX-H3-IMAGE.md"
+        guide.parent.mkdir(exist_ok=True)
+        copy(root / "docs" / guide.name, guide)
         make_archive(str(build_dir / package_name), "zip", package_dir)
     write_checksums(build_dir, version, [build_dir / f"{package_name}.zip", source_archive])
     print(f"Build artifacts: {build_dir.relative_to(root)}")

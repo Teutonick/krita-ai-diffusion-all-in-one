@@ -1,6 +1,6 @@
 # Build validation
 
-Current plugin: `1.53.0-all-in-one.9`. Managed-server dependency version remains `1.53.0-reloaded.8` because this release does not change server requirements. The validation results below refer to the previous build unless stated otherwise.
+Current plugin: `1.53.0-all-in-one.16`. Managed Server now pins ComfyUI v0.45.0. GPU inference on this revision has not been verified. The validation results below refer to the previous build unless stated otherwise.
 
 This unofficial combined fork includes Acly 1.53.0, FatGuy84's Reloaded improvements and Krea 2 Edit integration. Attribution, source revisions and license terms are documented in THIRD-PARTY-NOTICES.md and the source manifest embedded in each release archive.
 
