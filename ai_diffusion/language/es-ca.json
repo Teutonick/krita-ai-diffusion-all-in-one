@@ -1190,6 +1190,26 @@
     "This ComfyUI server cannot run MiniMax H3 Image. Connect to a newer ComfyUI with MiniMaxH3ImageConditioning. There is no separate Workload checkbox.": null,
     "The connected ComfyUI server is also missing: {resources}": null,
     "MiniMax H3 (video LoRAs, experimental for Image)": null,
-    "Video LoRAs are experimental on H3 Image. Start with a style or character LoRA; avoid motion and video turbo LoRAs.": null
+    "Video LoRAs are experimental on H3 Image. Start with a style or character LoRA; avoid motion and video turbo LoRAs.": null,
+    "Krea 2 Pose Studio requires full-frame generation or editing. Clear the selection or turn off Pose Studio.": null,
+    "Install the Krea 2 Edit nodes to use Pose Studio with Krea 2.": null,
+    "Pose Studio…": null,
+    "Use pose": null,
+    "Krea 2 Pose Studio uses one of two image inputs. Remove an extra reference or turn off Pose Studio.": null,
+    "Krea 2 Pose Studio requires a full-frame job.": null,
+    "Install Krea 2 Identity Edit V2 to use Pose Studio.": null,
+    "Update Krea 2 Edit nodes to use Pose Studio.": null,
+    "Edit the mannequin in VNCCS, then choose Use Pose in Krita to apply the render.": null,
+    "VNCCS Pose Studio": null,
+    "Could not read the VNCCS pose render. Open the editor and try again.": null,
+    "Open in Browser": null,
+    "VNCCS asset checksum mismatch: {name}": null,
+    "Install VNCCS Pose Studio from Managed Server → Additional components.": null,
+    "2nd pass": null,
+    "Krea 2 Pose Studio requires exactly one character reference.": null,
+    "Krea 2 Pose Studio requires a character reference. Add one reference layer or use Edit image.": null,
+    "Installs the original VNCCS editor and mannequin (about 53 MB), plus Impact Pack ": null,
+    "Use the original 1.5× upscale pass from the VNCCS Pose Studio package.": null,
+    "Install the complete VNCCS Pose Studio package to use the Krea 2 second pass.": null
   }
 }

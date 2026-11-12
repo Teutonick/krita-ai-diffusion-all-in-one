@@ -1,5 +1,25 @@
-# 1.53.0-all-in-one.16 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.29 — krita-ai-diffusion-all-in-one
 
+- Krea 2 Pose Studio keeps the mannequin aligned and places the character reference beside the canvas, improving pose transfer in the tested case.
+- README highlights Pose Editor and the third-party notices document the editor, rig, server nodes and their separate license terms.
+
+- MiniMax H3 Pose Studio separates character identity from pose and camera guidance, blurs the pose render as in the reference workflow, and uses the native zero-based image slots.
+- Krea 2 Pose Studio passes the original character reference to the edit nodes and preserves the internal image-role instructions when translating the user prompt.
+- Pose Library saves reusable poses and previews locally across editor sessions.
+
+- Krea 2 Pose Studio supplies image roles and screen-side pose instructions automatically.
+
+- Pose Studio attempts to close its browser tab after successfully sending the pose to Krita.
+
+- A single optional VNCCS Pose Studio checkbox installs the editor, Impact Pack and RES4LYF together.
+- Pose Studio releases its WebGL editor and workers after applying or cancelling, and opens at most one external browser tab per session.
+- Krea 2 Pose Studio follows the FoxFurEssence reference-based workflow, without a generated appearance draft. The original upscale pass is available via two optional server components.
+- VNCCS Pose Studio assets are now an optional download under Managed Server > Additional components. Saved renders remain usable without the editor download.
+- Pose Studio now uses the original VNCCS editor and MakeHuman rig, with individual fingers, camera controls and import of VNCCS pose data from ComfyUI workflows.
+- Krea 2 Pose Studio generates a separate appearance draft when no character reference is provided. With either kind of reference, the pose is aligned to the target and the character reference is placed beside it to reduce competition from the original pose.
+- Pose Studio controls now share the Strength row. Generation and Edit workflows are unchanged when the pose is off or no scene has been saved.
+- Krea 2 Pose Studio now starts from a fresh latent and uses Identity Edit V2, with the pose in image A and the optional character reference in image B. The mannequin has a shaded human silhouette and a black background.
+- Added optional Pose Studio for Krea 2 and MiniMax H3 Image. Pose the mannequin and frame the shot in Krita, then generate with or without a separate character reference.
 - Consecutive runs with the same prompt and settings now share a history row even when they take different amounts of time.
 - Added a MiniMax H3 filter in the LoRA browser. Video LoRAs are experimental on H3 Image.
 - Fixed JSON submission of MiniMax H3 Image jobs and a false checkpoint warning for supported H3 styles.
@@ -28,8 +48,8 @@ endorsed by their authors.
 
 ## Build artifacts
 
-The local build provides `krita_ai_diffusion-1.53.0-all-in-one.16.zip`, the corresponding
-source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.16/`. Published releases,
+The local build provides `krita_ai_diffusion-1.53.0-all-in-one.29.zip`, the corresponding
+source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.29/`. Published releases,
 when available, are listed on the [project releases page](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases).
 
 Import the plugin ZIP through **Tools → Scripts → Import Python Plugin from File**,

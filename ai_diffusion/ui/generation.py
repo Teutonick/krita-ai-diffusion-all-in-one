@@ -64,8 +64,10 @@ from ..style import Styles
 from ..text import create_mode_label
 from ..util import client_logger as log
 from ..util import ensure, flatten, sequence_equal
+from ..vnccs_pose import vnccs_assets_installed
 from . import actions, theme
 from .editing import EditControls
+from .pose_studio import VnccsPoseStudioDialog
 from .region import RegionPromptWidget
 from .widget import (
     ErrorBox,
@@ -1379,6 +1381,22 @@ class GenerationWidget(QWidget):
         self.region_prompt = RegionPromptWidget(self)
         layout.addWidget(self.region_prompt)
 
+        self.pose_studio_controls = QWidget(self)
+        pose_layout = QHBoxLayout(self.pose_studio_controls)
+        pose_layout.setContentsMargins(0, 0, 0, 0)
+        self.pose_studio_button = QPushButton(_("Pose Studio…"), self.pose_studio_controls)
+        self.pose_studio_button.clicked.connect(self._open_pose_studio)
+        self.pose_studio_toggle = QCheckBox(_("Use pose"), self.pose_studio_controls)
+        self.pose_studio_toggle.toggled.connect(self._toggle_pose_studio)
+        self.pose_studio_upscale = QCheckBox(_("2nd pass"), self.pose_studio_controls)
+        self.pose_studio_upscale.setToolTip(
+            _("Use the original 1.5× upscale pass from the VNCCS Pose Studio package.")
+        )
+        self.pose_studio_upscale.toggled.connect(self._toggle_pose_upscale)
+        pose_layout.addWidget(self.pose_studio_button)
+        pose_layout.addWidget(self.pose_studio_toggle)
+        pose_layout.addWidget(self.pose_studio_upscale)
+
         self.strength_slider = StrengthWidget(parent=self)
         self.layer_count_widget = LayerCountWidget(self)
         self.layer_count_widget.setVisible(False)
@@ -1387,7 +1405,8 @@ class GenerationWidget(QWidget):
             "control-add", _("Add Control Layer"), self
         )
         strength_layout = QHBoxLayout()
-        strength_layout.addWidget(self.strength_slider)
+        strength_layout.addWidget(self.pose_studio_controls)
+        strength_layout.addWidget(self.strength_slider, 1)
         self.sweep_button = QToolButton(self)
         self.sweep_button.setText("⇅")
         self.sweep_button.setToolTip(
@@ -1629,6 +1648,9 @@ class GenerationWidget(QWidget):
                 model.regions.active_changed.connect(self.update_generate_options),
                 model.region_only_changed.connect(self.update_generate_options),
                 model.style_changed.connect(self.update_generate_options),
+                model.pose_studio_state_changed.connect(self._update_pose_studio),
+                model.pose_studio_enabled_changed.connect(self._update_pose_studio),
+                model.pose_studio_upscale_changed.connect(self._update_pose_studio),
                 model.edit_mode_changed.connect(self.update_generate_options),
                 self.add_control_button.clicked.connect(self.add_control),
                 self.add_region_button.clicked.connect(self.add_region),
@@ -1865,12 +1887,60 @@ class GenerationWidget(QWidget):
     def add_control(self):
         self.model.active_regions.add_control()
 
+    def _open_pose_studio(self):
+        model = self.model
+        if not vnccs_assets_installed():
+            model.report_error(
+                _("Install VNCCS Pose Studio from Managed Server → Additional components.")
+            )
+            return
+        extent = model.document.extent
+        try:
+            dialog = VnccsPoseStudioDialog(model.pose_studio_state, extent, self)
+        except (OSError, ValueError) as error:
+            model.report_error(str(error))
+            return
+        if dialog.exec_():
+            model.pose_studio_state = dialog.state
+            model.pose_studio_enabled = True
+            self._update_pose_studio()
+        dialog.deleteLater()
+
+    def _toggle_pose_studio(self, checked: bool):
+        self.model.pose_studio_enabled = checked
+        self._update_pose_studio()
+
+    def _toggle_pose_upscale(self, checked: bool):
+        self.model.pose_studio_upscale = checked
+
+    def _update_pose_studio(self):
+        model = self.model
+        self.pose_studio_controls.setVisible(model.has_document and model.pose_studio_available)
+        self.pose_studio_toggle.setEnabled(bool(model.pose_studio_state))
+        self.pose_studio_upscale.setVisible(False)
+        if model.has_document:
+            arch = model.arch
+            krea_pose = arch is Arch.krea2 and model.pose_studio_enabled and model.pose_studio_state
+            self.strength_slider.setVisible(
+                arch not in (Arch.qwen_l, Arch.minimax_h3_image) and not krea_pose
+            )
+            self.sweep_button.setVisible(not krea_pose)
+            self.pose_studio_upscale.setVisible(bool(krea_pose))
+        blocked = self.pose_studio_upscale.blockSignals(True)
+        self.pose_studio_upscale.setChecked(model.pose_studio_upscale)
+        self.pose_studio_upscale.blockSignals(blocked)
+        blocked = self.pose_studio_toggle.blockSignals(True)
+        self.pose_studio_toggle.setChecked(
+            bool(model.pose_studio_state) and model.pose_studio_enabled
+        )
+        self.pose_studio_toggle.blockSignals(blocked)
+
     def update_generate_options(self):
+        self._update_pose_studio()
         if not self.model.has_document:
             return
 
         arch = self.model.arch
-        self.strength_slider.setVisible(arch not in (Arch.qwen_l, Arch.minimax_h3_image))
         self.layer_count_widget.setVisible(arch is Arch.qwen_l)
 
         regions = self.model.active_regions

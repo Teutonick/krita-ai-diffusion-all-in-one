@@ -17,6 +17,9 @@ changes in settings, and a policy for temporary media storage.
 
 ## Highlights
 
+- **Pose Editor** — pose a 3D mannequin inside Krita, save reusable poses, and use
+  them as guides for Krea 2 or MiniMax H3 Image. See [Pose Studio](#guide-the-pose-and-camera).
+
 - **Krea 2, ready to create and edit** — generate with Krea 2 Turbo or transform images
   with Identity Edit V2 and General Edit V2, using up to two input images. See the
   [model terms](#krea-2-edit-v2-read-the-model-terms) before use.
@@ -66,7 +69,7 @@ See the [security update report](SECURITY-UPDATE.md) for fixes and validation li
 
 ## Install once, choose your components
 
-1. Download `krita_ai_diffusion-1.53.0-all-in-one.16.zip` from this fork’s release assets when published, or use the locally built archive.
+1. Download `krita_ai_diffusion-1.53.0-all-in-one.27.zip` from this fork’s release assets when published, or use the locally built archive.
 2. In Krita, choose **Tools → Scripts → Import Python Plugin from File**.
 3. Restart Krita and enable the plugin if prompted.
 4. Open the plugin settings, choose **Managed Server**, and select your workloads.
@@ -114,6 +117,45 @@ selecting an Edit preset activates Edit mode. Results remain in history until ap
 
 The style browser has an **All tasks / Generate / Edit** filter, wrapped full names,
 operation labels and tooltips with checkpoint/LoRA details.
+
+## Guide the pose and camera
+
+In the **Generation** workspace, select a MiniMax H3 Image or Krea 2 style and open
+**Pose Studio…**. To install the editor, tick **VNCCS Pose Studio** under
+**Managed Server → Additional components** and apply the installation (about 53 MB
+for the editor, plus the second-pass nodes and their dependencies).
+This opens the original VNCCS editor with its MakeHuman rig,
+hand controls and camera. **Import Pose or Workflow…** loads pose data from a
+VNCCS JSON or ComfyUI workflow. **Use Pose in Krita** saves the editable VNCCS
+scene and its clean camera render with the document. Clear
+**Use pose** to generate without the guide and keep the saved scene for later.
+**Pose Library → Save Current Pose** keeps reusable poses and previews on this
+computer across editor sessions. Public VNCCS repositories are not connected in
+Krita; use **Import Pose or Workflow…** for downloaded VNCCS JSON files.
+
+For a new character, write a regular prompt. To reuse an existing character, add its
+layer as a named reference and write, for example, `Put @character on a rooftop.
+Preserve their face, outfit, and body proportions.` The plugin sends the mannequin
+render separately and adds an instruction to use it for pose, camera angle, and framing.
+In Edit mode the source layer already serves as the character reference.
+
+Krea 2 Pose Studio follows the FoxFurEssence workflow and needs the Krea 2 Edit nodes,
+Identity Edit V2 LoRA, and one character reference. Use a named reference layer in
+Generate or select the source in Edit image. The pose render sets the first pass
+dimensions. The model starts from noise with the pose on image A and the character
+on image B, with boosts of 1.0 and 4.0 respectively. The pose stays aligned to
+the canvas and the character reference is placed beside it, so the character's
+original pose does not anchor the output layout. There is no text-only draft.
+Enable **2nd pass** to also run the original 1.5× upscale and refinement. The
+**VNCCS Pose Studio** checkbox in **Additional components** installs the editor
+and both second-pass dependencies, Impact Pack and RES4LYF, together. See the
+[Pose Studio component notices](THIRD-PARTY-NOTICES.md#pose-studio-components),
+including the separate RES4LYF commercial service terms.
+Krea 2 Pose Studio is available for full-frame jobs.
+The editor opens in Krita when Qt WebEngine is available, or in your browser on
+the same computer. Manual posing and workflow import do not need VNCCS or
+Pixaroma installed on the server. SAM 3D Body image analysis and remote pose
+repositories are not part of this standalone editor.
 
 ## Krea 2 Edit V2: read the model terms
 
@@ -164,8 +206,8 @@ document autosave and backup settings continue to apply.
 
 Each release includes both:
 
-- **Installable plugin:** `krita_ai_diffusion-1.53.0-all-in-one.16.zip`
-- **Corresponding source:** `krita_ai_diffusion-1.53.0-all-in-one.16-source.zip`
+- **Installable plugin:** `krita_ai_diffusion-1.53.0-all-in-one.27.zip`
+- **Corresponding source:** `krita_ai_diffusion-1.53.0-all-in-one.27-source.zip`
 
 The source snapshot includes the modified code, bundled dependency sources, license
 notices and build scripts. `SOURCE-MANIFEST.json` records SHA-256 hashes of the snapshot's

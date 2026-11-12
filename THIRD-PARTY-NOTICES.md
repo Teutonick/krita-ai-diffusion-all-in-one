@@ -14,6 +14,7 @@ warranty notices remain applicable. No endorsement by the upstream authors is im
 | FatGuy84 and the Krita AI Reloaded contributors | Visual browsers, prompt/batch tools, history/export changes, Krea custom workflows and other Reloaded additions | GPLv3; [08082efef6f2d4a90a80c32a90895a8c0e3f913d](https://github.com/FatGuy84/krita-ai-reloaded/tree/08082efef6f2d4a90a80c32a90895a8c0e3f913d) |
 | Teutonick | Combined integration, installation changes, media retention policy and subsequent fixes | GPLv3; exact modified sources accompany each release |
 | Aymeric Augustin and the websockets contributors | Bundled WebSocket library | BSD 3-Clause; its original LICENSE is retained in ai_diffusion/websockets/LICENSE; source revision 624a36cc9c1ea1369971387d7bb23533b2797350 |
+| AHEKOT / MiuProject and contributors | Optional VNCCS Pose Studio frontend and rig runtime | MIT; [8e0fe0bd8470ba1c10273a4d37806b5902aa0b39](https://github.com/AHEKOT/ComfyUI_VNCCS_Utils/tree/8e0fe0bd8470ba1c10273a4d37806b5902aa0b39). MakeHuman asset notices are downloaded alongside the rig. |
 
 ## Independently downloaded components
 
@@ -31,6 +32,25 @@ These components are not relicensed by the plugin and retain their own notices:
 - **ComfyUI, other node packs, runtimes and model weights** — downloaded components
   retain their respective licenses and requirements. Their inclusion in setup is not
   a statement that every component or model is licensed under GPLv3.
+
+## Pose Studio components
+
+The plugin ZIP includes the GPLv3 Krita integration and its local editor bridge.
+It ships the VNCCS and Three.js license notices, but downloads the editor runtime
+and assets separately. It does not contain the FoxFurEssence workflow or require
+the original workflow's prompt, splitter, or Pixaroma nodes.
+
+| Component | License and use |
+| --- | --- |
+| [VNCCS Pose Studio](https://github.com/AHEKOT/ComfyUI_VNCCS_Utils/tree/8e0fe0bd8470ba1c10273a4d37806b5902aa0b39) | MIT. The pinned web editor is downloaded by the optional component installer. |
+| [Three.js and controls](ai_diffusion/vnccs_pose_web/THREE-LICENSE) | MIT. Downloaded with the editor; original notice included. |
+| [MakeHuman rig assets](https://github.com/AHEKOT/ComfyUI_VNCCS_Utils/blob/8e0fe0bd8470ba1c10273a4d37806b5902aa0b39/web/pose_studio/assets/pose_studio_makehuman.v2.LICENSE.md) | CC0 1.0 for the derived mesh, morph targets, rig and weights. The asset attribution and CC0 text are downloaded alongside the rig. |
+| [ComfyUI Krea 2 Edit](https://github.com/lbouaraba/comfyui-krea2edit/blob/13ef60f20828949becada815d3cbc371eb5ccaab/LICENSE) | Apache-2.0. Installed separately on ComfyUI; provides `Krea2EditModelPatch` and `Krea2EditGroundedEncode`. |
+| [ComfyUI Impact Pack](https://github.com/ltdrdata/ComfyUI-Impact-Pack/blob/429d0159ad429e64d2b3916e6e7be9c22d025c3c/LICENSE.txt) | GPLv3. Installed separately; `LatentPixelScale` is used by the optional second pass. |
+| [RES4LYF](https://github.com/ClownsharkBatwing/RES4LYF/blob/119679d8d8d26e6db52757e705488abb6399d7d4/LICENSE) | Its license file contains AGPLv3 text and an additional restriction requiring separate permission or licensing for commercial services. Installed separately; `ClownsharKSampler_Beta` is used by the optional second pass. |
+
+No model weights are included in the plugin ZIP. The base models and LoRAs have
+their own terms, separate from the editor and server node licenses.
 
 ## Krea 2 Edit V2 model documents
 

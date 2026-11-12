@@ -404,6 +404,7 @@
       ],
       "alternatives": [
         "models/diffusion_models/krea2_turbo_bf16.safetensors",
+        "models/diffusion_models/krea2_turbo_int8_convrot.safetensors",
         "models/diffusion_models/krea2_turbo_nvfp4.safetensors"
       ]
     }

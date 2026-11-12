@@ -316,6 +316,7 @@ class ComfyWorkflow:
         start_at_step=0,
         cfg=7.0,
         seed=-1,
+        end_at_step: int | None = None,
     ):
         self.sample_count += steps - start_at_step
 
@@ -331,7 +332,7 @@ class ComfyWorkflow:
             latent_image=latent_image,
             steps=steps,
             start_at_step=start_at_step,
-            end_at_step=steps,
+            end_at_step=steps if end_at_step is None else end_at_step,
             cfg=cfg,
             add_noise="enable",
             return_with_leftover_noise="disable",

@@ -71,6 +71,23 @@ optional_custom_nodes = [
 ]
 
 
+pose_studio_custom_nodes = [
+    CustomNode(
+        "Impact Pack (Pose Studio upscale)",
+        "ComfyUI-Impact-Pack",
+        "https://github.com/ltdrdata/ComfyUI-Impact-Pack",
+        "429d0159ad429e64d2b3916e6e7be9c22d025c3c",
+        ["LatentPixelScale"],
+    ),
+    CustomNode(
+        "RES4LYF (Pose Studio upscale)",
+        "RES4LYF",
+        "https://github.com/ClownsharkBatwing/RES4LYF",
+        "119679d8d8d26e6db52757e705488abb6399d7d4",
+        ["ClownsharKSampler_Beta"],
+    ),
+]
+
 selectable_custom_nodes = [
     CustomNode(
         "Krea 2 Edit",

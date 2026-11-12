@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VNCCS Pose Studio · Krita</title>
+<style>
+body { margin: 0; background: #161622; color: #f0edf5; font: 14px system-ui; height: 100dvh; display: flex; flex-direction: column; }
+header { display: flex; align-items: center; gap: 12px; padding: 10px; }
+button, label { padding: 7px 12px; background: #3d3452; color: white; border: 1px solid #685884; border-radius: 5px; cursor: pointer; }
+button:disabled, label:has(input:disabled) { opacity: .5; cursor: default; }
+#studio { flex: 1; min-height: 0; }
+#status { margin-left: auto; }
+#studio .vnccs-ps-library-menu-btn { display: none; }
+</style>
+<header>
+    <strong>VNCCS Pose Studio · Krita</strong>
+    <label>Import Pose or Workflow… <input id="import" type="file" accept=".json,application/json" hidden disabled></label>
+    <button id="apply" disabled>Use Pose in Krita</button>
+    <output id="status">Loading mannequin…</output>
+</header>
+<main id="studio"></main>
+<script type="module" src="./editor.js"></script>
+</html>

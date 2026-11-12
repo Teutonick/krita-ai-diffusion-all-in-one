@@ -42,6 +42,7 @@ from ..platform_tools import get_cuda_devices, is_macos, is_windows
 from ..settings import Settings, settings
 from ..style import Arch
 from ..util import ensure
+from ..vnccs_pose import vnccs_component
 from .model_licenses import confirm_krea2_terms
 from .theme import SignalBlocker, add_header, green, grey, highlight, red, set_text_clipped, yellow
 
@@ -955,14 +956,22 @@ class ComponentsTab(QWidget):
             "LoRA Browser metadata": _(
                 "Installs ComfyUI-LoRA-Manager and its Python dependencies for previews, tags and metadata."
             ),
+            vnccs_component: _(
+                "Installs the original VNCCS editor and mannequin (about 53 MB), plus Impact Pack "
+                "and RES4LYF for the Krea 2 second pass."
+            ),
         }
-        for pkg in resources.selectable_custom_nodes:
-            box = QCheckBox(pkg.name, self)
-            box.setChecked(pkg.name in settings.server_components)
-            box.setToolTip(descriptions[pkg.name])
-            self._checkboxes[pkg.name] = box
+        for name in (*[pkg.name for pkg in resources.selectable_custom_nodes], vnccs_component):
+            box = QCheckBox(name, self)
+            box.setChecked(
+                srv.pose_studio_selected
+                if name == vnccs_component
+                else name in settings.server_components
+            )
+            box.setToolTip(descriptions[name])
+            self._checkboxes[name] = box
             layout.addWidget(box)
-            desc = QLabel(descriptions[pkg.name], self)
+            desc = QLabel(descriptions[name], self)
             desc.setWordWrap(True)
             layout.addWidget(desc)
             box.toggled.connect(self._save)
@@ -993,8 +1002,13 @@ class ComponentsTab(QWidget):
 
     @property
     def requires_install(self):
-        return self.eagle_setup.isChecked() or any(
-            not self._server.component_installed(pkg) for pkg in self._server.selected_custom_nodes
+        return (
+            self.eagle_setup.isChecked()
+            or self._server.needs_vnccs_assets
+            or any(
+                not self._server.component_installed(pkg)
+                for pkg in self._server.selected_custom_nodes
+            )
         )
 
 

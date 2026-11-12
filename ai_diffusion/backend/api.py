@@ -115,6 +115,8 @@ class ConditioningInput:
     regions: list[RegionInput] = field(default_factory=list)
     language: str = ""
     edit_reference: bool = False  # use input image as conditioning reference
+    pose_guide: Image | None = None
+    pose_upscale: bool = False
 
 
 class InpaintMode(Enum):

@@ -16,6 +16,7 @@ from ai_diffusion.backend.workflow import (
     apply_krea2_edit_patch,
 )
 from ai_diffusion.settings import settings
+from ai_diffusion.vnccs_pose import vnccs_component
 
 from .conftest import qtapp
 
@@ -124,18 +125,42 @@ async def test_only_selected_components_are_installed(tmp_path: Path, monkeypatc
     srv = Server(str(tmp_path))
     srv.comfy_dir = tmp_path / "ComfyUI"
     installed = AsyncMock()
+    assets = AsyncMock()
     monkeypatch.setattr(srv, "_install_custom_node", installed)
     monkeypatch.setattr(srv, "check_install", lambda: None)
+    monkeypatch.setattr(server, "install_vnccs_assets", assets)
+    monkeypatch.setattr(server, "vnccs_assets_installed", lambda: False)
     previous = settings.server_components
     try:
         settings.server_components = []
         await srv.install_components(lambda *_: None)
         installed.assert_not_awaited()
+        assets.assert_not_awaited()
         settings.server_components = ["LoRA Browser metadata"]
         await srv.install_components(lambda *_: None)
         assert installed.await_count == 1
         assert installed.await_args is not None
         assert installed.await_args.args[0].name == "LoRA Browser metadata"
+        assets.assert_not_awaited()
+        settings.server_components = [vnccs_component]
+        await srv.install_components(lambda *_: None)
+        assets.assert_awaited_once()
+        assert [
+            call.args[0] for call in installed.await_args_list[1:]
+        ] == resources.pose_studio_custom_nodes
+
+        assets.reset_mock()
+        installed.reset_mock()
+        monkeypatch.setattr(server, "vnccs_assets_installed", lambda: True)
+        monkeypatch.setattr(srv, "component_installed", lambda pkg: pkg.folder == "RES4LYF")
+        settings.server_components = [resources.pose_studio_custom_nodes[0].name]
+        assert srv.pose_studio_selected
+        await srv.install_components(lambda *_: None)
+        assets.assert_not_awaited()
+        assert installed.await_args is not None
+        assert [
+            call.args[0] for call in installed.await_args_list
+        ] == resources.pose_studio_custom_nodes[:1]
     finally:
         settings.server_components = previous
 

@@ -3,7 +3,8 @@ from __future__ import annotations
 import math
 import random
 from copy import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from pathlib import Path
 from typing import Any, NamedTuple
 
 from ..files import FileFormat, FileLibrary
@@ -120,7 +121,9 @@ def _sampler_params(sampling: SamplingInput, extent: Extent, strength: float | N
     return params
 
 
-def load_checkpoint_with_lora(w: ComfyWorkflow, checkpoint: CheckpointInput, models: ClientModels):
+def load_checkpoint_with_lora(
+    w: ComfyWorkflow, checkpoint: CheckpointInput, models: ClientModels, *, h3_pose=False
+):
     arch = checkpoint.version
     model_info = models.checkpoints.get(checkpoint.checkpoint)
     if model_info is None:
@@ -169,7 +172,8 @@ def load_checkpoint_with_lora(w: ComfyWorkflow, checkpoint: CheckpointInput, mod
             case Arch.krea2:
                 clip = w.load_clip(te["qwen_3vl_4b"], type="krea2")
             case Arch.minimax_h3_image:
-                clip = w.load_clip(te.find("h3_heretic") or te["h3_qwen3vl"], type="minimax")
+                encoder = te.find("h3_qwen3vl") if h3_pose else te.find("h3_heretic")
+                clip = w.load_clip(encoder or te.find("h3_heretic") or te["h3_qwen3vl"], "minimax")
             case Arch.moss:
                 clip = w.load_clip(te["qwen_3.5_9b"], type="moss_image")
             case _:
@@ -1824,7 +1828,7 @@ def build_instructions(cond: ConditioningInput, arch: Arch, inpaint: InpaintMode
         if instructions != "":
             cond.edit_reference = True
 
-    offset = 2 if cond.edit_reference else 1
+    offset = 1 + int(cond.edit_reference) + int(arch is Arch.krea2 and cond.pose_guide is not None)
     for i, control in enumerate(cond.control):
         if instruction := _control_instructions.get(control.mode):
             if arch is Arch.minimax_h3_image:
@@ -1837,12 +1841,31 @@ def build_instructions(cond: ConditioningInput, arch: Arch, inpaint: InpaintMode
     return cond.positive
 
 
-def _reference_names(cond: ConditioningInput):
+def _reference_names(cond: ConditioningInput, offset=0):
     # Same order in which encode_prompt and apply_reference_conditioning pass the images
     # to the model: canvas (when editing) first, then reference controls, then regions.
     controls = cond.control + [c for r in cond.regions for c in r.control]
     names = [c.name for c in controls if c.mode.is_ip_adapter]
-    return reference_name_mapping(names, start_index=2 if cond.edit_reference else 1)
+    return reference_name_mapping(names, start_index=1 + int(cond.edit_reference) + offset)
+
+
+def _add_pose_guide(cond: ConditioningInput, arch: Arch):
+    if cond.pose_guide is None or arch is not Arch.krea2:
+        return
+    controls = cond.control + [c for region in cond.regions for c in region.control]
+    index = 1 + int(cond.edit_reference) + sum(c.mode.is_ip_adapter for c in controls)
+    if index > 2:
+        raise ValueError(
+            _(
+                "Krea 2 Pose Studio uses one of two image inputs. Remove an extra reference or turn off Pose Studio."
+            )
+        )
+    if index == 1:
+        raise ValueError(
+            _(
+                "Krea 2 Pose Studio requires a character reference. Add one reference layer or use Edit image."
+            )
+        )
 
 
 def prepare_prompts(
@@ -1866,6 +1889,9 @@ def prepare_prompts(
     }
     models = style.get_models([])
     ref_layers = ref_layers or {}
+    krea_pose = arch is Arch.krea2 and cond.pose_guide is not None
+    if krea_pose:
+        ref_layers = {name: index + 1 for name, index in ref_layers.items()}
     layer_replace = {
         Arch.flux2_4b: "image {}",
         Arch.flux2_9b: "image {}",
@@ -1880,14 +1906,17 @@ def prepare_prompts(
     if cond.positive != meta["prompt"]:
         meta["prompt_eval"] = cond.positive
     cond.positive, extra_loras = extract_loras(cond.positive, files.loras)
+    if krea_pose:
+        extra_loras = [lora for lora in extra_loras if not _is_krea_edit_lora(lora.name)]
     cond.positive = replace_layers(cond.positive, ref_layers, layer_replace)
     cond.positive += _collect_lora_triggers(models.loras, files)
     if arch.is_flux2 or arch is Arch.krea2:
         cond.positive = build_instructions(cond, arch, inpaint)
     elif arch is Arch.minimax_h3_image:
         cond.positive = build_instructions(cond, arch, None)
-    ref_names = _reference_names(cond)
+    ref_names = _reference_names(cond, int(krea_pose))
     cond.positive = replace_reference_names(cond.positive, ref_names, layer_replace)
+    _add_pose_guide(cond, arch)
     if cond.positive == "" and inpaint is InpaintMode.remove_object:
         cond.positive = "background scenery"
     meta["prompt_final"] = cond.positive
@@ -1958,19 +1987,39 @@ def prepare(
     i.models.tiled_vae = perf.tiled_vae
     arch = i.models.version = resolve_arch(style, models)
 
+    if arch is Arch.krea2 and cond.pose_guide is not None:
+        i.models.dynamic_caching = i.models.tiled_vae = False
+        identity = next((name for name in models.loras if _is_krea_pose_lora(name)), None)
+        if identity is None:
+            raise ValueError(_("Install Krea 2 Identity Edit V2 to use Pose Studio."))
+        i.models.loras = [lora for lora in i.models.loras if not _is_krea_edit_lora(lora.name)] + [
+            LoraInput(identity, 1.0)
+        ]
+        i.sampling = SamplingInput("euler_ancestral", "beta", 1.0, 8, seed=seed)
+
     _check_server_has_models(i.models, i.conditioning.regions, models, files, style.name)
     _check_inpaint_model(inpaint, arch, models)
 
     model_set = models.for_arch(arch)
     has_ip_adapter = model_set.ip_adapter.find(ControlMode.reference) is not None
-    if arch is not Arch.minimax_h3_image:
+    if arch is not Arch.minimax_h3_image and not (
+        arch is Arch.krea2 and cond.pose_guide is not None
+    ):
         i.models.loras += _get_sampling_lora(style, is_live, model_set, models)
         all_control = cond.control + [c for r in cond.regions for c in r.control]
         face_weight = median_or_zero(c.strength for c in all_control if c.mode is ControlMode.face)
         if face_weight > 0:
             i.models.loras.append(LoraInput(model_set.lora["face"], 0.65 * face_weight))
 
-    if arch is Arch.minimax_h3_image and kind in _h3_image_kinds:
+    if arch is Arch.krea2 and cond.pose_guide is not None:
+        target = canvas if isinstance(canvas, Extent) else canvas.extent
+        render = cond.pose_guide.extent
+        i.images = ImageInput(
+            ExtentInput(target, render, render, target),
+            initial_image=canvas if isinstance(canvas, Image) else None,
+        )
+        i.batch_count = 1
+    elif arch is Arch.minimax_h3_image and kind in _h3_image_kinds:
         i.sampling = SamplingInput(
             "euler", "simple", 1.0, _h3_steps(i.models.checkpoint), seed=seed
         )
@@ -1999,11 +2048,11 @@ def prepare(
 
     elif kind is WorkflowKind.inpaint:
         assert isinstance(canvas, Image) and mask and inpaint and style
-        i.images, _ = resolution.prepare_image(
+        i.images, _batch_count = resolution.prepare_image(
             canvas, arch, style, perf, inpaint=inpaint.use_inpaint_model
         )
         i.images.hires_mask = mask.to_image(canvas.extent)
-        upscale_extent, _ = resolution.prepare_extent(
+        upscale_extent, _upscale_batch_count = resolution.prepare_extent(
             mask.bounds.extent, arch, style, perf, downscale=False
         )
         i.inpaint = InpaintParams.clamped(inpaint)
@@ -2058,7 +2107,8 @@ def prepare(
     if arch is Arch.sdxl and i.inpaint and i.inpaint.use_inpaint_model:
         i.models.dynamic_caching = False  # inpaint model incompatible with dynamic caching
 
-    i.batch_count = 1 if is_live else i.batch_count
+    if is_live or (arch is Arch.krea2 and cond.pose_guide is not None):
+        i.batch_count = 1
     i.images.layer_count = layer_count if arch is Arch.qwen_l else 1
     i.color_match = 1.0 if settings.color_match else 0.0
     i.nsfw_filter = settings.nsfw_filter
@@ -2124,7 +2174,10 @@ def minimax_h3_image(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
 
     checkpoint, images = ensure(i.models), ensure(i.images)
     cond, sampling = ensure(i.conditioning), ensure(i.sampling)
-    model, clip, vae = load_checkpoint_with_lora(w, checkpoint, models)
+    pose_guide = cond.pose_guide
+    model, clip, vae = load_checkpoint_with_lora(
+        w, checkpoint, models, h3_pose=pose_guide is not None
+    )
     steps = _h3_steps(checkpoint.checkpoint)
     if steps == 2:
         if models.node_inputs and "MiniMaxH3SigmaShift" not in models.node_inputs:
@@ -2138,6 +2191,27 @@ def minimax_h3_image(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
             references.append(w.load_image(control.image))
 
     prompt = merge_prompt(cond.positive, cond.style, cond.language)
+    if pose_guide is not None:
+        pose = w.add("ImageBlur", 1, image=w.load_image(pose_guide), blur_radius=5, sigma=5.0)
+        subject = (
+            "the single character in <Picture 1>" if references else "the character described below"
+        )
+        pose_index = len(references) + 1
+        instruction = (
+            f"Generate a new shot of {subject} with the body pose, camera angle, and framing "
+            f"depicted in <Picture {pose_index}>."
+        )
+        if references:
+            instruction += (
+                " Preserve the exact facial identity, appearance, outfit, colors, and body "
+                "proportions of the character in <Picture 1>."
+            )
+        instruction += (
+            f" Use <Picture {pose_index}> only for pose and camera. "
+            "Do not render the mannequin or copy its appearance or background."
+        )
+        prompt = f"{instruction}\n\n{prompt}"
+        references.append(pose)
     mask = w.load_mask(images.hires_mask) if images.hires_mask is not None else None
     if mask is not None:
         assert source is not None
@@ -2147,7 +2221,7 @@ def minimax_h3_image(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
             f"<Picture {len(references)}> are white. Keep the rest of <Picture 1> unchanged. "
             f"Do not render the mask. {prompt}"
         )
-    elif source is not None:
+    elif source is not None and pose_guide is None:
         prompt = f"Edit <Picture 1>. {prompt}"
 
     if len(references) > 100:
@@ -2163,11 +2237,11 @@ def minimax_h3_image(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
         prompt=w.translate(prompt) if cond.language and cond.positive else prompt,
         width=extent.width,
         height=extent.height,
-        **{f"images.image_{n}": image for n, image in enumerate(references, 1)},
+        **{f"images.image_{n}": image for n, image in enumerate(references)},
     )
     latent = w.ksampler(
         model,
-        ConditioningOutput(positive, positive),
+        ConditioningOutput(positive, w.conditioning_zero_out(positive) if pose_guide else positive),
         latent,
         sampler="euler",
         scheduler="simple",
@@ -2189,6 +2263,127 @@ def minimax_h3_image(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
     return w
 
 
+def _is_krea_pose_lora(name: str):
+    return Path(name.replace("\\", "/")).name.lower() == "krea2_identity_edit_v2.safetensors"
+
+
+def _is_krea_edit_lora(name: str):
+    return (
+        Path(name.replace("\\", "/"))
+        .name.lower()
+        .startswith(("krea2_identity_edit", "krea2_general_edit"))
+    )
+
+
+def krea2_pose_studio(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
+    if models.node_inputs and "ref_position" not in (
+        models.node_inputs.inputs("Krea2EditModelPatch") or {}
+    ):
+        raise ValueError(_("Update Krea 2 Edit nodes to use Pose Studio."))
+    checkpoint, cond, sampling = ensure(i.models), ensure(i.conditioning), ensure(i.sampling)
+    identity = next((lora for lora in checkpoint.loras if _is_krea_pose_lora(lora.name)), None)
+    if identity is None:
+        raise ValueError(_("Install Krea 2 Identity Edit V2 to use Pose Studio."))
+    base = replace(checkpoint, loras=[lora for lora in checkpoint.loras if lora is not identity])
+    base_model, clip, vae = load_checkpoint_with_lora(w, base, models)
+
+    controls = cond.control + [c for region in cond.regions for c in region.control]
+    references = [c.image for c in controls if c.mode.is_ip_adapter and c.image is not None]
+    if cond.edit_reference and ensure(i.images).initial_image is not None:
+        references.insert(0, i.image)
+    if len(references) != 1:
+        raise ValueError(_("Krea 2 Pose Studio requires exactly one character reference."))
+    guide = ensure(cond.pose_guide)
+    pose = w.load_image(guide)
+    extent = guide.extent
+    latent = w.empty_latent_image(extent, Arch.krea2, i.batch_count)
+    text = "\n".join(
+        dict.fromkeys(p for p in [cond.positive, *(r.positive for r in cond.regions)] if p)
+    )
+    character = w.load_image(references[0])
+
+    model = w.add(
+        "LoraLoaderModelOnly", 1, model=base_model, lora_name=identity.name, strength_model=1.0
+    )
+    pose_latent = vae_encode(w, vae, pose, checkpoint.tiled_vae)
+    character_latent = vae_encode(w, vae, character, checkpoint.tiled_vae)
+    model = w.krea2_edit_model_patch(
+        model,
+        pose_latent,
+        source_latent_b=character_latent,
+        vae=vae,
+        source_image=pose,
+        source_image_b=character,
+        target_latent=latent,
+        ref_boost=4.0,
+        ref_boost_a=1.0,
+        ref_position="beside (right of target)",
+    )
+    pose_instruction = (
+        "Draw character from image2. Preserve the character's identity and visible outfit. "
+        "Use image1 only for the body pose and camera framing. Match the positions of the "
+        "arms and legs on the same sides of the frame as image1. Do not mirror the pose."
+    )
+    description = merge_prompt(text, cond.style, cond.language)
+    if not cond.style:
+        style = "generate a high quality realistic color photograph of the single character"
+        description = f"{style}. {description}" if description else style
+    prompt = TextPrompt(f"{pose_instruction}\n\n{description}", cond.language).encode(
+        w, clip, images=[pose, character]
+    )
+    negative = w.krea2_edit_grounded_encode(clip.model, "", pose, character)
+    result = w.ksampler_advanced(
+        model,
+        ConditioningOutput(prompt, negative),
+        latent,
+        sampler=sampling.sampler,
+        scheduler=sampling.scheduler,
+        steps=sampling.total_steps,
+        cfg=sampling.cfg_scale,
+        seed=sampling.seed,
+        end_at_step=10000,
+    )
+    if cond.pose_upscale:
+        required = ("LatentPixelScale", "ClownsharKSampler_Beta")
+        if models.node_inputs and not all(n in models.node_inputs for n in required):
+            raise ValueError(
+                _("Install the complete VNCCS Pose Studio package to use the Krea 2 second pass.")
+            )
+        upscaled, _upscaled_preview = w.add(
+            "LatentPixelScale",
+            2,
+            samples=result,
+            vae=vae,
+            scale_method="lanczos",
+            scale_factor=1.5,
+            use_tiled_vae=False,
+        )
+        result, _denoised, _options = w.add(
+            "ClownsharKSampler_Beta",
+            3,
+            model=model,
+            positive=prompt,
+            negative=negative,
+            latent_image=upscaled,
+            eta=0.9,
+            sampler_name="exponential/res_2s",
+            scheduler="bong_tangent",
+            steps=2,
+            steps_to_run=-1,
+            denoise=0.3,
+            cfg=1.0,
+            seed=42,
+            sampler_mode="standard",
+            bongmath=True,
+        )
+        w.sample_count += 2
+    image = vae_decode(w, vae, result, checkpoint.tiled_vae)
+    if cond.pose_upscale or extent != i.extent.target:
+        image = w.scale_image(image, i.extent.target)
+    w.send_image(w.nsfw_filter(image, sensitivity=i.nsfw_filter))
+    return w
+
+
 def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.server) -> ComfyWorkflow:
     """
     Takes a WorkflowInput object and creates the corresponding ComfyUI workflow prompt.
@@ -2197,6 +2392,16 @@ def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.serve
     workflow = ComfyWorkflow(models.node_inputs, comfy_mode)
     layer_count = i.images.layer_count if i.images else 1
     misc = MiscParams(i.batch_count, layer_count, i.color_match, i.nsfw_filter)
+
+    if (
+        i.models
+        and i.models.version is Arch.krea2
+        and i.conditioning
+        and i.conditioning.pose_guide is not None
+    ):
+        if i.kind not in (WorkflowKind.generate, WorkflowKind.refine):
+            raise ValueError(_("Krea 2 Pose Studio requires a full-frame job."))
+        return krea2_pose_studio(workflow, i, models)
 
     if i.models and i.models.version is Arch.minimax_h3_image:
         if i.kind in _h3_image_kinds:

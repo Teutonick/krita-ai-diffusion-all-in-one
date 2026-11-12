@@ -20,6 +20,7 @@ from ai_diffusion.backend.comfy_workflow import ComfyObjectInfo
 from ai_diffusion.backend.resources import Arch, ControlMode, ResourceKind, resource_id
 from ai_diffusion.files import FileFormat
 from ai_diffusion.image import Bounds, Extent, Image, Mask
+from ai_diffusion.pose_studio import PoseScene
 
 
 @pytest.mark.parametrize(
@@ -27,7 +28,8 @@ from ai_diffusion.image import Bounds, Extent, Image, Mask
     [(WorkflowKind.generate, 0), (WorkflowKind.refine, 2), (WorkflowKind.refine_region, 3)],
 )
 @pytest.mark.parametrize("turbo", [False, True])
-def test_h3_image_graph(kind, expected_refs, turbo):
+@pytest.mark.parametrize("pose", [False, True])
+def test_h3_image_graph(kind, expected_refs, turbo, pose):
     arch = Arch.minimax_h3_image
     checkpoint = (
         "minimax_h3_image_pdmd_2step_bf16.safetensors"
@@ -61,14 +63,27 @@ def test_h3_image_graph(kind, expected_refs, turbo):
     if kind is WorkflowKind.refine_region:
         images.hires_mask = Mask.rectangle(bounds, Bounds.from_extent(extent)).to_image(extent)
         work.inpaint = InpaintParams(InpaintMode.custom, bounds)
+    if pose:
+        cond.edit_reference = images.initial_image is not None
+        cond.pose_guide = PoseScene().render(extent)
 
     graph = workflow.create(work, models)
     payload = json.loads(json.dumps({"prompt": graph.root}))
     nodes = {n["class_type"]: (key, n["inputs"]) for key, n in payload["prompt"].items()}
     conditioning_id, conditioning = nodes["MiniMaxH3ImageConditioning"]
     refs = [key for key in conditioning if key.startswith("images.")]
-    assert refs == [f"images.image_{n}" for n in range(1, expected_refs + 1)]
+    assert refs == [f"images.image_{n}" for n in range(expected_refs + int(pose))]
     assert "Paint the chair blue." in conditioning["prompt"]
+    if pose:
+        guide_index = 1 if kind is WorkflowKind.generate else 3
+        assert f"Use <Picture {guide_index}> only for pose and camera" in conditioning["prompt"]
+        blur_id, blur = nodes["ImageBlur"]
+        assert (blur["blur_radius"], blur["sigma"]) == (5, 5.0)
+        assert conditioning[f"images.image_{guide_index - 1}"] == [blur_id, 0]
+        if kind is not WorkflowKind.generate:
+            assert "the single character in <Picture 1>" in conditioning["prompt"]
+            assert conditioning["images.image_0"] != [blur_id, 0]
+            assert not conditioning["prompt"].startswith("Edit <Picture 1>. ")
     model_link = [nodes["UNETLoader"][0], 0]
     clip_link = [nodes["CLIPLoader"][0], 0]
     if kind is WorkflowKind.refine:
@@ -78,9 +93,12 @@ def test_h3_image_graph(kind, expected_refs, turbo):
         assert lora["strength_model"] == 0.5
         model_link, clip_link = [lora_id, 0], [lora_id, 1]
     assert conditioning["clip"] == clip_link
-    assert nodes["CLIPLoader"][1]["clip_name"] == "heretic.safetensors"
+    assert nodes["CLIPLoader"][1]["clip_name"] == (
+        "official.safetensors" if pose else "heretic.safetensors"
+    )
     sampler_id, sampler = nodes["KSampler"]
     assert sampler["latent_image"] == [conditioning_id, 1]
+    assert sampler["negative"] == [nodes["ConditioningZeroOut"][0] if pose else conditioning_id, 0]
     assert sampler["steps"] == (2 if turbo else 6)
     assert (sampler["sampler_name"], sampler["scheduler"], sampler["cfg"]) == (
         "euler",
@@ -97,8 +115,9 @@ def test_h3_image_graph(kind, expected_refs, turbo):
     assert nodes["VAEDecode"][1]["samples"] == [sampler_id, 0]
     assert not {"Krea2EditModelPatch", "Krea2EditGroundedEncode"} & nodes.keys()
     if kind is WorkflowKind.refine_region:
-        assert "<Picture 3> are white" in conditioning["prompt"]
-        assert conditioning["images.image_3"] == [nodes["MaskToImage"][0], 0]
+        mask_index = 3 + int(pose)
+        assert f"<Picture {mask_index}> are white" in conditioning["prompt"]
+        assert conditioning[f"images.image_{mask_index - 1}"] == [nodes["MaskToImage"][0], 0]
         assert nodes["ETN_ApplyMaskToImage"][1]["mask"] == [nodes["CropMask"][0], 0]
     else:
         assert "ETN_ApplyMaskToImage" not in nodes

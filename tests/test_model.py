@@ -23,6 +23,7 @@ from ai_diffusion.model.connection import Connection, ConnectionState
 from ai_diffusion.model.custom_workflow import WorkflowCollection
 from ai_diffusion.model.jobs import Job, JobKind, JobParams, JobRegion, JobState
 from ai_diffusion.model.model import DocumentModel, ErrorKind, ProgressKind, no_error
+from ai_diffusion.pose_studio import PoseScene
 from ai_diffusion.settings import ApplyBehavior, ApplyRegionBehavior
 from ai_diffusion.style import Style, Styles
 
@@ -752,6 +753,44 @@ def _configure_krea(model: DocumentModel, client: MockClient):
     style.linked_edit_style = "Krea 2 Identity Edit"
     model.style = style
     return style
+
+
+@pytest.mark.parametrize("arch", [Arch.krea2, Arch.minimax_h3_image])
+@pytest.mark.parametrize("editing", [False, True])
+@qtapp
+async def test_pose_studio_is_optional(workflows_dir: Path, arch: Arch, editing: bool):
+    doc = Krita.instance().openDocument("test")
+    async with _model_env(doc, workflows_dir) as (model, client):
+        await asyncio.sleep(0)
+        if arch is Arch.krea2:
+            _configure_krea(model, client)
+            if editing:
+                client.models.loras = ["krea2_identity_edit_v2.safetensors"]
+        else:
+            checkpoint = "minimax_h3_image_pruned_int8_convrot.safetensors"
+            client.models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, arch)
+            style = _make_style(checkpoint)
+            style.architecture = arch
+            model.style = style
+        if editing:
+            source = model.layers.create("Subject", Image.create(_DOC_EXTENT, _RED), _DOC_BOUNDS)
+            model.edit_layer(source)
+        model.active_regions.positive = "A character in a garden."
+        model.fixed_seed = True
+        model.seed = 1234
+        baseline, *_ = model._prepare_workflow()
+        assert baseline.kind is (WorkflowKind.refine if editing else WorkflowKind.generate)
+        assert baseline.conditioning and baseline.conditioning.pose_guide is None
+        expected = baseline.to_dict()
+
+        model.pose_studio_enabled = True  # No saved scene yet.
+        empty, *_ = model._prepare_workflow()
+        assert empty.to_dict() == expected
+
+        model.pose_studio_enabled = False
+        model.pose_studio_state = PoseScene().save()
+        disabled, *_ = model._prepare_workflow()
+        assert disabled.to_dict() == expected
 
 
 @qtapp

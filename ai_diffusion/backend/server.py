@@ -12,7 +12,7 @@ from itertools import chain
 from pathlib import Path
 from typing import NamedTuple
 
-from PyQt5.QtNetwork import QNetworkAccessManager
+from PyQt5.QtNetwork import QNetworkAccessManager, QSslSocket
 
 from .. import eventloop, media_storage, util
 from ..localization import translate as _
@@ -29,6 +29,12 @@ from ..platform_tools import (
 from ..settings import ServerBackend, settings
 from ..util import client_logger as log
 from ..util import server_logger as server_log
+from ..vnccs_pose import (
+    download_vnccs_asset_https,
+    install_vnccs_assets,
+    vnccs_assets_installed,
+    vnccs_component,
+)
 from . import model_licenses, resources
 from .network import DownloadProgress, download
 from .resources import (
@@ -222,10 +228,20 @@ class Server:
         self.check_install()
 
     @property
+    def pose_studio_selected(self):
+        selected = settings.server_components
+        return vnccs_component in selected or any(
+            p.name in selected for p in resources.pose_studio_custom_nodes
+        )
+
+    @property
     def selected_custom_nodes(self):
-        return [
+        selected = [
             p for p in resources.selectable_custom_nodes if p.name in settings.server_components
         ]
+        if self.pose_studio_selected:
+            selected.extend(resources.pose_studio_custom_nodes)
+        return selected
 
     def resolve_model_dependencies(self, packages: list[str]):
         if not any(p.endswith("-krea2") for p in packages):
@@ -252,8 +268,11 @@ class Server:
         marker = self.comfy_dir / "custom_nodes" / pkg.folder / ".krita-component-version"
         return marker.exists() and marker.read_text().strip() == pkg.version
 
+    @property
+    def needs_vnccs_assets(self):
+        return self.pose_studio_selected and not vnccs_assets_installed()
+
     async def install_components(self, callback: Callback):
-        assert self.comfy_dir is not None
         network = QNetworkAccessManager()
         self._cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -270,6 +289,17 @@ class Server:
         previous = self.state
         self.state = ServerState.installing
         try:
+            if self.needs_vnccs_assets:
+
+                async def download_asset(url: str, target: Path):
+                    if QSslSocket.supportsSsl():
+                        await _download_cached(vnccs_component, network, url, target, cb)
+                    else:
+                        cb(f"Downloading {vnccs_component}", f"Downloading {target.name}")
+                        await asyncio.to_thread(download_vnccs_asset_https, url, target)
+
+                await install_vnccs_assets(download_asset)
+                cb(f"Installing {vnccs_component}", f"Finished installing {vnccs_component}")
             for pkg in self.selected_custom_nodes:
                 if not self.component_installed(pkg):
                     await self._install_custom_node(pkg, network, cb)
@@ -392,7 +422,9 @@ class Server:
         await _download_cached(pkg.name, network, resource_url, resource_zip_path, cb)
         await _extract_archive(pkg.name, resource_zip_path, folder.parent, cb)
         backup = folder.with_name(folder.name + ".krita-backup")
-        managed = pkg in resources.selectable_custom_nodes
+        managed = (
+            pkg in resources.selectable_custom_nodes or pkg in resources.pose_studio_custom_nodes
+        )
         if managed and folder.exists():
             if backup.exists():
                 raise RuntimeError(f"Component backup already exists: {backup}")

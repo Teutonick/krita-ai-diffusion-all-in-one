@@ -53,6 +53,7 @@ from ..image import BlendMode, Bounds, DummyImage, Extent, Image, ImageCollectio
 from ..layer import Layer, LayerType, RestoreActiveLayer
 from ..localization import translate as _
 from ..pose import Pose
+from ..pose_studio import PoseScene
 from ..settings import (
     ApplyBehavior,
     ApplyRegionBehavior,
@@ -71,6 +72,7 @@ from ..text import (
 )
 from ..util import PluginError, clamp, ensure, trim_text, unique
 from ..util import client_logger as log
+from ..vnccs_pose import render_vnccs_pose
 from .connection import Connection, ConnectionState
 from .control import ControlLayer
 from .custom_workflow import (
@@ -158,6 +160,9 @@ class DocumentModel(QObject, ObservableProperties):
     fixed_seed = Property(False, setter="set_fixed_seed", persist=True)
     seed_increment = Property(False, setter="set_seed_increment", persist=True)
     resolution_multiplier = Property(1.0, persist=True)
+    pose_studio_state = Property("", persist=True)
+    pose_studio_enabled = Property(False, persist=True)
+    pose_studio_upscale = Property(False, persist=True)
     queue_mode = Property(QueueMode.back, persist=True)
     translation_enabled = Property(True, persist=True)
     layer_count = Property(4, persist=True)
@@ -178,6 +183,9 @@ class DocumentModel(QObject, ObservableProperties):
     fixed_seed_changed = pyqtSignal(bool)
     seed_increment_changed = pyqtSignal(bool)
     resolution_multiplier_changed = pyqtSignal(float)
+    pose_studio_state_changed = pyqtSignal(str)
+    pose_studio_enabled_changed = pyqtSignal(bool)
+    pose_studio_upscale_changed = pyqtSignal(bool)
     queue_mode_changed = pyqtSignal(QueueMode)
     translation_enabled_changed = pyqtSignal(bool)
     layer_count_changed = pyqtSignal(int)
@@ -310,9 +318,15 @@ class DocumentModel(QObject, ObservableProperties):
 
     def _prepare_workflow(self, dryrun=False):
         arch = self.arch
+        use_pose = (
+            not dryrun
+            and self.pose_studio_available
+            and self.pose_studio_enabled
+            and bool(self.pose_studio_state)
+        )
         workflow_kind = WorkflowKind.generate
         strength = self.strength
-        if arch in (Arch.qwen_l, Arch.minimax_h3_image):
+        if arch in (Arch.qwen_l, Arch.minimax_h3_image) or (arch is Arch.krea2 and use_pose):
             strength = 1.0
         if strength < 1.0 or self.is_editing:
             workflow_kind = WorkflowKind.refine
@@ -347,9 +361,31 @@ class DocumentModel(QObject, ObservableProperties):
         seed = self.seed if (self.fixed_seed or self.seed_increment) else workflow.generate_seed()
         ref_layers: dict[str, int] | None = None
         if not dryrun:
+            if use_pose and arch is Arch.krea2:
+                if mask is not None:
+                    raise PluginError(
+                        _(
+                            "Krea 2 Pose Studio requires full-frame generation or editing. Clear the selection or turn off Pose Studio."
+                        )
+                    )
+                nodes = client.models.node_inputs
+                if nodes and not all(
+                    node in nodes for node in ("Krea2EditGroundedEncode", "Krea2EditModelPatch")
+                ):
+                    raise PluginError(
+                        _("Install the Krea 2 Edit nodes to use Pose Studio with Krea 2.")
+                    )
             conditioning, ref_layers = self._add_reference_layers(
-                conditioning, use_source=arch is Arch.minimax_h3_image and mask is not None
+                conditioning,
+                use_source=arch is Arch.minimax_h3_image and mask is not None,
             )
+            if use_pose:
+                conditioning.pose_guide = render_vnccs_pose(
+                    self.pose_studio_state
+                ) or PoseScene.load(self.pose_studio_state).render(
+                    extent if mask is None else bounds.extent
+                )
+                conditioning.pose_upscale = arch is Arch.krea2 and self.pose_studio_upscale
 
         original_conditioning = conditioning
         inpaint_instruction = inpaint_mode if strength == 1.0 else None
@@ -1622,6 +1658,10 @@ class DocumentModel(QObject, ObservableProperties):
     @property
     def layers(self):
         return self._doc.layers
+
+    @property
+    def pose_studio_available(self):
+        return self.arch in (Arch.krea2, Arch.minimax_h3_image)
 
     @property
     def name(self):
