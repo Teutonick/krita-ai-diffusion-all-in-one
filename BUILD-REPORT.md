@@ -1,6 +1,6 @@
 # Build validation
 
-Current plugin: 1.53.0-all-in-one.29. Includes the local Pose Library and the Krea 2 Pose Studio reference placement fix. The placement was verified with Krea 2 Turbo and Identity Edit V2 on seed 12342. Historical validation is listed below.
+Current plugin: 1.53.0-all-in-one.30, with a fork-specific GitHub release updater. Includes the local Pose Library and the Krea 2 Pose Studio reference placement fix. The placement was verified with Krea 2 Turbo and Identity Edit V2 on seed 12342. Historical validation is listed below.
 
 This unofficial combined fork includes Acly 1.53.0, FatGuy84's Reloaded improvements and Krea 2 Edit integration. Attribution, source revisions and license terms are documented in THIRD-PARTY-NOTICES.md and the source manifest embedded in each release archive.
 

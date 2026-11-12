@@ -204,6 +204,15 @@ document autosave and backup settings continue to apply.
 
 ## Exact source for every release
 
+The all-in-one updater checks [this fork's GitHub Releases](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases).
+In the plugin settings, use **Check for updates** and **Download and Install**,
+then restart Krita manually. You can also enable the check on startup.
+
+To publish an update, create a public, non-prerelease GitHub Release with a tag
+matching the build version (for example `v1.53.0-all-in-one.30`). Attach the
+installable plugin ZIP, the corresponding source ZIP and `SHA256SUMS-<version>.txt`
+from the same build. The updater checks the installable ZIP against that file.
+
 Each release includes both:
 
 - **Installable plugin:** `krita_ai_diffusion-1.53.0-all-in-one.27.zip`

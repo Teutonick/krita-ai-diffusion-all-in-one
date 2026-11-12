@@ -1,3 +1,5 @@
+import hashlib
+import io
 import os
 from pathlib import Path
 
@@ -5,7 +7,7 @@ import pytest
 from aiohttp import ClientSession
 from PyQt5.QtCore import pyqtBoundSignal
 
-from ai_diffusion.model.updates import AutoUpdate, UpdateState
+from ai_diffusion.model.updates import AutoUpdate, UpdateState, fork_releases_url, fork_repo
 from ai_diffusion.platform_tools import ZipFile
 
 from .conftest import CloudService, qtapp
@@ -121,9 +123,59 @@ async def test_authorization(cloud_service: CloudService):
 
 
 @qtapp
-@pytest.mark.parametrize("version", ["1.53.0-reloaded.11", "1.53.0-all-in-one.1"])
-async def test_fork_does_not_install_upstream_updates(version: str):
-    updater = AutoUpdate(current_version=version)
+async def test_reloaded_does_not_install_upstream_updates():
+    updater = AutoUpdate(current_version="1.53.0-reloaded.11")
     await updater._check()
     assert updater.state is UpdateState.failed_check
     assert "all-in-one" in updater.error
+
+
+@qtapp
+@pytest.mark.parametrize("corrupt", [False, True])
+async def test_fork_update(tmp_path: Path, monkeypatch, corrupt: bool):
+    version = "1.53.0-all-in-one.10"
+    name = f"krita_ai_diffusion-{version}.zip"
+    checksums = f"SHA256SUMS-{version}.txt"
+    base = f"https://github.com/{fork_repo}/releases/download/v{version}"
+    init = tmp_path / "ai_diffusion" / "__init__.py"
+    init.parent.mkdir()
+    init.write_text('__version__ = "1.53.0-all-in-one.8"\n')
+    data = io.BytesIO()
+    with ZipFile(data, "w") as archive:
+        archive.writestr("ai_diffusion.desktop", "[Desktop Entry]\n")
+        archive.writestr("ai_diffusion/__init__.py", f'__version__ = "{version}"\r\n')
+    payload = data.getvalue()
+    digest = hashlib.sha256(payload).hexdigest()
+
+    class Network:
+        async def get(self, url, timeout):
+            assert url == fork_releases_url
+            return [
+                {"tag_name": tag, "draft": False, "prerelease": prerelease, "assets": assets}
+                for tag, prerelease, assets in [
+                    ("1.53.0-all-in-one.9", False, []),
+                    ("v1.53.0-all-in-one.11", True, []),
+                    ("v1.54.0", False, []),
+                    (f"v{version}", False, [{"name": name}, {"name": checksums}]),
+                ]
+            ]
+
+        async def download(self, url, timeout):
+            if url == f"{base}/{checksums}":
+                return f"{digest}  {name}\r\n".encode()
+            assert url == f"{base}/{name}"
+            return payload + b"bad" if corrupt else payload
+
+    monkeypatch.setattr(AutoUpdate, "_net", property(lambda self: Network()))
+    updater = AutoUpdate(tmp_path, current_version="1.53.0-all-in-one.8")
+    await updater.check()
+    assert updater.latest_version == version
+    assert updater.state is UpdateState.available
+    await updater.run()
+    if corrupt:
+        assert updater.state is UpdateState.failed_update
+        assert "all-in-one.8" in init.read_text()
+    else:
+        assert updater.state is UpdateState.restart_required
+        assert version in init.read_text()
+        assert (tmp_path / "ai_diffusion.desktop").is_file()

@@ -1,4 +1,6 @@
-# 1.53.0-all-in-one.29 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.30 — krita-ai-diffusion-all-in-one
+
+- The in-plugin updater checks this fork’s GitHub Releases and installs verified plugin ZIPs. Restart Krita manually to finish.
 
 - Krea 2 Pose Studio keeps the mannequin aligned and places the character reference beside the canvas, improving pose transfer in the tested case.
 - README highlights Pose Editor and the third-party notices document the editor, rig, server nodes and their separate license terms.
@@ -48,8 +50,8 @@ endorsed by their authors.
 
 ## Build artifacts
 
-The local build provides `krita_ai_diffusion-1.53.0-all-in-one.29.zip`, the corresponding
-source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.29/`. Published releases,
+The local build provides `krita_ai_diffusion-1.53.0-all-in-one.30.zip`, the corresponding
+source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.30/`. Published releases,
 when available, are listed on the [project releases page](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases).
 
 Import the plugin ZIP through **Tools → Scripts → Import Python Plugin from File**,
