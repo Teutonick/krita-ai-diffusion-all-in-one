@@ -53,3 +53,20 @@ Install the .8 plugin ZIP, restart Krita and complete the offered Managed Server
 Fresh installer integration was attempted; standalone PyQt failed TLS initialization downloading ComfyUI. Complete fresh installation in Krita, GPU inference and an actual Docker image build are not claimed as validated.
 
 **Windows ROCm limitation:** AMD's official 7.2.1 Windows wheel repository still provides PyTorch 2.9.1, while GHSA-rrmf-rvhw-rf47 lists PyTorch <=2.12.1 as affected. These direct-URL wheels were not part of the GitHub alert occurrences being remediated. They have not been silently replaced with incompatible CUDA/CPU wheels or disabled. Windows ROCm therefore retains this separate upstream risk; the NVIDIA/CPU/Linux locks and updated Docker use PyTorch 2.13.0. An appropriate patched AMD Windows build is still needed.
+
+## Dictation and Pose Studio media lifetime
+
+- Audio is captured locally. A transcription subprocess uses a private staging
+  directory in the locked media session. Normal completion/cancellation removes
+  it; orphaned sessions are swept at the next plugin startup. Only model weights
+  and the runtime are installed persistently. Recognized text follows normal
+  prompt and document persistence.
+- Pose Studio serves content on loopback with session URLs, origin checks for
+  writes, and no-store responses. The embedded web view uses an off-the-record
+  profile. When Qt WebEngine is unavailable, opening Pose Studio launches the
+  default browser. Its history, downloads and
+  backups are outside the plugin's control.
+- Applying a pose explicitly attaches its editable state and PNG guide to the
+  document. Saving a library entry explicitly stores its pose and any image or
+  video preview in the local SQLite library. Deletion enables SQLite secure
+  delete for the database operation; it does not remove historical backups.

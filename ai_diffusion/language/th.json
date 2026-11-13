@@ -1231,6 +1231,7 @@
     "Whisper download timed out.": null,
     "Could not stop the microphone: {error}": null,
     "Recording… Click the microphone to stop.": null,
-    "Dictate text": null
+    "Dictate text": null,
+    "Click Open in Browser to edit the pose in your browser.": null
   }
 }

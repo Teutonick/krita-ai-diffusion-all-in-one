@@ -18,6 +18,7 @@ class VnccsPoseStudioDialog(QDialog):
         self.setWindowTitle(_("VNCCS Pose Studio"))
         self.state = ""
         self._view: QWidget | None = None
+        self._profile = None
         self.session = VnccsSession(value, extent)
         self.finished.connect(self._finish)
         layout = QVBoxLayout(self)
@@ -31,15 +32,19 @@ class VnccsPoseStudioDialog(QDialog):
         self._external = QPushButton(_("Open in Browser"), self)
         self._external.clicked.connect(self._open_external)
         try:
-            browser_type = import_module("PyQt5.QtWebEngineWidgets").QWebEngineView
-            view = browser_type(self)
+            engine = import_module("PyQt5.QtWebEngineWidgets")
+            view = engine.QWebEngineView(self)
+            profile = engine.QWebEngineProfile(self)
+            view.setPage(engine.QWebEnginePage(profile, view))
+            self._profile = profile
             self._view = view
             layout.addWidget(view, 1)
             self.resize(1200, 820)
             view.load(url)
         except (ImportError, RuntimeError):
             self.resize(460, 130)
-            self._open_external()
+            self.info.setText(_("Click Open in Browser to edit the pose in your browser."))
+            QTimer.singleShot(0, self._open_fallback_browser)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel, parent=self)
         buttons.addButton(self._external, QDialogButtonBox.ButtonRole.ActionRole)
         buttons.rejected.connect(self.reject)
@@ -48,9 +53,16 @@ class VnccsPoseStudioDialog(QDialog):
         self._timer.timeout.connect(self._receive)
         self._timer.start(100)
 
+    def _open_fallback_browser(self):
+        if self.isVisible():
+            self._open_external()
+
     def _open_external(self):
         if self._external.isEnabled() and QDesktopServices.openUrl(QUrl(self.session.url)):
             self._external.setEnabled(False)
+            self.info.setText(
+                _("Edit the mannequin in VNCCS, then choose Use Pose in Krita to apply the render.")
+            )
             self._release_view()
 
     def _release_view(self):
@@ -58,6 +70,9 @@ class VnccsPoseStudioDialog(QDialog):
             self._view.hide()
             self._view.deleteLater()
             self._view = None
+        if self._profile is not None:
+            self._profile.deleteLater()
+            self._profile = None
 
     def _receive(self):
         try:

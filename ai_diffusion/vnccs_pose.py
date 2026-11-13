@@ -20,6 +20,7 @@ from urllib.request import urlopen
 
 from .image import Extent, Image
 from .localization import translate as _
+from .remote_pose_library import RemotePoseLibrary
 from .util import user_data_dir
 
 web_root = Path(__file__).parent / "vnccs_pose_web"
@@ -109,6 +110,7 @@ def _library(method: str, route: str, query: str, payload: dict, path: Path):
     key = (name, params.get("category", "Uncategorized"), params.get("asset_type", "pose"))
     path.parent.mkdir(parents=True, exist_ok=True)
     with closing(connect(path)) as db, db:
+        db.execute("PRAGMA secure_delete = ON")
         db.execute(
             "CREATE TABLE IF NOT EXISTS poses (name TEXT, category TEXT, kind TEXT, "
             "metadata TEXT, pose TEXT, mime TEXT, preview BLOB, PRIMARY KEY(name, category, kind))"
@@ -201,6 +203,7 @@ class VnccsSession:
         vendor_root = vnccs_assets_path().resolve()
         library_path = user_data_dir / "pose-library.sqlite3"
         library_prefix = "vnccs/pose_library/"
+        remote = RemotePoseLibrary()
 
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, format: str, *args):
@@ -234,14 +237,30 @@ class VnccsSession:
                         payload = json.loads(self.rfile.read(size))
                         if not isinstance(payload, dict):
                             raise ValueError("Invalid library payload")
-                    data, mime = _library(self.command, route, url.query, payload, library_path)
+                    params = parse_qs(url.query)
+                    repo = params.get("repository", ["local_user_poses"])[0]
+                    if self.command == "POST" and route == "remote/enable":
+                        remote.enable(payload["repository"])
+                        data, mime = b'{"ok":true}', "application/json"
+                    elif repo != "local_user_poses":
+                        if self.command != "GET":
+                            raise LookupError("Public pose libraries are read-only")
+                        action, _, name = route.partition("/")
+                        key = (
+                            name,
+                            params.get("category", ["Uncategorized"])[0],
+                            params.get("asset_type", ["pose"])[0],
+                        )
+                        data, mime = remote.serve(repo, action, key)
+                    else:
+                        data, mime = _library(self.command, route, url.query, payload, library_path)
                 except (KeyError, TypeError, AttributeError, ValueError):
                     self.respond(b'{"error":"Invalid library item"}', "application/json", 400)
                 except LookupError:
                     self.respond(b'{"error":"Library item unavailable"}', "application/json", 404)
                 except (DatabaseError, OSError):
                     self.respond(
-                        b'{"error":"Could not access local library"}', "application/json", 500
+                        b'{"error":"Could not access the pose library"}', "application/json", 500
                     )
                 else:
                     self.respond(data, mime)
@@ -296,6 +315,7 @@ class VnccsSession:
                     "Content-Length",
                     str(len(script) if script is not None else file.stat().st_size),
                 )
+                self.send_header("Cache-Control", "no-store")
                 self.send_header("Referrer-Policy", "no-referrer")
                 self.send_header("X-Content-Type-Options", "nosniff")
                 frame_ancestors = "'self'" if name == "frame.html" else "'none'"

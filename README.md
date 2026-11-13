@@ -32,6 +32,9 @@ changes in settings, and a policy for temporary media storage.
   or selection, and create motion-focused video prompts from an image with Prompt AI.
   Mention reference images and Krita layers by name with `@Name`; use wildcards to
   explore variations. Image description requires a vision model in Ollama.
+- **Local voice dictation** — speak prompts and Prompt AI instructions for images or
+  video on Windows x64. [Whisper runs on your CPU](#voice-dictation-windows-x64)
+  without uploading the recording.
 - **Isolated temporary media and security hardening** — plugin-managed temporary media
   lives in isolated sessions and is cleaned up; explicitly saved files remain. Dependency
   security updates and additional protections are detailed in the
@@ -130,8 +133,12 @@ VNCCS JSON or ComfyUI workflow. **Use Pose in Krita** saves the editable VNCCS
 scene and its clean camera render with the document. Clear
 **Use pose** to generate without the guide and keep the saved scene for later.
 **Pose Library → Save Current Pose** keeps reusable poses and previews on this
-computer across editor sessions. Public VNCCS repositories are not connected in
-Krita; use **Import Pose or Workflow…** for downloaded VNCCS JSON files.
+computer across editor sessions. Use the source selector in **Pose Library**
+to browse [VNCCS Main by MIUProject](https://huggingface.co/MIUProject/VNCCS_PoseLibrary_Main)
+or [General Poses by Totemistyk](https://huggingface.co/Totemistyk/General_Poses_PoseStudio).
+These online libraries are read-only and only contacted when selected. Catalogs
+stay in memory for the editor session; previews and poses are loaded as needed.
+Use **Import Pose or Workflow…** for VNCCS JSON files you already have.
 
 For a new character, write a regular prompt. To reuse an existing character, add its
 layer as a named reference and write, for example, `Put @character on a rooftop.
@@ -152,10 +159,11 @@ and both second-pass dependencies, Impact Pack and RES4LYF, together. See the
 [Pose Studio component notices](THIRD-PARTY-NOTICES.md#pose-studio-components),
 including the separate RES4LYF commercial service terms.
 Krea 2 Pose Studio is available for full-frame jobs.
-The editor opens in Krita when Qt WebEngine is available, or in your browser on
-the same computer. Manual posing and workflow import do not need VNCCS or
-Pixaroma installed on the server. SAM 3D Body image analysis and remote pose
-repositories are not part of this standalone editor.
+The editor opens in an off-the-record view when Qt WebEngine is available.
+Otherwise, clicking **Pose Studio** opens the default browser automatically.
+**Open in Browser** is also available in the dialog. The editor is served
+on the same computer. Manual posing and workflow import do not need VNCCS or
+Pixaroma installed on the server. SAM 3D Body image analysis is not part of this standalone editor.
 
 ## Krea 2 Edit V2: read the model terms
 
@@ -190,6 +198,15 @@ For the optional command-line downloader, review the bundled documents before us
   files are not a fallback. A model with no online match is shown without a thumbnail.
 - Animation transfers, live-recording frames, Eagle staging, managed ComfyUI input/output/
   temp/user data, its SQLite database, and LoRA Manager preview files use a session folder.
+- Dictation buffers the recording in memory. Whisper's temporary WAV and text files
+  are placed in the media session and removed after transcription or cancellation.
+  Only the downloaded runtime/model stay installed; the inserted text follows the
+  normal prompt and document settings.
+- Pose Studio serves poses and previews over loopback with no-store responses.
+  Edits are transient until **Use Pose in Krita** attaches the pose and its PNG
+  guide to the document, or **Save Current Pose** writes the pose and preview to
+  the local library. The system browser may keep its own
+  history; Krita cannot control browser or OS backups.
 - Normal shutdown stops the managed server before cleanup. Startup removes abandoned
   sessions left by crashes; locks protect other active Krita instances.
 - Metadata, tags and favorites may be cached without image files. Explicit image exports,
@@ -421,6 +438,7 @@ recording, then click it again to insert the transcript at the cursor. Recording
 stops automatically after 90 seconds by default (adjustable from 15 to 120).
 Whisper runs locally on the CPU and frees memory when it exits. Starting
 generation or Prompt AI cancels any unfinished dictation. Audio is not uploaded.
+See [voice dictation licenses](THIRD-PARTY-NOTICES.md#voice-dictation-components).
 
 ### Prompt AI
 

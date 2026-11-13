@@ -27,6 +27,58 @@ try {
         queueCaptureUpload() {}
         scheduleAnimationCacheUpload() {}
         autoRefreshEnabledPoseRepositories() {}
+        showLibraryModal() {
+            this.kritaRepository = "local_user_poses";
+            super.showLibraryModal();
+            const toolbar = this.libraryModal.querySelector(".vnccs-ps-library-toolbar");
+            const source = document.createElement("select");
+            source.setAttribute("aria-label", "Pose library source");
+            source.add(new Option("Local Library", "local_user_poses"));
+            source.add(new Option("VNCCS Main (online)", "miuproject"));
+            source.add(new Option("General Poses (online)", "totemistyk"));
+            toolbar.prepend(source);
+            source.onchange = async () => {
+                const previous = this.kritaRepository;
+                const repo = source.value;
+                source.disabled = true;
+                try {
+                    if (repo !== "local_user_poses") {
+                        const response = await fetch("./vnccs/pose_library/remote/enable", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ repository: repo }),
+                        });
+                        if (!response.ok) throw new Error("Could not load the public pose catalog.");
+                    }
+                    if (!source.isConnected) return;
+                    this.kritaRepository = repo;
+                    this.librarySelectedName = null;
+                    this.libraryActiveCategory = "All";
+                    await this.refreshLibrary(false);
+                } catch (error) {
+                    this.kritaRepository = previous;
+                    source.value = previous;
+                    this.showMessage(error.message, true);
+                } finally {
+                    source.disabled = false;
+                }
+            };
+        }
+        async refreshLibrary(forceFull = false) {
+            if (forceFull || !this.kritaRepository || this.kritaRepository === "local_user_poses") {
+                return super.refreshLibrary(forceFull);
+            }
+            const repo = this.kritaRepository;
+            const modal = this.libraryModal;
+            const token = this._libraryRefreshToken = (this._libraryRefreshToken || 0) + 1;
+            const response = await fetch("./vnccs/pose_library/list?repository=" + encodeURIComponent(repo));
+            const data = await response.json();
+            if (!response.ok || !Array.isArray(data.poses)) throw new Error("Could not load poses.");
+            if (token !== this._libraryRefreshToken || this.libraryModal !== modal) return;
+            this.libraryPoses = data.poses;
+            this.renderLibrary();
+        }
+
     }
     studio = new KritaPoseStudio(node);
     container.append(studio.container);

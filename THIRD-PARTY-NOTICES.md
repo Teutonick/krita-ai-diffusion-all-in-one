@@ -88,3 +88,16 @@ Hugging Face Accelerate is Apache-2.0 licensed and installed separately. The inc
 `dependency_security.py` applies a local checkpoint-path safety modification after
 dependency installation; the upstream package is not represented as unmodified or
 fully fixed by a version bump. See SECURITY-UPDATE.md for the change and its limits.
+
+## Voice dictation components
+
+| Component | License and distribution |
+| --- | --- |
+| [whisper.cpp v1.8.3](https://github.com/ggml-org/whisper.cpp/tree/v1.8.3) | MIT; see the [runtime license](https://github.com/ggml-org/whisper.cpp/blob/v1.8.3/LICENSE). The plugin downloads the pinned Windows x64 CPU runtime. |
+| [OpenAI Whisper Base weights](https://github.com/openai/whisper#license), [GGML Q5_1 conversion](https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-base-q5_1.bin) | MIT. The plugin downloads the multilingual quantized weights. |
+
+Both downloads are verified by SHA-256 and are separate from the plugin ZIP.
+MIT permits free use and redistribution, including commercial use, provided
+the relevant copyright and license notices accompany redistributed copies.
+If bundling the runtime or weights separately, keep their upstream notices
+and any notices accompanying third-party files in the runtime distribution.

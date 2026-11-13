@@ -435,7 +435,7 @@ class LoraBrowser(QWidget):
                 self._all_loras = cached
                 self._rebuild_filters()
                 self._apply_filter()
-                self._status.setText(f"{len(cached)} {_('LoRAs (cached)')}")
+                self._status.setText(f"{len(self._filtered)} / {len(cached)} {_('LoRAs (cached)')}")
                 return
 
         self._status.setText(_("Loading…"))

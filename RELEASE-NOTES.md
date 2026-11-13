@@ -1,4 +1,15 @@
-# 1.53.0-all-in-one.33 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.36 — krita-ai-diffusion-all-in-one
+
+Restores automatic opening of the default browser when Pose Studio runs
+without Qt WebEngine.
+
+Pose Library can browse VNCCS Main and General Poses on demand. The local
+library remains the default; remote catalogs and previews are not saved to disk.
+
+Hides LoRAs and checkpoints with unknown or adult ratings from the initial SFW
+list, including cached rows with stale local preview ratings. Dictation uses
+the locked temporary media session, and Pose Studio uses no-store responses
+and an off-the-record embedded browser. See THIRD-PARTY-NOTICES.md for Whisper.
 
 Fixes the prompt toolbar layout: the translation button and negative prompt
 warning stay on the right whether the microphone is visible or hidden.
@@ -60,8 +71,8 @@ endorsed by their authors.
 
 ## Build artifacts
 
-The local build provides `krita_ai_diffusion-1.53.0-all-in-one.33.zip`, the corresponding
-source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.33/`. Published releases,
+The local build provides `krita_ai_diffusion-1.53.0-all-in-one.36.zip`, the corresponding
+source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.36/`. Published releases,
 when available, are listed on the [project releases page](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases).
 
 Import the plugin ZIP through **Tools → Scripts → Import Python Plugin from File**,

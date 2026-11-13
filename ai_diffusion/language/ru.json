@@ -1231,6 +1231,7 @@
     "Dictation timed out.": "Время распознавания истекло.",
     "Dictation failed: {error}": "Ошибка распознавания: {error}",
     "Dictate text": "Диктовать текст",
-    "Start dictation": "Начать запись"
+    "Start dictation": "Начать запись",
+    "Click Open in Browser to edit the pose in your browser.": null
   }
 }

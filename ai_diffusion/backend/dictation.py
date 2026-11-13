@@ -6,7 +6,6 @@ import hashlib
 import io
 import os
 import platform
-import tempfile
 import time
 import wave
 import zipfile
@@ -16,7 +15,7 @@ from pathlib import Path
 from PyQt5.QtCore import QObject, QProcess, QTimer, QUrl, pyqtSignal
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
-from .. import eventloop
+from .. import eventloop, media_storage
 from ..localization import translate as _
 from ..settings import settings
 from ..util import client_logger as log
@@ -303,13 +302,13 @@ class Dictation(QObject):
         try:
             if self.target is not target:
                 return
-            with tempfile.TemporaryDirectory(prefix="audio-", dir=self.directory) as folder:
+            with media_storage.temporary_directory("dictation-") as folder:
                 audio = Path(folder) / "recording.wav"
                 output = Path(folder) / "transcript"
                 write_wav(audio, pcm)
                 process = QProcess()
                 self._process = process
-                process.setWorkingDirectory(str(self.directory))
+                process.setWorkingDirectory(folder)
                 process.setStandardOutputFile(QProcess.nullDevice())
                 process.setStandardErrorFile(QProcess.nullDevice())
                 try:
@@ -317,9 +316,9 @@ class Dictation(QObject):
                         str(self.directory / "v1.8.3" / "whisper-cli.exe"),
                         [
                             "-m",
-                            model_name,
+                            os.path.relpath(self.directory / model_name, folder),
                             "-f",
-                            str(audio.relative_to(self.directory)),
+                            audio.name,
                             "-l",
                             settings.dictation_language.strip().lower() or "auto",
                             "-ng",
@@ -329,7 +328,7 @@ class Dictation(QObject):
                             "-sns",
                             "-otxt",
                             "-of",
-                            str(output.relative_to(self.directory)),
+                            output.name,
                         ],
                     )
                     deadline = time.monotonic() + 180

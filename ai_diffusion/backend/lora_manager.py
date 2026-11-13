@@ -32,6 +32,18 @@ def _clean_name(file_name: str) -> str:
     return file_name
 
 
+def _rating(value) -> int:
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _adult_rating(data: dict) -> int:
+    level = _rating(data.get("nsfwLevel") or data.get("nsfw_level"))
+    return level if level >= 8 else 8 if data.get("nsfw") is True else 0
+
+
 @dataclass
 class LoraInfo:
     name: str  # file name without extension - this is what ComfyUI expects in <lora:name:weight>
@@ -49,8 +61,6 @@ class LoraInfo:
     file_path: str = ""  # full path on the server, needed to query per-model metadata
     commercial: str = ""  # "", "yes" or "no" - filled in lazily (see fetch_commercial_use)
     civitai_model_id: int = 0  # 0 if not from CivitAI
-    # CivitAI content-rating bit flag for the preview image specifically (not
-    # necessarily the whole model): 1=G 2=PG 4=PG-13 8=R 16=X 32=XXX, 0=unrated
     nsfw_level: int = 0
 
     @staticmethod
@@ -68,8 +78,22 @@ class LoraInfo:
         images = civitai_data.get("images") or [] if isinstance(civitai_data, dict) else []
         preview_image = next((i for i in images if is_remote_preview(i.get("url", ""))), {})
         preview = preview_image.get("url", "")
-        if not preview and is_remote_preview(data.get("preview_url", "")):
-            preview = data["preview_url"]
+        sidecar_url = data.get("preview_url") or ""
+        if not preview and is_remote_preview(sidecar_url):
+            preview = sidecar_url
+        sidecar_rating = _rating(data.get("preview_nsfw_level"))
+        image_rating = _rating(preview_image.get("nsfwLevel"))
+        # Sidecar ratings only describe the sidecar URL. Adult flags are restrictive
+        # even when no matching preview is available.
+        adult_rating = max(
+            _adult_rating(data),
+            _adult_rating(civitai_data) if isinstance(civitai_data, dict) else 0,
+            sidecar_rating if sidecar_rating >= 8 else 0,
+        )
+        rating = max(
+            adult_rating,
+            image_rating or (sidecar_rating if preview and preview == sidecar_url else 0),
+        )
         tags = data.get("tags") or []
         if isinstance(tags, str):
             tags = [t.strip() for t in tags.split(",") if t.strip()]
@@ -90,7 +114,7 @@ class LoraInfo:
             trigger_words=trigger_words,
             version=version,
             civitai_model_id=civitai_model_id,
-            nsfw_level=int(preview_image.get("nsfwLevel") or data.get("preview_nsfw_level") or 0),
+            nsfw_level=rating,
             favorite=bool(data.get("favorite")),
             sha256=sha256,
             modified=float(data.get("modified") or 0.0),
@@ -178,11 +202,17 @@ async def fetch_lora_online_metadata(lora: LoraInfo):
         lora.base_model = data.get("baseModel") or lora.base_model
         lora.version = data.get("name") or lora.version
         lora.civitai_model_id = data.get("modelId") or lora.civitai_model_id
+        model = data.get("model")
+        adult_rating = max(
+            _adult_rating(data), _adult_rating(model) if isinstance(model, dict) else 0
+        )
         images = data.get("images") or []
         if not is_remote_preview(lora.preview_url):
             preview = next((i for i in images if is_remote_preview(i.get("url", ""))), {})
             lora.preview_url = preview.get("url", "")
-            lora.nsfw_level = int(preview.get("nsfwLevel") or 0)
+            lora.nsfw_level = max(adult_rating, lora.nsfw_level, _rating(preview.get("nsfwLevel")))
+        else:
+            lora.nsfw_level = max(adult_rating, lora.nsfw_level)
     except Exception as e:
         log.warning(f"Could not resolve online metadata for {lora.name}: {e}")
 
@@ -533,9 +563,10 @@ async def fetch_model_preview_bytes(lora: LoraInfo) -> bytes | None:
             if lora.sha256:
                 await fetch_lora_online_metadata(lora)
             elif lora.civitai_model_id:
-                lora.preview_url, lora.nsfw_level = await civitai.fetch_model_preview(
+                lora.preview_url, level = await civitai.fetch_model_preview(
                     lora.civitai_model_id, settings.civitai_api_key
                 )
+                lora.nsfw_level = max(lora.nsfw_level, level)
         except Exception as e:
             log.warning(f"Could not resolve online preview for {lora.name}: {e}")
     if not is_remote_preview(lora.preview_url):

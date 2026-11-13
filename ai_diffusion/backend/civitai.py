@@ -275,11 +275,13 @@ async def fetch_model_preview(model_id: int, api_key: str = "") -> tuple[str, in
             data = json.loads(data)
         if not isinstance(data, dict):
             return "", 0
+        model_level = int(data.get("nsfwLevel") or 0)
+        adult_rating = model_level if model_level >= 8 else 8 if data.get("nsfw") is True else 0
         for version in data.get("modelVersions") or []:
             for image in version.get("images") or []:
                 if url := image.get("url"):
-                    return url, int(image.get("nsfwLevel") or 0)
-        return "", 0
+                    return url, max(adult_rating, int(image.get("nsfwLevel") or 0))
+        return "", adult_rating
     except Exception as e:
         log.warning(f"Could not fetch CivitAI model {model_id}: {e}")
         return "", 0

@@ -64,6 +64,7 @@ def test_vnccs_browser_round_trip():
     try:
         with urlopen(session.url, timeout=5) as response:
             assert b'data-src="./frame.html"' in response.read()
+            assert response.headers["Cache-Control"] == "no-store"
             assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
         with urlopen(session.url + "frame.html", timeout=5) as response:
             assert "frame-ancestors 'self'" in response.headers["Content-Security-Policy"]
@@ -145,10 +146,72 @@ def test_vnccs_local_library_across_sessions(tmp_path: Path, monkeypatch):
             assert json.load(response)["pose"] == pose
         with request(session, prefix + "preview/" + name) as response:
             assert response.headers.get_content_type() == "image/png"
+            assert response.headers["Cache-Control"] == "no-store"
             assert response.read() == preview
         with request(session, prefix + "delete/" + name, "DELETE") as response:
             assert json.load(response)["ok"]
         with request(session, prefix + "list") as response:
             assert json.load(response) == {"poses": []}
+    finally:
+        session.close()
+
+
+def test_public_pose_library_is_opt_in_read_only_and_checks_hashes(tmp_path, monkeypatch):
+    from ai_diffusion import remote_pose_library as remote
+
+    monkeypatch.setattr(vnccs_pose, "user_data_dir", tmp_path)
+    pose = b'{"bones":{}}'
+    path = "poses/Standing/Pose A.json"
+    manifest = json.dumps({
+        "poses": [
+            {
+                "name": "Pose A",
+                "category": "Standing",
+                "asset_type": "pose",
+                "json_path": path,
+                "json_sha256": sha256(pose).hexdigest(),
+            },
+            {
+                "name": "Invalid",
+                "category": "Standing",
+                "asset_type": "pose",
+                "json_path": "poses/../escape.json",
+                "json_sha256": sha256(pose).hexdigest(),
+            },
+        ]
+    }).encode()
+    calls = []
+    downloads = {"pose_library.json": manifest, path: pose}
+
+    def download(repo, path):
+        calls.append((repo, path))
+        return downloads[path]
+
+    monkeypatch.setattr(remote, "_download", download)
+    session = VnccsSession("", Extent(96, 128))
+    base = session.url + "vnccs/pose_library/"
+    url = urlsplit(base)
+    header = {"Origin": f"{url.scheme}://{url.netloc}"}
+    try:
+        with urlopen(base + "list?repository=miuproject", timeout=5) as response:
+            assert json.load(response) == {"poses": []}
+        assert not calls
+        request = Request(base + "remote/enable", b'{"repository":"miuproject"}', header)
+        with urlopen(request, timeout=5) as response:
+            assert json.load(response)["ok"]
+        with urlopen(base + "list?repository=miuproject", timeout=5) as response:
+            assert [item["name"] for item in json.load(response)["poses"]] == ["Pose A"]
+        assert calls == [("miuproject", "pose_library.json")]
+        query = "Pose%20A?repository=miuproject&category=Standing"
+        with urlopen(base + "get/" + query, timeout=5) as response:
+            assert json.load(response)["pose"] == {"bones": {}}
+            assert response.headers["Cache-Control"] == "no-store"
+        request = Request(base + "delete/" + query, headers=header, method="DELETE")
+        with pytest.raises(HTTPError, match="404"):
+            urlopen(request, timeout=5)
+        downloads[path] = b"{}"
+        with pytest.raises(HTTPError, match="400"):
+            urlopen(base + "get/" + query, timeout=5)
+        assert not list(tmp_path.iterdir())
     finally:
         session.close()

@@ -125,6 +125,11 @@ def _nsfw_request_flag(mode: str) -> bool | None:
     return mode != SFW
 
 
+def _version_rating(model: CivitaiModel, version: CivitaiVersion):
+    adult_rating = model.nsfw_level if model.nsfw_level >= 8 else 8 if model.nsfw else 0
+    return max(adult_rating, version.preview_nsfw_level if version.preview_url else 0)
+
+
 def _distinguisher(model: CivitaiModel, version: CivitaiVersion, others: list) -> str:
     """Something to tell two results with the same title apart.
 
@@ -624,11 +629,7 @@ class CivitaiBrowser(QWidget):
                 continue
             if self._commercial_check.isChecked() and model.commercial != "yes":
                 continue
-            level = version.preview_nsfw_level
-            if not version.preview_url and model.nsfw_level >= 8:
-                # Search results can omit adult previews until the details request.
-                level = model.nsfw_level
-            if not matches_content_rating(nsfw_mode, level):
+            if not matches_content_rating(nsfw_mode, _version_rating(model, version)):
                 continue
             if client_side_arch and arch_for_base_model(version.base_model) != arch:
                 continue
@@ -780,7 +781,9 @@ class CivitaiBrowser(QWidget):
             return
         version.preview_url = url
         version.preview_nsfw_level = nsfw_level
-        if not matches_content_rating(self._nsfw_combo.currentData(), nsfw_level):
+        if not matches_content_rating(
+            self._nsfw_combo.currentData(), _version_rating(model, version)
+        ):
             self._apply_filter()
             return
         if version.id in self._pending_previews:

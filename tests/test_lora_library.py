@@ -67,6 +67,35 @@ def test_rating_filter_uses_the_selected_preview():
     assert matches_content_rating(ALL, unrated)
 
 
+def test_cached_sidecar_rating_requires_the_matching_remote_preview():
+    data = {"file_name": "model.safetensors", "preview_nsfw_level": 2}
+    for preview in ("", "/api/lm/preview.png", "http://127.0.0.1/preview.png"):
+        entry = LoraInfo.from_api(dict(data, preview_url=preview), "")
+        assert not matches_content_rating(SFW, entry.nsfw_level)
+        assert matches_content_rating(ALL, entry.nsfw_level)
+    remote = "https://image.civitai.com/safe.png"
+    entry = LoraInfo.from_api(dict(data, preview_url=remote), "")
+    assert matches_content_rating(SFW, entry.nsfw_level)
+    entry = LoraInfo.from_api(dict(data, preview_url=remote, civitai={"nsfw": True}), "")
+    assert matches_content_rating(NSFW, entry.nsfw_level)
+    assert not matches_content_rating(SFW, entry.nsfw_level)
+
+
+@qtapp
+async def test_metadata_does_not_override_known_adult_rating(monkeypatch):
+    from ai_diffusion.backend import civitai
+    from ai_diffusion.backend.lora_manager import fetch_lora_online_metadata
+
+    requests = AsyncMock()
+    requests.get.return_value = {
+        "images": [{"url": "https://image.civitai.com/safe.png", "nsfwLevel": 2}]
+    }
+    monkeypatch.setattr(civitai, "requests", lambda: requests)
+    entry = LoraInfo("model", sha256="abc", nsfw_level=16)
+    await fetch_lora_online_metadata(entry)
+    assert entry.nsfw_level == 16
+
+
 @qtapp
 async def test_scan_enriches_triggers_even_with_existing_preview(monkeypatch, tmp_path):
     from ai_diffusion.backend import civitai
