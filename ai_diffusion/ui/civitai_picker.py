@@ -48,11 +48,9 @@ from ..model.root import root
 from ..settings import settings
 from ..util import ensure
 from . import theme
+from .content_rating import SFW, content_rating_combo, matches_content_rating
 from .lora_picker import (
     _ARCH_LABELS,
-    _NSFW_ALL,
-    _NSFW_HIDE_EXPLICIT,
-    _NSFW_SAFE,
     _visible_range,
     _with_badges,
 )
@@ -123,14 +121,8 @@ def _with_state_marker(pixmap: QPixmap, state: str) -> QPixmap:
 
 
 def _nsfw_request_flag(mode: str) -> bool | None:
-    """What to ask CivitAI for. Explicitly requesting nsfw=true widens the result set
-    beyond the default; None leaves the choice to CivitAI, and the rating filter is
-    then applied client-side on top."""
-    if mode == _NSFW_SAFE:
-        return False
-    if mode == _NSFW_ALL:
-        return True
-    return None
+    # CivitAI nsfw=true includes adult results; NSFW-only is enforced locally.
+    return mode != SFW
 
 
 def _distinguisher(model: CivitaiModel, version: CivitaiVersion, others: list) -> str:
@@ -256,19 +248,7 @@ class CivitaiBrowser(QWidget):
         self._tag_combo.currentIndexChanged.connect(self._start_search)
         ensure(self._tag_combo.lineEdit()).returnPressed.connect(self._start_search)
 
-        self._nsfw_combo = QComboBox(self)
-        self._nsfw_combo.addItem(_("Safe only"), _NSFW_SAFE)
-        self._nsfw_combo.addItem(_("Hide explicit"), _NSFW_HIDE_EXPLICIT)
-        self._nsfw_combo.addItem(_("All ratings"), _NSFW_ALL)
-        nsfw_index = self._nsfw_combo.findData(settings.civitai_nsfw_filter)
-        self._nsfw_combo.setCurrentIndex(max(nsfw_index, 0))
-        self._nsfw_combo.setToolTip(
-            _(
-                "Content rating limit for CivitAI results. The starting value comes from"
-                " Settings - Interface, and changing it here updates that setting."
-            )
-        )
-        self._nsfw_combo.currentIndexChanged.connect(self._save_nsfw_setting)
+        self._nsfw_combo = content_rating_combo(self)
         self._nsfw_combo.currentIndexChanged.connect(self._start_search)
 
         self._show_combo = QComboBox(self)
@@ -422,9 +402,8 @@ class CivitaiBrowser(QWidget):
     def _api_key(self) -> str:
         return settings.civitai_api_key.strip()
 
-    def _save_nsfw_setting(self):
-        settings.civitai_nsfw_filter = self._nsfw_combo.currentData()
-        settings.save()
+    def reset_content_filter(self):
+        self._nsfw_combo.setCurrentIndex(self._nsfw_combo.findData(SFW))
 
     def _current_tag(self) -> str:
         # editable combo: the placeholder entry shows its label as text, which would
@@ -645,14 +624,11 @@ class CivitaiBrowser(QWidget):
                 continue
             if self._commercial_check.isChecked() and model.commercial != "yes":
                 continue
-            # A model's nsfwLevel is the union of the ratings of ALL its images, so
-            # one spicy example sets the R bit on an otherwise tame model - filtering
-            # on it dropped over half of even an nsfw=false result set. Judge the
-            # preview we actually show instead, like the local LoRA browser does.
-            preview_level = version.preview_nsfw_level
-            if nsfw_mode == _NSFW_SAFE and preview_level >= 8:
-                continue
-            if nsfw_mode == _NSFW_HIDE_EXPLICIT and preview_level >= 16:
+            level = version.preview_nsfw_level
+            if not version.preview_url and model.nsfw_level >= 8:
+                # Search results can omit adult previews until the details request.
+                level = model.nsfw_level
+            if not matches_content_rating(nsfw_mode, level):
                 continue
             if client_side_arch and arch_for_base_model(version.base_model) != arch:
                 continue
@@ -804,6 +780,9 @@ class CivitaiBrowser(QWidget):
             return
         version.preview_url = url
         version.preview_nsfw_level = nsfw_level
+        if not matches_content_rating(self._nsfw_combo.currentData(), nsfw_level):
+            self._apply_filter()
+            return
         if version.id in self._pending_previews:
             return
         self._pending_previews.add(version.id)

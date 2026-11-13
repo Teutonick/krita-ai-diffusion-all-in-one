@@ -14,6 +14,7 @@ from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkReques
 from ..settings import settings
 from ..util import client_logger as log
 from ..util import plugin_dir, user_data_dir
+from .dictation import dictation
 from .network import NetworkError, RequestManager
 
 # Ollama runs as its own service, independent of the ComfyUI connection, so it gets
@@ -205,8 +206,12 @@ async def generate(
     # newline-delimited JSON which the request manager cannot parse.
     data = _request_body(prompt, system, model, temperature, stream=False, images=images)
     timeout = timeout or settings.ollama_timeout
-    result = await _requests.http("POST", f"{url()}/api/generate", data, timeout=timeout)
-    return clean_response(result.get("response", ""))
+    dictation.prompt_started()
+    try:
+        result = await _requests.http("POST", f"{url()}/api/generate", data, timeout=timeout)
+        return clean_response(result.get("response", ""))
+    finally:
+        dictation.prompt_finished()
 
 
 class Generation:
@@ -255,7 +260,12 @@ class Generation:
         self._reply = reply
         reply.readyRead.connect(self._read)
         reply.finished.connect(self._finish)
-        return await self._future
+        dictation.prompt_started()
+        try:
+            return await self._future
+        finally:
+            self.cancel()
+            dictation.prompt_finished()
 
     def cancel(self):
         if self._reply is not None and self._reply.isRunning():
@@ -310,6 +320,7 @@ async def unload():
 async def free_comfy_vram(client):
     """Unload checkpoints on the ComfyUI side to make room for the language model.
     Only useful when both run on the same GPU."""
+    dictation.cancel()
     try:
         await client._requests.http(
             "POST",

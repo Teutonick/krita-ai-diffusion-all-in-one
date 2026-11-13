@@ -1,4 +1,14 @@
-# 1.53.0-all-in-one.30 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.33 — krita-ai-diffusion-all-in-one
+
+Fixes the prompt toolbar layout: the translation button and negative prompt
+warning stay on the right whether the microphone is visible or hidden.
+
+Adds local voice dictation on Windows x64 in **Settings → Integrations → Voice
+Dictation**. Use the microphone in image and video prompt fields and in Prompt AI
+instruction dialogs. The multilingual Whisper model downloads on first enable,
+runs on the CPU, and releases memory after each transcription.
+
+- LoRA and model browsers default to SFW, with SFW-only, NSFW-only and all-rating filters. Unrated previews appear only in All.
 
 - The in-plugin updater checks this fork’s GitHub Releases and installs verified plugin ZIPs. Restart Krita manually to finish.
 
@@ -50,8 +60,8 @@ endorsed by their authors.
 
 ## Build artifacts
 
-The local build provides `krita_ai_diffusion-1.53.0-all-in-one.30.zip`, the corresponding
-source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.30/`. Published releases,
+The local build provides `krita_ai_diffusion-1.53.0-all-in-one.33.zip`, the corresponding
+source ZIP and SHA-256 checksums under `builds/1.53.0-all-in-one.33/`. Published releases,
 when available, are listed on the [project releases page](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases).
 
 Import the plugin ZIP through **Tools → Scripts → Import Python Plugin from File**,

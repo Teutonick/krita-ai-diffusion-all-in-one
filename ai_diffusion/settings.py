@@ -287,18 +287,6 @@ class Settings(QObject):
         ),
     )
 
-    civitai_nsfw_filter: str
-    _civitai_nsfw_filter = Setting(
-        _("CivitAI Content Filter"),
-        "safe",
-        _("Content rating limit applied when browsing CivitAI"),
-        items=[
-            (_("Safe only"), "safe"),
-            (_("Hide explicit"), "hide_explicit"),
-            (_("All ratings"), "all"),
-        ],
-    )
-
     animadex_enabled: bool
     _animadex_enabled = Setting(
         _("AnimaDex Browser"),
@@ -365,6 +353,21 @@ class Settings(QObject):
         _("Prompt Translation"),
         "",
         _("Translate text prompts from the selected language to English"),
+    )
+
+    dictation_enabled: bool
+    _dictation_enabled = Setting(
+        _("Enable Dictation"), False, _("Recognize speech locally with Whisper on Windows x64")
+    )
+
+    dictation_language: str
+    _dictation_language = Setting(
+        _("Speech Language"), "auto", _("Use auto or a language code such as ru or en")
+    )
+
+    dictation_record_limit: int
+    _dictation_record_limit = Setting(
+        _("Recording Limit"), 90, _("Automatically stop and transcribe when this limit is reached")
     )
 
     ollama_enabled: bool

@@ -6,6 +6,7 @@ from krita import DockWidgetFactory, DockWidgetFactoryBase, Extension, Krita, Wi
 from PyQt5.QtWidgets import QAction
 
 from . import __version__, eventloop, media_storage
+from .backend.dictation import dictation
 from .model.model import Workspace
 from .model.root import root
 from .settings import settings
@@ -44,6 +45,7 @@ class AIToolsExtension(Extension):
 
         eventloop.setup()
         settings.load()
+        dictation.configure()
         root.init()
         self._settings_dialog = SettingsDialog(root.server)
         self._layer_prompt_actions = LayerPromptActions(self)
@@ -56,6 +58,7 @@ class AIToolsExtension(Extension):
         eventloop.run(root.autostart(self._settings_dialog.connection.update_ui))
 
     def shutdown(self):
+        dictation.shutdown()
         try:
             eventloop.run_until_complete(eventloop.run(root.server.stop()))
         except Exception:

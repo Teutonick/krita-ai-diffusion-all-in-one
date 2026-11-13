@@ -48,6 +48,7 @@ from ..util import client_logger as log
 from ..util import ensure
 from . import theme
 from .control import ControlListWidget
+from .dictation import dictation_row
 from .lora_picker import LoraPickerDialog
 from .settings import settings
 from .widget import TextPromptWidget
@@ -175,10 +176,12 @@ class ActiveRegionWidget(QFrame):
         self._header.setLayout(header_layout)
 
         self.positive = TextPromptWidget(parent=self)
+        self._positive_row, self._positive_mic = dictation_row(self.positive)
         self.positive.handle_dragged.connect(self._handle_positive_dragging)
         self.positive.installEventFilter(self)
 
         self.negative = TextPromptWidget(line_count=1, is_negative=True, parent=self)
+        self._negative_row, self._negative_mic = dictation_row(self.negative)
         self.negative.handle_dragged.connect(self._handle_negative_dragging)
         self.negative.installEventFilter(self)
 
@@ -278,45 +281,6 @@ class ActiveRegionWidget(QFrame):
         self._enhance_timer.setInterval(200)
         self._enhance_timer.timeout.connect(self._update_enhance_progress)
 
-        # left-aligned, grouped by what they do: insert saved/dynamic content first
-        # (Prompts -> Wildcards -> Recipe -> LoRA, increasing in scope from a single
-        # snippet to a whole checkpoint+LoRA+prompt bundle), AI last since it acts on
-        # whatever text is already in the field rather than inserting new content
-        buttons_layout = QHBoxLayout()
-        buttons_layout.setContentsMargins(0, 0, 0, 0)
-        buttons_layout.setSpacing(2)
-        buttons_layout.addWidget(self._prompt_browse_button)
-        buttons_layout.addWidget(self._wildcard_browse_button)
-        buttons_layout.addWidget(self._animadex_button)
-        buttons_layout.addWidget(self._recipe_browse_button)
-        buttons_layout.addWidget(self._lora_browse_button)
-        buttons_layout.addWidget(self._enhance_button)
-        buttons_layout.addStretch(1)
-
-        prompt_tools_layout = QVBoxLayout()
-        prompt_tools_layout.setContentsMargins(0, 0, 0, 0)
-        prompt_tools_layout.setSpacing(0)
-        prompt_tools_layout.addLayout(buttons_layout)
-        prompt_tools_layout.addWidget(self._enhance_progress)
-
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        if header is PromptHeader.icon:
-            self._header.setVisible(False)
-            layout.addLayout(prompt_tools_layout)
-            positive_layout = QHBoxLayout()
-            positive_layout.addWidget(self._header_icon, alignment=Qt.AlignmentFlag.AlignTop)
-            positive_layout.addWidget(self.positive, 1)
-            layout.addLayout(positive_layout)
-        else:
-            layout.addWidget(self._header)
-            layout.addLayout(prompt_tools_layout)
-            layout.addWidget(self.positive)
-        layout.addWidget(self.negative)
-        layout.addWidget(self._no_region)
-        self.setLayout(layout)
-
         font_size = self.font().pointSize()
         self._language_button = QToolButton(self)
         self._language_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
@@ -332,6 +296,47 @@ class ActiveRegionWidget(QFrame):
         self._negative_warning.setPixmap(theme.icon("alert").pixmap(font_height, font_height))
         self._negative_warning.setToolTip(_("The selected Style does not use the negative prompt."))
         self._negative_warning.setVisible(False)
+
+        # left-aligned, grouped by what they do: insert saved/dynamic content first
+        # (Prompts -> Wildcards -> Recipe -> LoRA, increasing in scope from a single
+        # snippet to a whole checkpoint+LoRA+prompt bundle), AI last since it acts on
+        # whatever text is already in the field rather than inserting new content
+        buttons_layout = QHBoxLayout()
+        buttons_layout.setContentsMargins(0, 0, 0, 0)
+        buttons_layout.setSpacing(2)
+        buttons_layout.addWidget(self._prompt_browse_button)
+        buttons_layout.addWidget(self._wildcard_browse_button)
+        buttons_layout.addWidget(self._animadex_button)
+        buttons_layout.addWidget(self._recipe_browse_button)
+        buttons_layout.addWidget(self._lora_browse_button)
+        buttons_layout.addWidget(self._enhance_button)
+        buttons_layout.addStretch(1)
+        buttons_layout.addWidget(self._negative_warning)
+        buttons_layout.addWidget(self._language_button)
+
+        prompt_tools_layout = QVBoxLayout()
+        prompt_tools_layout.setContentsMargins(0, 0, 0, 0)
+        prompt_tools_layout.setSpacing(0)
+        prompt_tools_layout.addLayout(buttons_layout)
+        prompt_tools_layout.addWidget(self._enhance_progress)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        if header is PromptHeader.icon:
+            self._header.setVisible(False)
+            layout.addLayout(prompt_tools_layout)
+            positive_layout = QHBoxLayout()
+            positive_layout.addWidget(self._header_icon, alignment=Qt.AlignmentFlag.AlignTop)
+            positive_layout.addWidget(self._positive_row, 1)
+            layout.addLayout(positive_layout)
+        else:
+            layout.addWidget(self._header)
+            layout.addLayout(prompt_tools_layout)
+            layout.addWidget(self._positive_row)
+        layout.addWidget(self._negative_row)
+        layout.addWidget(self._no_region)
+        self.setLayout(layout)
 
         self._setup_bindings(self._region)
         settings.changed.connect(self.update_settings)
@@ -351,6 +356,8 @@ class ActiveRegionWidget(QFrame):
     @region.setter
     def region(self, region: RootRegion | Region | None):
         if region != self._region:
+            self._positive_mic.cancel()
+            self._negative_mic.cancel()
             self._region = region
             self._setup_bindings(region)
             # an undo stack from a different region's text makes no sense here
@@ -401,7 +408,7 @@ class ActiveRegionWidget(QFrame):
         self.positive.move_cursor_to_end()
         self._link_button.setVisible(not is_root_region)
         self._remove_button.setVisible(not is_root_region)
-        self.positive.setVisible(region is not None)
+        self._positive_row.setVisible(region is not None)
         self._no_region.setVisible(region is None)
 
     def focus(self):
@@ -585,27 +592,9 @@ class ActiveRegionWidget(QFrame):
             )
         else:
             self.positive.line_count = settings.prompt_line_count_live
-        self.negative.setVisible(self.has_negative)
-        self._layout_language_button()
+        self._negative_row.setVisible(self.has_negative)
         self._setup_resize_handle()
         self._show_negative_warning()
-
-    def _layout_language_button(self):
-        if settings.prompt_translation:
-            pos = self.positive.geometry().bottomRight()
-            if self.has_negative:
-                pos = self.negative.geometry().bottomRight()
-            s = QSize(self.fontMetrics().width("EN"), self.fontMetrics().height())
-            self._language_button.move(pos.x() - s.width() - 2, pos.y() - s.height() - 2)
-            self._language_button.resize(s)
-
-        if self.has_negative:
-            pos = self.negative.geometry().bottomRight()
-            if settings.prompt_translation:
-                pos = pos - QPoint(self._language_button.width() + 4, 0)
-            s = self.fontMetrics().height() + 2
-            self._negative_warning.move(pos.x() - s - 2, pos.y() - s - 2)
-            self._negative_warning.resize(QSize(s, s))
 
     def _show_negative_warning(self):
         if isinstance(self._region, RootRegion):
@@ -964,7 +953,8 @@ class ActiveRegionWidget(QFrame):
 
         instruction = QLineEdit(dialog)
         instruction.setPlaceholderText(_("Describe the change to the animation..."))
-        layout.addWidget(instruction)
+        instruction_row, _mic = dictation_row(instruction)
+        layout.addWidget(instruction_row)
         status = QLabel(dialog)
         status.setWordWrap(True)
         layout.addWidget(status)
@@ -1122,10 +1112,6 @@ class ActiveRegionWidget(QFrame):
         dialog.activateWindow()
         dialog.browser.create_from_image(text, negative, image)
 
-    def resizeEvent(self, a0):
-        super().resizeEvent(a0)
-        self._layout_language_button()
-
     def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
         if a1 and a1.type() == QEvent.Type.FocusIn:
             self.setStyleSheet(self._style_focus)
@@ -1187,7 +1173,8 @@ class InstructionDialog(QDialog):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(4)
         layout.addWidget(label)
-        layout.addWidget(self._edit)
+        edit_row, _mic = dictation_row(self._edit)
+        layout.addWidget(edit_row)
         layout.addWidget(self._negative_check)
         layout.addLayout(button_row)
         self.setLayout(layout)

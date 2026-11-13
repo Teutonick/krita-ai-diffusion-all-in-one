@@ -409,6 +409,19 @@ On edit models an `@name` that matches neither a reference nor a layer is left a
 warning, and `a@b.com`-style text is never touched. Wildcards and
 `<lora:...>` tags are unaffected.
 
+### Voice dictation (Windows x64)
+
+Open **Settings → Integrations → Voice Dictation** and enable dictation. Krita
+downloads whisper.cpp and the multilingual Whisper Base model (about 64 MB
+total). Use **Speech Language** to choose automatic detection or a code such as
+`ru` or `en`.
+
+Click the microphone next to a prompt or a Prompt AI instruction to start
+recording, then click it again to insert the transcript at the cursor. Recording
+stops automatically after 90 seconds by default (adjustable from 15 to 120).
+Whisper runs locally on the CPU and frees memory when it exits. Starting
+generation or Prompt AI cancels any unfinished dictation. Audio is not uploaded.
+
 ### Prompt AI
 
 An **AI** button next to the prompt rewrites it with a local language model

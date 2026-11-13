@@ -40,6 +40,7 @@ from ..settings import settings
 from ..style import Styles
 from ..util import ensure
 from . import theme
+from .content_rating import SFW, content_rating_combo, matches_content_rating
 from .generate_across import AcrossOptions, generate_across_checkpoints
 from .generate_sets import GenerateSetBar
 from .lora_picker import (
@@ -75,9 +76,6 @@ _PREVIEW_SIZE_MAX = 256
 _BASE_ANY = "__any__"
 _SORT_NAME = "name"
 _SORT_DATE = "date"
-_NSFW_ALL = "all"
-_NSFW_SAFE = "safe"
-_NSFW_HIDE_EXPLICIT = "hide_explicit"
 # ComfyUI loader nodes whose file lists hold the models a style can point at
 _LOADERS = [
     ("CheckpointLoaderSimple", "ckpt_name", FileFormat.checkpoint),
@@ -146,16 +144,7 @@ class CheckpointBrowser(QWidget):
         )
         self._hide_styled.toggled.connect(self._apply_filter)
 
-        self._nsfw_combo = QComboBox(self)
-        self._nsfw_combo.addItem(_("All"), _NSFW_ALL)
-        self._nsfw_combo.addItem(_("Safe Only"), _NSFW_SAFE)
-        self._nsfw_combo.addItem(_("Hide Explicit"), _NSFW_HIDE_EXPLICIT)
-        self._nsfw_combo.setToolTip(
-            _(
-                "Filter by the CivitAI content rating of the preview image.\n"
-                "Safe Only: hides R and above. Hide Explicit: hides X/XXX only."
-            )
-        )
+        self._nsfw_combo = content_rating_combo(self)
         self._nsfw_combo.currentIndexChanged.connect(self._apply_filter)
 
         sort_label = QLabel(_("Sort:"), self)
@@ -342,9 +331,7 @@ class CheckpointBrowser(QWidget):
         def matches(c: LoraInfo) -> bool:
             if favorites_only and not c.favorite:
                 return False
-            if nsfw_mode == _NSFW_SAFE and c.nsfw_level >= 8:  # R and above
-                return False
-            if nsfw_mode == _NSFW_HIDE_EXPLICIT and c.nsfw_level >= 16:  # X/XXX
+            if not matches_content_rating(nsfw_mode, c.nsfw_level):
                 return False
             if hide_styled and c.name in has_style:
                 return False
@@ -471,6 +458,9 @@ class CheckpointBrowser(QWidget):
         if client is None:
             return
         data = await fetch_model_preview_bytes(c)
+        if not matches_content_rating(self._nsfw_combo.currentData(), c.nsfw_level):
+            self._apply_filter()
+            return
         is_video = _is_video_url(c.preview_url)
         if data:
             pixmap = QPixmap()
@@ -579,6 +569,9 @@ class CheckpointBrowser(QWidget):
         else:
             self._load()  # also refreshes the "has a style" badges
 
+    def reset_content_filter(self):
+        self._nsfw_combo.setCurrentIndex(self._nsfw_combo.findData(SFW))
+
     def shutdown(self):
         # drop the pending scan callback so it doesn't fire on a closed browser. The
         # dialog is kept for a reopen, so leave the button usable - the scan itself
@@ -644,13 +637,11 @@ class CheckpointBrowser(QWidget):
         return [i.data(Qt.ItemDataRole.UserRole).name for i in self._grid.selectedItems()]
 
     def _apply_set(self, names: list[str]):
-        # a set can hold checkpoints the current filters hide - reset them,
-        # otherwise restoring a set would silently drop half of it
+        # Reset other filters, but keep the rating the user selected.
         self._search.clear()
         self._favorites_only.setChecked(False)
         self._hide_styled.setChecked(False)
         self._base_combo.setCurrentIndex(0)
-        self._nsfw_combo.setCurrentIndex(0)
         self._apply_filter()
 
         wanted = set(names)
@@ -668,7 +659,7 @@ class CheckpointBrowser(QWidget):
             self._grid.scrollToItem(first)
         text = _("Selected {n} checkpoints").format(n=len(found))
         if missing := len(wanted - found):
-            text += "  " + _("({n} no longer available)").format(n=missing)
+            text += "  " + _("({n} hidden or unavailable)").format(n=missing)
         self._status.setText(text)
 
     def _generate_across(self):

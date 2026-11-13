@@ -36,6 +36,8 @@ from .. import __version__, eventloop, util
 from ..backend import ollama, resources
 from ..backend.client import Client, MissingResources, User
 from ..backend.cloud_client import CloudClient
+from ..backend.dictation import dictation
+from ..backend.dictation import supported as dictation_supported
 from ..backend.network import NetworkError
 from ..backend.resources import Arch, ResourceId
 from ..backend.server import Server, ServerState
@@ -882,12 +884,32 @@ class IntegrationSettings(SettingsTab):
 
         _section(
             self._layout,
+            _("Voice Dictation"),
+            _("Whisper runs locally on the CPU and releases memory after each transcription."),
+        )
+        if dictation_supported:
+            self.add("dictation_enabled", SwitchSetting(S._dictation_enabled, parent=self))
+            self.add("dictation_language", TextSetting(S._dictation_language, parent=self))
+            self.add(
+                "dictation_record_limit",
+                SpinBoxSetting(S._dictation_record_limit, self, 15, 120, 5, _(" seconds")),
+            )
+            self._dictation_retry = QPushButton(_("Retry Whisper Setup"), self)
+            self._dictation_retry.clicked.connect(dictation.configure)
+            self._layout.addWidget(self._dictation_retry, alignment=Qt.AlignmentFlag.AlignLeft)
+        self._dictation_status = QLabel(self)
+        self._dictation_status.setWordWrap(True)
+        self._layout.addWidget(self._dictation_status)
+        dictation.changed.connect(self._update_dictation)
+        self._update_dictation()
+
+        _section(
+            self._layout,
             _("CivitAI"),
             _("Model search and downloads in the CivitAI browser"),
         )
         self.add("civitai_host", ComboBoxSetting(S._civitai_host, parent=self))
         self.add("civitai_api_key", TextSetting(S._civitai_api_key, parent=self))
-        self.add("civitai_nsfw_filter", ComboBoxSetting(S._civitai_nsfw_filter, parent=self))
 
         _section(
             self._layout,
@@ -916,6 +938,13 @@ class IntegrationSettings(SettingsTab):
         )
 
         self._layout.addStretch()
+
+    def _update_dictation(self):
+        self._dictation_status.setText(dictation.status)
+        if dictation_supported:
+            self._dictation_retry.setVisible(
+                settings.dictation_enabled and dictation.install_failed
+            )
 
     def _read(self):
         if settings.ollama_model:

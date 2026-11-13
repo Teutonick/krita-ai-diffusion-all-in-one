@@ -21,6 +21,7 @@ from ..model.root import root
 from ..settings import settings
 from . import theme
 from .control import ControlListWidget
+from .dictation import dictation_row
 from .widget import (
     ErrorBox,
     QueueButton,
@@ -58,13 +59,15 @@ class AnimationWidget(QWidget):
         self.prompt_textbox.line_count = settings.prompt_line_count
 
         self.negative_textbox = TextPromptWidget(line_count=1, is_negative=True, parent=self)
-        self.negative_textbox.setVisible(settings.show_negative_prompt)
+        positive_row, self._positive_mic = dictation_row(self.prompt_textbox)
+        self._negative_row, self._negative_mic = dictation_row(self.negative_textbox)
+        self._negative_row.setVisible(settings.show_negative_prompt)
 
         prompt_layout = QVBoxLayout()
         prompt_layout.setContentsMargins(0, 0, 0, 0)
         prompt_layout.setSpacing(2)
-        prompt_layout.addWidget(self.prompt_textbox)
-        prompt_layout.addWidget(self.negative_textbox)
+        prompt_layout.addWidget(positive_row)
+        prompt_layout.addWidget(self._negative_row)
         layout.addLayout(prompt_layout)
 
         self.strength_slider = StrengthWidget(parent=self)
@@ -130,6 +133,8 @@ class AnimationWidget(QWidget):
     @model.setter
     def model(self, model: DocumentModel):
         if self._model != model:
+            self._positive_mic.cancel()
+            self._negative_mic.cancel()
             Binding.disconnect_all(self._model_bindings)
             self._model = model
             self._model_bindings = [
@@ -166,7 +171,7 @@ class AnimationWidget(QWidget):
             self.prompt_textbox.line_count = value
         elif key == "show_negative_prompt":
             self.negative_textbox.text = ""
-            self.negative_textbox.setVisible(value)
+            self._negative_row.setVisible(value)
 
     def update_mode(self):
         self.target_layer.setVisible(not self.model.animation.batch_mode)

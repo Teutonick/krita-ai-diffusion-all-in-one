@@ -44,6 +44,7 @@ from ..backend.client import (
     is_style_supported,
     resolve_arch,
 )
+from ..backend.dictation import dictation
 from ..backend.network import NetworkError
 from ..backend.resolution import compute_bounds, compute_relative_bounds
 from ..backend.resources import ControlMode
@@ -480,6 +481,8 @@ class DocumentModel(QObject, ObservableProperties):
         queue_mode: QueueMode | None = None,
         prompt_loras_0: list | None = None,
     ):
+        if kind is not JobKind.live_preview:
+            dictation.cancel()
         sampling = ensure(input.sampling)
         params.has_mask = input.images is not None and input.images.hires_mask is not None
         params.batch_id = uuid.uuid4().hex

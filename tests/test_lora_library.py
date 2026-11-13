@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 from urllib.parse import parse_qs, urlsplit
 
 from ai_diffusion.backend.lora_manager import LoraInfo, fetch_loras_pages
+from ai_diffusion.ui.content_rating import ALL, NSFW, SFW, matches_content_rating
 
 from .conftest import qtapp
 
@@ -47,6 +48,23 @@ def test_manager_folder_is_not_duplicated():
         LoraInfo.from_api({"file_name": "Krea2/model.safetensors", "folder": "Krea2"}, "").name
         == "Krea2/model"
     )
+
+
+def test_rating_filter_uses_the_selected_preview():
+    data = {
+        "file_name": "model.safetensors",
+        "preview_nsfw_level": 2,
+        "civitai": {"images": [{"url": "https://image.civitai.com/preview.png", "nsfwLevel": 8}]},
+    }
+    rated = LoraInfo.from_api(data, "").nsfw_level
+    unrated = LoraInfo.from_api({"file_name": "local.safetensors"}, "").nsfw_level
+    assert not matches_content_rating(SFW, rated)
+    assert matches_content_rating(NSFW, rated)
+    assert matches_content_rating(SFW, 2)
+    assert not matches_content_rating(NSFW, 2)
+    assert not matches_content_rating(SFW, unrated)
+    assert not matches_content_rating(NSFW, unrated)
+    assert matches_content_rating(ALL, unrated)
 
 
 @qtapp
@@ -133,7 +151,7 @@ def test_base_model_filter_excludes_unknown_and_other_architectures():
         _arch_combo=NS(currentData=lambda: "krea2"),
         _tag_combo=NS(currentData=lambda: lora_picker._TAG_ALL),
         _favorites_only=NS(isChecked=lambda: False),
-        _nsfw_combo=NS(currentData=lambda: None),
+        _nsfw_combo=NS(currentData=lambda: ALL),
         _sort_combo=NS(currentData=lambda: None),
         _all_loras=loras,
         _populate_grid=lambda: None,

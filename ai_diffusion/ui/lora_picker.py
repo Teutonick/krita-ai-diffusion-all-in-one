@@ -44,6 +44,7 @@ from ..text import format_option_group
 from ..util import ensure
 from ..wildcards import WildcardLibrary
 from . import theme
+from .content_rating import SFW, content_rating_combo, matches_content_rating
 
 _PREVIEW_SIZE_DEFAULT = 96
 _PREVIEW_SIZE_MIN = 48
@@ -63,9 +64,6 @@ _SORT_DATE = "date"
 _POS_END = "end"
 _POS_START = "start"
 _POS_CURSOR = "cursor"
-_NSFW_ALL = "all"
-_NSFW_SAFE = "safe"
-_NSFW_HIDE_EXPLICIT = "hide_explicit"
 _KNOWN_ARCHES = [
     "sd15",
     "sdxl",
@@ -264,16 +262,7 @@ class LoraBrowser(QWidget):
         self._favorites_only = QCheckBox(_("Favorites"), self)
         self._favorites_only.toggled.connect(self._apply_filter)
 
-        self._nsfw_combo = QComboBox(self)
-        self._nsfw_combo.addItem(_("All"), _NSFW_ALL)
-        self._nsfw_combo.addItem(_("Safe Only"), _NSFW_SAFE)
-        self._nsfw_combo.addItem(_("Hide Explicit"), _NSFW_HIDE_EXPLICIT)
-        self._nsfw_combo.setToolTip(
-            _(
-                "Filter by the CivitAI content rating of the preview image.\n"
-                "Safe Only: hides R and above. Hide Explicit: hides X/XXX only."
-            )
-        )
+        self._nsfw_combo = content_rating_combo(self)
         self._nsfw_combo.currentIndexChanged.connect(self._apply_filter)
 
         sort_label = QLabel(_("Sort:"), self)
@@ -505,6 +494,9 @@ class LoraBrowser(QWidget):
             self._loading = False
             self._rescan_btn.setEnabled(True)
 
+    def reset_content_filter(self):
+        self._nsfw_combo.setCurrentIndex(self._nsfw_combo.findData(SFW))
+
     def shutdown(self):
         # drop the pending scan callback so it doesn't fire on a destroyed browser.
         # Not tied to hiding: switching to another tab while a scan runs must not
@@ -561,9 +553,7 @@ class LoraBrowser(QWidget):
         def matches(lora: LoraInfo) -> bool:
             if favorites_only and not lora.favorite:
                 return False
-            if nsfw_mode == _NSFW_SAFE and lora.nsfw_level >= 8:  # R and above
-                return False
-            if nsfw_mode == _NSFW_HIDE_EXPLICIT and lora.nsfw_level >= 16:  # X/XXX
+            if not matches_content_rating(nsfw_mode, lora.nsfw_level):
                 return False
             if arch:
                 model_arch = arch_for_base_model(lora.base_model)
@@ -724,6 +714,9 @@ class LoraBrowser(QWidget):
         if client is None:
             return
         data = await fetch_model_preview_bytes(lora)
+        if not matches_content_rating(self._nsfw_combo.currentData(), lora.nsfw_level):
+            self._apply_filter()
+            return
         selected = self._grid.selectedItems()
         if selected and selected[0].data(Qt.ItemDataRole.UserRole) is lora:
             self._on_selection_changed()
@@ -966,6 +959,11 @@ class LoraPickerDialog(QDialog):
         layout.addWidget(self._tabs, 1)
         layout.addLayout(bottom)
         self.setLayout(layout)
+
+    def showEvent(self, a0):
+        self.library.reset_content_filter()
+        self.civitai.reset_content_filter()
+        super().showEvent(a0)
 
     def closeEvent(self, a0):
         self.library.shutdown()

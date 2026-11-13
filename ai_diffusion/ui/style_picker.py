@@ -740,6 +740,11 @@ class StylePickerDialog(QDialog):
         self.styles._current = style
         self.styles._reload()
 
+    def showEvent(self, a0):
+        self.checkpoints.reset_content_filter()
+        self.civitai.reset_content_filter()
+        super().showEvent(a0)
+
     def closeEvent(self, a0):
         self.checkpoints.shutdown()
         super().closeEvent(a0)

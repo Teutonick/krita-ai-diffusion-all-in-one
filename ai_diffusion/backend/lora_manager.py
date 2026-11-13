@@ -66,9 +66,8 @@ class LoraInfo:
         sha256 = data.get("sha256", "")
         civitai_data = data.get("civitai") or {}
         images = civitai_data.get("images") or [] if isinstance(civitai_data, dict) else []
-        preview = next(
-            (i.get("url", "") for i in images if is_remote_preview(i.get("url", ""))), ""
-        )
+        preview_image = next((i for i in images if is_remote_preview(i.get("url", ""))), {})
+        preview = preview_image.get("url", "")
         if not preview and is_remote_preview(data.get("preview_url", "")):
             preview = data["preview_url"]
         tags = data.get("tags") or []
@@ -91,7 +90,7 @@ class LoraInfo:
             trigger_words=trigger_words,
             version=version,
             civitai_model_id=civitai_model_id,
-            nsfw_level=int(data.get("preview_nsfw_level") or 0),
+            nsfw_level=int(preview_image.get("nsfwLevel") or data.get("preview_nsfw_level") or 0),
             favorite=bool(data.get("favorite")),
             sha256=sha256,
             modified=float(data.get("modified") or 0.0),
@@ -181,9 +180,9 @@ async def fetch_lora_online_metadata(lora: LoraInfo):
         lora.civitai_model_id = data.get("modelId") or lora.civitai_model_id
         images = data.get("images") or []
         if not is_remote_preview(lora.preview_url):
-            lora.preview_url = next(
-                (i.get("url", "") for i in images if is_remote_preview(i.get("url", ""))), ""
-            )
+            preview = next((i for i in images if is_remote_preview(i.get("url", ""))), {})
+            lora.preview_url = preview.get("url", "")
+            lora.nsfw_level = int(preview.get("nsfwLevel") or 0)
     except Exception as e:
         log.warning(f"Could not resolve online metadata for {lora.name}: {e}")
 
