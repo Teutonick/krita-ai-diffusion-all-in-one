@@ -13,7 +13,11 @@ scripts/docker/krita-ai-diffusion
 scripts/docker/ComfyUI
 scripts/downloads
 service
-tests/data/*.safetensors
+# Local model weights and pytest scratch files
+*.safetensors
+*.ckpt
+*.gguf
+/.tmp-pytest/
 tests/server
 tests/results
 tests/benchmark

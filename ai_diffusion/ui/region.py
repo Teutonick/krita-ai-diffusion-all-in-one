@@ -840,7 +840,10 @@ class ActiveRegionWidget(QFrame):
             protected = ollama.protect(source)
             count = max(2, settings.ollama_variation_count)
             to_negative = to_negative and isinstance(region, RootRegion)
-            request = ollama.build_prompt(task, protected.text, count, instruction, to_negative)
+            edit_prompt = task is EnhanceTask.instruct and bool(source.strip())
+            request = ollama.build_prompt(
+                task, source if edit_prompt else protected.text, count, instruction, to_negative
+            )
             images = None
             if task is EnhanceTask.describe:  # selection presence was checked on entry
                 images = [ensure(_canvas_image(model, canvas_selection))]
@@ -855,24 +858,21 @@ class ActiveRegionWidget(QFrame):
                 system=(
                     ollama.animation_frame_system
                     if animation_prompt
+                    else ollama.prompt_edit_system
+                    if edit_prompt
                     else ollama.structure_system_prompt()
                     if task is EnhanceTask.structure
                     else ensure(profile).system_for(task)
                 ),
                 temperature=ollama.temperature_for(task),
                 images=images,
+                output_schema=ollama.prompt_edit_schema if edit_prompt else None,
             )
             if not response:
                 self._report_error(_("The language model returned an empty response"))
                 return
 
             negative_terms = ""
-            if to_negative:
-                response, negative_terms = ollama.split_negative(response)
-                if not response:
-                    self._report_error(_("The language model returned an empty response"))
-                    return
-
             if animation_prompt:
                 self._enhance_job = ollama.Generation()
                 prompt = await self._enhance_job.run(
@@ -890,7 +890,19 @@ class ActiveRegionWidget(QFrame):
                     self._show_animation_prompt(prompt)
                 return
 
-            if task is EnhanceTask.variations:
+            if edit_prompt:
+                try:
+                    result, excluded = ollama.apply_prompt_edits(source, response)
+                except (TypeError, ValueError):
+                    self._report_error(
+                        _("The language model did not return applicable prompt edits")
+                    )
+                    return
+                negative_terms = excluded if to_negative else ""
+                if result == source and not negative_terms.strip():
+                    self._report_error(_("The language model did not suggest any prompt changes"))
+                    return
+            elif task is EnhanceTask.variations:
                 lines = [line.strip(" -*\t") for line in response.splitlines()]
                 lines = [line for line in lines if line][:count]
                 if len(lines) < 2:
@@ -905,7 +917,8 @@ class ActiveRegionWidget(QFrame):
                 protected = ollama.ProtectedPrompt(result, [])  # tokens are still in `source`
             else:
                 result = response
-            result = protected.restore(result)
+            if not edit_prompt:
+                result = protected.restore(result)
 
             if self.region is not region or region.positive != original:
                 return  # the prompt changed underneath us while the model was writing
