@@ -1232,6 +1232,8 @@
     "Dictation failed: {error}": "Ошибка распознавания: {error}",
     "Dictate text": "Диктовать текст",
     "Start dictation": "Начать запись",
-    "Click Open in Browser to edit the pose in your browser.": null
+    "Click Open in Browser to edit the pose in your browser.": null,
+    "The language model did not return applicable prompt edits": null,
+    "The language model did not suggest any prompt changes": null
   }
 }

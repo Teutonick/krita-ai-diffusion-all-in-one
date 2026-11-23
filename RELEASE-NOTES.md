@@ -1,4 +1,16 @@
-# 1.53.0-all-in-one.36 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.39 — krita-ai-diffusion-all-in-one
+
+Adds a dedicated Krea 2 Prompt AI profile with guidance for poses, points of
+contact, spatial relationships, framing, and verbatim lettering.
+
+Built-in Prompt AI profiles no longer prescribe fixed word, sentence, or tag
+counts. Response Length sets the maximum number of output tokens.
+
+Prompt AI's Modify with instruction applies exact text edits to the existing
+prompt, preserving unrelated text, formatting, LoRA tags and wildcards.
+Invalid or ambiguous edits leave the original prompt unchanged.
+
+Local pytest scratch files and model weights are excluded from Git.
 
 Restores automatic opening of the default browser when Pose Studio runs
 without Qt WebEngine.
