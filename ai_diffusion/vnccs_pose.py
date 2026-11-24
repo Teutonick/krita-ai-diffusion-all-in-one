@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import mimetypes
 from base64 import b64decode, b64encode
 from collections.abc import Awaitable, Callable
 from contextlib import closing
@@ -37,6 +36,34 @@ def vnccs_assets_path():
 
 def _asset_manifest() -> dict[str, str]:
     return json.loads((web_root / "assets.json").read_text(encoding="utf-8"))
+
+
+def _static_assets():
+    web_files = {
+        "": "index.html",
+        "frame.html": "frame.html",
+        "session.js": "session.js",
+        "editor.js": "editor.js",
+        "scripts/api.js": "scripts/api.js",
+        "scripts/app.js": "scripts/app.js",
+    }
+    vendor_files = {f"extensions/vnccs/{name}": name for name in _asset_manifest()}
+    content_types = {
+        ".html": "text/html",
+        ".js": "text/javascript",
+        ".mjs": "text/javascript",
+        ".png": "image/png",
+        ".md": "text/plain",
+        ".gz": "application/gzip",
+    }
+    assets: dict[str, tuple[Path, str]] = {}
+    for root, files in ((web_root, web_files), (vnccs_assets_path(), vendor_files)):
+        root = root.resolve()
+        for route, name in files.items():
+            path = (root / name).resolve()
+            if path.is_relative_to(root) and path.is_file():
+                assets[route] = (path, content_types.get(path.suffix, "application/octet-stream"))
+    return assets
 
 
 def vnccs_assets_installed():
@@ -200,7 +227,7 @@ class VnccsSession:
             "height": max(32, round(extent.height * ratio)),
         }).encode()
         results = self.results
-        vendor_root = vnccs_assets_path().resolve()
+        static_assets = _static_assets()
         library_path = user_data_dir / "pose-library.sqlite3"
         library_prefix = "vnccs/pose_library/"
         remote = RemotePoseLibrary()
@@ -281,29 +308,12 @@ class VnccsSession:
                 if name == "health":
                     self.respond(b"", "text/plain", status=204)
                     return
-                if name.startswith("extensions/vnccs/"):
-                    folder = vendor_root
-                    name = name.removeprefix("extensions/vnccs/")
-                elif name in (
-                    "",
-                    "frame.html",
-                    "session.js",
-                    "editor.js",
-                    "scripts/api.js",
-                    "scripts/app.js",
-                ):
-                    folder = web_root.resolve()
-                else:
+                asset = static_assets.get(name)
+                if asset is None:
                     self.send_error(404)
                     return
-                file = (folder / (name or "index.html")).resolve()
-                if not file.is_relative_to(folder) or not file.is_file():
-                    self.send_error(404)
-                    return
-                mime = mimetypes.guess_type(file.name)[0] or "application/octet-stream"
-                if file.suffix in (".js", ".mjs"):
-                    mime = "text/javascript"
-                if folder == vendor_root and name == "vnccs_pose_studio.js":
+                file, mime = asset
+                if name == "extensions/vnccs/vnccs_pose_studio.js":
                     script = file.read_bytes().replace(
                         b"/vnccs/pose_library/", b"./vnccs/pose_library/"
                     )

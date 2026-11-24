@@ -43,14 +43,20 @@ async def test_vnccs_assets_install_and_retry(tmp_path: Path, monkeypatch):
     assert downloads == list(files) * 2
     await vnccs_pose.install_vnccs_assets(download)
     assert downloads == list(files) * 2
+    (vnccs_pose.vnccs_assets_path() / "unlisted.txt").write_text("local file")
     session = VnccsSession("", Extent(96, 128))
 
     def fetch_script():
         with urlopen(session.url + "extensions/vnccs/vnccs_pose_studio.js", timeout=5) as response:
+            assert response.headers.get_content_type() == "text/javascript"
             return response.read()
 
     try:
         assert await asyncio.to_thread(fetch_script) == files["vnccs_pose_studio.js"]
+        with pytest.raises(HTTPError, match="404"):
+            await asyncio.to_thread(
+                urlopen, session.url + "extensions/vnccs/unlisted.txt", timeout=5
+            )
     finally:
         session.close()
 
