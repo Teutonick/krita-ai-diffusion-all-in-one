@@ -2,7 +2,7 @@
 
 **Acly's foundation. Reloaded's workflow tools. Krea 2 Edit V2 integration.**
 
-[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.50-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
+[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.51-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
 [![Code license](https://img.shields.io/badge/plugin_code-GPLv3-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-unofficial_fork-orange)](#credits)
 
@@ -75,7 +75,7 @@ See the [security update report](SECURITY-UPDATE.md) for fixes and validation li
 
 ## Install once, choose your components
 
-1. Download `krita_ai_diffusion-1.53.0-all-in-one.50.zip` from this fork’s release assets when published, or use the locally built archive.
+1. Download `krita_ai_diffusion-1.53.0-all-in-one.51.zip` from this fork’s release assets when published, or use the locally built archive.
 2. In Krita, choose **Tools → Scripts → Import Python Plugin from File**.
 3. Restart Krita and enable the plugin if prompted.
 4. Open the plugin settings, choose **Managed Server**, and select your workloads.
@@ -136,7 +136,7 @@ Labels show the requested viewpoints. The generated angles and poses can vary.*
 2. Select a Krea 2 style and choose **↔** for six horizontal views or **↕** for five vertical views.
 3. Click **Make POVs**. Each job uses the same visible canvas snapshot and the active prompt.
    Compatible LoRA tags such as `<lora:character:0.65>` also apply to every view.
-4. Review the results in history. Apply a view to the document or export it to keep it.
+4. Click a result in history to preview it on the canvas. Apply or export the view to keep it.
 
 The workflow targets one or two clearly visible people or human-shaped characters.
 It reconstructs unseen details, and background placement can vary between views.
@@ -237,8 +237,8 @@ For the optional command-line downloader, review the bundled documents before us
 - Normal shutdown stops the managed server before cleanup. Startup removes abandoned
   sessions left by crashes; locks protect other active Krita instances.
 - Make POVs transfers canvas snapshots and results through the local server's RAM
-  cache and renders normal maps through process pipes. Its results stay in session
-  history until you explicitly apply or export them.
+  cache and renders normal maps through process pipes. History entries stay in memory.
+  Canvas previews use Krita's preview layer and follow Krita's document save rules.
 - Metadata, tags and favorites may be cached without image files. Explicit image exports,
   accepted model downloads, explicit recipe/Eagle saves and history embedded in `.kra` remain.
 - External/cloud servers and arbitrary custom workflows require explicit session-scoped

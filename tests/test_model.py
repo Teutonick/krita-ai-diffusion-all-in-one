@@ -220,12 +220,16 @@ async def test_make_povs_enqueues_one_series(workflows_dir: Path, monkeypatch):
         layer_count = len(model.layers.images)
         model.jobs.set_results(finished, ImageCollection([image]))
         model._show_sampling_preview(finished, finished.results)
+        preview_id = model.preview_layer_id
+        assert preview_id
         model._finish_job(finished, ClientEvent.finished)
-        assert not model.preview_layer_id
-        assert len(model.layers.images) == layer_count
+        assert model.preview_layer_id == preview_id
+        assert len(model.layers.images) == layer_count + 1
         assert finished.id is not None
+        model.hide_preview(delete_layer=True)
         model.jobs.select(finished.id, 0)
-        assert not model.preview_layer_id
+        assert model.preview_layer_id
+        assert len(model.layers.images) == layer_count + 1
         assert failed.id is not None
         model.handle_message(
             ClientMessage(ClientEvent.error, failed.id, error="Test render failure")

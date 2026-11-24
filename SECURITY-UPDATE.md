@@ -76,10 +76,9 @@ Fresh installer integration was attempted; standalone PyQt failed TLS initializa
 - The Managed Server transfers the source and completed views through ComfyUI
   Tooling Nodes' in-memory image cache. The normal renderer exchanges geometry
   and PNG bytes with its subprocess over pipes.
-- The Krita history holds POV results in memory for the session. A generation
-  does not add a preview layer, automatically apply a result or embed result
-  images in document annotations. Use the existing Apply or Save Image action
-  to keep a result.
+- The Krita history holds POV results in memory for the session. Canvas preview
+  uses a reusable Krita document layer, so Krita saves and autosaves can include
+  that layer. Use Apply or Save Image to keep a result intentionally.
 - The managed server starts with isolated input, output, temporary and user
   directories. Clean shutdown removes the session directory. The next startup
   sweeps abandoned sessions after an abrupt shutdown. Explicit exports and

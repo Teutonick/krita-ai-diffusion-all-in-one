@@ -21,7 +21,7 @@ from ..util import client_logger as log
 from ..util import parse_enum
 from ..websockets.src import websockets
 from . import resources
-from .api import WorkflowInput, WorkflowKind
+from .api import WorkflowInput
 from .client import (
     CheckpointInfo,
     Client,
@@ -404,7 +404,7 @@ class ComfyClient(Client):
             "client_id": self._id,
             "prompt_id": job.id,
         }
-        if settings.show_generation_preview and job.work.kind is not WorkflowKind.pov:
+        if settings.show_generation_preview:
             # per-prompt override, so ComfyUI needs no --preview-method launch argument
             data["extra_data"] = {"preview_method": "auto"}
         self._waiting_job.set(job)

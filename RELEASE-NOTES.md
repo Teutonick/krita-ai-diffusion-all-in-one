@@ -1,4 +1,9 @@
-# 1.53.0-all-in-one.50 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.51 — krita-ai-diffusion-all-in-one
+
+Restores Make POVs canvas previews during sampling and when selecting a result
+in history. Applying a POV result still requires an explicit action.
+
+## 1.53.0-all-in-one.50
 
 Make POVs keeps generated images in session history until you explicitly apply
 or export them. A new Make POVs section in the README shows the original
