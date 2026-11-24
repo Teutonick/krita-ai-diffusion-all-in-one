@@ -1240,6 +1240,7 @@
     "Make POVs": "Make POVs",
     "Generate six different camera viewpoints of the current image while preserving its identity and visual style.": "Создать шесть ракурсов текущего изображения с сохранением внешности и визуального стиля.",
     "Six camera viewpoints for one or two people. Requires NVIDIA CUDA and about 4.4 GB of additional model downloads.": "Шесть ракурсов для одного или двух человек. Требуются NVIDIA CUDA и около 4,4 ГБ дополнительных моделей.",
-    "Install Make POVs and accept the component licenses below? Models are downloaded from public sources and run locally.": "Установить Make POVs и принять условия перечисленных ниже лицензий? Модели скачиваются из публичных источников и работают локально."
+    "Install Make POVs and accept the component licenses below? Models are downloaded from public sources and run locally.": "Установить Make POVs и принять условия перечисленных ниже лицензий? Модели скачиваются из публичных источников и работают локально.",
+    "Switch between horizontal and vertical camera viewpoints": null
   }
 }

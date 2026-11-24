@@ -226,6 +226,17 @@ async def test_make_povs_enqueues_one_series(workflows_dir: Path, monkeypatch):
         assert model.clear_queued() == [job.id for job in remaining]
         assert list(model.history) == [finished]
 
+        model.make_povs(vertical=True)
+        jobs = await _wait_for_enqueue(client, count=11)
+        views = [job.camera_view for job in jobs[6:]]
+        assert [(view.azimuth, view.elevation) for view in views if view is not None] == [
+            (0, -60),
+            (0, 60),
+            (180, -60),
+            (180, 0),
+            (180, 60),
+        ]
+
 
 @qtapp
 async def test_generate_references(workflows_dir: Path):

@@ -998,6 +998,7 @@
     "Styles": null,
     "Subfolder below that root. Pick an existing one or type a new path -": null,
     "Subfolder below the download folder, e.g. Illustrious/character": null,
+    "Switch between horizontal and vertical camera viewpoints": null,
     "Switch between workspaces: image generation, upscaling, live preview and animation.": null,
     "Switch to edit mode": null,
     "Switch to generate mode": null,

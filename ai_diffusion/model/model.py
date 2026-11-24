@@ -275,7 +275,7 @@ class DocumentModel(QObject, ObservableProperties):
             for job in self.jobs
         )
 
-    def make_povs(self):
+    def make_povs(self, vertical: bool = False):
         if not self.pov_available or self.pov_in_progress:
             return
         try:
@@ -317,7 +317,8 @@ class DocumentModel(QObject, ObservableProperties):
         model = CheckpointInput(checkpoint, Arch.krea2, loras=[LoraInput(lora, 1.0), *prompt_loras])
         sampling = SamplingInput("euler", "simple", 1.0, 8, seed=seed)
         jobs = []
-        for name, view in pov.pov_views:
+        views = pov.pov_vertical_views if vertical else pov.pov_views
+        for name, view in views:
             params = JobParams(
                 bounds,
                 f"Make POVs · {name}",

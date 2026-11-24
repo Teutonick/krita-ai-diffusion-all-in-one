@@ -1,4 +1,8 @@
-# 1.53.0-all-in-one.48 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.49 — krita-ai-diffusion-all-in-one
+
+Make POVs can switch between six horizontal views and five vertical views.
+
+## 1.53.0-all-in-one.48
 
 Make POVs preserves the source camera scale and uses the visible framing to
 anchor camera turns for cropped subjects. Update the Make POVs server component.

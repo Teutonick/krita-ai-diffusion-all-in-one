@@ -74,6 +74,13 @@ pov_views = (
     ("Rear-left", CameraView(-135)),
     ("Left", CameraView(-90)),
 )
+pov_vertical_views = (
+    ("Front from below", CameraView(0, -60)),
+    ("Front from above", CameraView(0, 60)),
+    ("Rear from below", CameraView(180, -60)),
+    ("Rear", CameraView(180)),
+    ("Rear from above", CameraView(180, 60)),
+)
 
 
 def _basename(name: str):

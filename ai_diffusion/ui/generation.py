@@ -1414,6 +1414,18 @@ class GenerationWidget(QWidget):
         )
         self.pov_button.hide()
         strength_layout.addWidget(self.pov_button)
+        self.pov_direction = QToolButton(self)
+        self.pov_direction.setCheckable(True)
+        self.pov_direction.setText("↔")
+        self.pov_direction.setToolTip(_("Switch between horizontal and vertical camera viewpoints"))
+        self.pov_direction.toggled.connect(
+            lambda vertical: self.pov_direction.setText("↕" if vertical else "↔")
+        )
+        self.pov_direction.hide()
+        strength_layout.addWidget(self.pov_direction)
+        self.pov_button.clicked.connect(
+            lambda: self.model.make_povs(self.pov_direction.isChecked())
+        )
         strength_layout.addWidget(self.strength_slider, 1)
         self.sweep_button = QToolButton(self)
         self.sweep_button.setText("⇅")
@@ -1664,7 +1676,6 @@ class GenerationWidget(QWidget):
                 self.add_region_button.clicked.connect(self.add_region),
                 self.region_prompt.activated.connect(model.generate),
                 self.generate_button.clicked.connect(model.generate),
-                self.pov_button.clicked.connect(model.make_povs),
                 model.jobs.count_changed.connect(self._update_pov),
                 settings.changed.connect(self._update_pov),
                 self.generate_button.ctrl_clicked.connect(model.generate_replace),
@@ -1948,8 +1959,11 @@ class GenerationWidget(QWidget):
 
     def _update_pov(self, *_):
         model = self.model
-        self.pov_button.setVisible(model.pov_available)
-        self.pov_button.setEnabled(not model.pov_in_progress)
+        available = model.pov_available
+        enabled = not model.pov_in_progress
+        for button in (self.pov_button, self.pov_direction):
+            button.setVisible(available)
+            button.setEnabled(enabled)
 
     def update_generate_options(self):
         self._update_pose_studio()
