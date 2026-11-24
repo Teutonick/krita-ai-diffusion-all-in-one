@@ -9,7 +9,7 @@ import pytest
 from krita import Document as MockKritaDocument
 from krita import Krita
 
-from ai_diffusion.backend.api import FillMode, InpaintMode
+from ai_diffusion.backend.api import FillMode, InpaintMode, WorkflowKind
 from ai_diffusion.document import KritaDocument
 from ai_diffusion.image import Bounds, Extent, Image, ImageCollection
 from ai_diffusion.model.connection import Connection
@@ -197,6 +197,12 @@ async def test_history(workflows_dir: Path):
     model1.jobs.set_results(job1, results)
     model1.jobs.notify_finished(job1)
 
+    pov_params = JobParams(bounds=bounds, name="Make POVs", workflow_kind=WorkflowKind.pov)
+    pov_job = model1.jobs.add_job(Job("pov-job-1", JobKind.diffusion, pov_params))
+    model1.jobs.set_results(pov_job, results)
+    model1.jobs.notify_finished(pov_job)
+    assert model1.jobs.find("pov-job-1") is pov_job
+
     # Wait for the async image-saving task to complete
     if sync1._image_task is not None:
         await sync1._image_task
@@ -214,6 +220,7 @@ async def test_history(workflows_dir: Path):
 
     # The finished job should have been restored in model2's queue
     restored_job = model2.jobs.find("history-job-1")
+    assert model2.jobs.find("pov-job-1") is None
     assert restored_job is not None, "finished job not found in restored model"
     assert restored_job.state is JobState.finished
     assert restored_job.params.name == "history test"

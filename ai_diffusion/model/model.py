@@ -1147,7 +1147,11 @@ class DocumentModel(QObject, ObservableProperties):
             self.jobs.notify_finished(job)
             self.progress = 1
 
-            if job.id and job.kind in [JobKind.diffusion, JobKind.animation]:
+            if (
+                job.id
+                and job.kind in [JobKind.diffusion, JobKind.animation]
+                and job.params.workflow_kind is not WorkflowKind.pov
+            ):
                 action = settings.generation_finished_action
                 if (
                     action is GenerationFinishedAction.preview
@@ -1177,6 +1181,8 @@ class DocumentModel(QObject, ObservableProperties):
     def _show_sampling_preview(self, job: Job, images: ImageCollection | None):
         if job.kind is not JobKind.diffusion or not images or len(images) == 0:
             return
+        if job.params.workflow_kind is WorkflowKind.pov:
+            return
         if self._browsing:
             return  # user is looking at a result, keep it on the canvas
         if job.state in (JobState.finished, JobState.cancelled):
@@ -1204,6 +1210,9 @@ class DocumentModel(QObject, ObservableProperties):
         assert job is not None, "Cannot show preview, invalid job id"
         if job.kind is JobKind.animation:
             return  # don't show animation preview on canvas (it's slow and clumsy)
+        if job.params.workflow_kind is WorkflowKind.pov:
+            self.hide_preview(delete_layer=True)
+            return
 
         name = f"[{name_prefix}] {trim_text(job.params.name, 77)}"
         image = job.results[index]

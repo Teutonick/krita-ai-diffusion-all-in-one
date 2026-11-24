@@ -132,6 +132,8 @@ def test_make_povs_workflows():
             "Avoid these changes or details: Human nose"
         )
         image_ids.add(nodes["ETN_LoadImageCache"]["id"])
+        assert "ETN_SaveImageCache" in nodes
+        assert {"LoadImage", "SaveImage", "PreviewImage"}.isdisjoint(nodes)
         assert nodes["KSampler"]["seed"] == 1234
         assert nodes["Krea2AnyglesLoadLoRA"]["lora_name"] == lora
         lora_id, model_port = nodes["Krea2AnyglesLoadLoRA"]["model"]

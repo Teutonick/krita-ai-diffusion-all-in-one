@@ -30,7 +30,11 @@ source_folders = {"ai_diffusion", "scripts", "tests", "custom_workflows", "brand
 def allowed(path: Path):
     if len(path.parts) == 1:
         return path.name in root_files
-    if path.as_posix() == "docs/MINIMAX-H3-IMAGE.md":
+    if path.as_posix() in {
+        "docs/MINIMAX-H3-IMAGE.md",
+        "docs/make-povs-experiment.md",
+        "docs/screenshots/make-povs.webp",
+    }:
         return True
     if path.parts[0] not in source_folders:
         return False

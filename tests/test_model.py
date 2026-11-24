@@ -30,6 +30,7 @@ from ai_diffusion.pose_studio import PoseScene
 from ai_diffusion.settings import (
     ApplyBehavior,
     ApplyRegionBehavior,
+    GenerationFinishedAction,
     ServerBackend,
     ServerMode,
     settings,
@@ -215,7 +216,16 @@ async def test_make_povs_enqueues_one_series(workflows_dir: Path, monkeypatch):
         ]
         assert model.regions.positive == prompt
         finished, failed, *remaining = list(model.jobs)
-        model.jobs.notify_finished(finished)
+        monkeypatch.setattr(settings, "generation_finished_action", GenerationFinishedAction.apply)
+        layer_count = len(model.layers.images)
+        model.jobs.set_results(finished, ImageCollection([image]))
+        model._show_sampling_preview(finished, finished.results)
+        model._finish_job(finished, ClientEvent.finished)
+        assert not model.preview_layer_id
+        assert len(model.layers.images) == layer_count
+        assert finished.id is not None
+        model.jobs.select(finished.id, 0)
+        assert not model.preview_layer_id
         assert failed.id is not None
         model.handle_message(
             ClientMessage(ClientEvent.error, failed.id, error="Test render failure")

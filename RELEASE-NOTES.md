@@ -1,4 +1,10 @@
-# 1.53.0-all-in-one.49 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.50 — krita-ai-diffusion-all-in-one
+
+Make POVs keeps generated images in session history until you explicitly apply
+or export them. A new Make POVs section in the README shows the original
+portrait and six local Krea 2 views and links to the component licenses.
+
+## 1.53.0-all-in-one.49
 
 Make POVs can switch between six horizontal views and five vertical views.
 

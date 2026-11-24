@@ -105,10 +105,15 @@ and any notices accompanying third-party files in the runtime distribution.
 
 The component downloads separate runtime dependencies when enabled in Managed Server.
 
-- [Anygles ComfyUI nodes](https://github.com/alexw5702-afk/krea2-anygles) publish an MIT notice and include SAM inference code under the SAM License.
-- [Krea 2 Anygles weights](https://huggingface.co/yijunwang2/krea2-anygles) are subject to the [Krea 2 Community License](https://www.krea.ai/krea-2-licensing).
-- [SAM 3D Body and MHR weights](https://huggingface.co/Blendcap/sam-3d-body) are downloaded with the SAM License from a public mirror.
+- [Anygles ComfyUI nodes](https://github.com/alexw5702-afk/krea2-anygles) use the MIT License and include SAM inference code under the SAM License. The [upstream NOTICE](https://github.com/alexw5702-afk/krea2-anygles/blob/main/NOTICE) credits Yijun Wang, [RealRebelAI](https://github.com/RealRebelAI/ComfyUI-Rebels-Krea2-Outpaint), [Ostris](https://github.com/ostris/ComfyUI-Krea2-Ostris-Edit), Krea AI, and the Hugging Face team.
+- [Krea 2 Anygles weights](https://huggingface.co/yijunwang2/krea2-anygles) by Yijun Wang and [Krea 2 Turbo](https://huggingface.co/krea/Krea-2-Turbo) by Krea are subject to the [Krea 2 Community License](https://www.krea.ai/krea-2-licensing).
+- [SAM 3D Body](https://github.com/facebookresearch/sam-3d-body) by Meta provides the human reconstruction. The [SAM 3D Body model bundle](https://huggingface.co/Blendcap/sam-3d-body), including its MHR asset and bundled SAM License, is downloaded from a public mirror.
 - [DINOv3](https://github.com/facebookresearch/dinov3) is installed from a pinned revision under the DINOv3 License.
 - [MoGe-2 code](https://github.com/microsoft/MoGe) (MIT with Apache-2.0 DINOv2 code) and [MoGe-2 weights](https://huggingface.co/Ruicheng/moge-2-vitl-normal) (MIT) provide camera intrinsics.
 - [TorchVision SSDLite](https://docs.pytorch.org/vision/stable/models/generated/torchvision.models.detection.ssdlite320_mobilenet_v3_large.html) provides person detection with its published COCO weights.
 - [LoRA Dataset Studio](https://github.com/perfectgf/lora-dataset-studio) provided architectural inspiration for independent camera-view jobs.
+
+The [README illustration](docs/screenshots/make-povs.webp) is an AI-generated
+documentation asset created with Krea 2 Turbo and Krea 2 Anygles.
+See sections 2 and 5.3 of the [Krea 2 Community License](https://www.krea.ai/krea-2-licensing)
+for the model terms and use of generated outputs. Component weights are installed separately.

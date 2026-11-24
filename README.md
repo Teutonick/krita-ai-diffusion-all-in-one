@@ -2,7 +2,7 @@
 
 **Acly's foundation. Reloaded's workflow tools. Krea 2 Edit V2 integration.**
 
-[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.45-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
+[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.50-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
 [![Code license](https://img.shields.io/badge/plugin_code-GPLv3-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-unofficial_fork-orange)](#credits)
 
@@ -17,14 +17,8 @@ changes in settings, and a policy for temporary media storage.
 
 ## Highlights
 
-- **Make POVs** — enable the optional component in Managed Server → Components
-  and install it, then select a Krea 2 style and click **Make POVs** in Generation.
-  Six jobs use the same canvas snapshot and appear in the existing history.
-  The active prompt supplies subject and scene context for every view.
-  Tags such as `<lora:character:0.65>` apply compatible Krea 2 LoRAs alongside Anygles.
-  The local CUDA workflow targets one or two clearly visible people. It
-  reconstructs unseen details and can change the background.
-  See [the experiment and limitations](docs/make-povs-experiment.md).
+- **[Make POVs](#make-povs)** — turn a Krea 2 canvas image into six horizontal
+  or five vertical views with one click. Review the series in session history.
 
 - **Pose Editor** — pose a 3D mannequin inside Krita, save reusable poses, and use
   them as guides for Krea 2 or MiniMax H3 Image. See [Pose Studio](#guide-the-pose-and-camera).
@@ -81,7 +75,7 @@ See the [security update report](SECURITY-UPDATE.md) for fixes and validation li
 
 ## Install once, choose your components
 
-1. Download `krita_ai_diffusion-1.53.0-all-in-one.27.zip` from this fork’s release assets when published, or use the locally built archive.
+1. Download `krita_ai_diffusion-1.53.0-all-in-one.50.zip` from this fork’s release assets when published, or use the locally built archive.
 2. In Krita, choose **Tools → Scripts → Import Python Plugin from File**.
 3. Restart Krita and enable the plugin if prompted.
 4. Open the plugin settings, choose **Managed Server**, and select your workloads.
@@ -129,6 +123,30 @@ selecting an Edit preset activates Edit mode. Results remain in history until ap
 
 The style browser has an **All tasks / Generate / Edit** filter, wrapped full names,
 operation labels and tooltips with checkpoint/LoRA details.
+
+## Make POVs
+
+![Make POVs example showing a Krea 2 portrait and six camera views generated from it](docs/screenshots/make-povs.webp)
+
+*AI-generated example. The source portrait was created with Krea 2 Turbo and
+the six views were generated from it with the local Make POVs graph and Anygles.
+Labels show the requested viewpoints. The generated angles and poses can vary.*
+
+1. Enable and install **Make POVs** in **Managed Server → Components** on a CUDA server.
+2. Select a Krea 2 style and choose **↔** for six horizontal views or **↕** for five vertical views.
+3. Click **Make POVs**. Each job uses the same visible canvas snapshot and the active prompt.
+   Compatible LoRA tags such as `<lora:character:0.65>` also apply to every view.
+4. Review the results in history. Apply a view to the document or export it to keep it.
+
+The workflow targets one or two clearly visible people or human-shaped characters.
+It reconstructs unseen details, and background placement can vary between views.
+See the [experiment and limitations](docs/make-povs-experiment.md).
+
+The camera adapter is by [Yijun Wang](https://huggingface.co/yijunwang2/krea2-anygles).
+The workflow uses [Anygles ComfyUI nodes](https://github.com/alexw5702-afk/krea2-anygles)
+and [Meta SAM 3D Body](https://github.com/facebookresearch/sam-3d-body).
+The [third-party notices](THIRD-PARTY-NOTICES.md#make-povs-optional-component) list
+the component licenses and the terms applicable to the illustration.
 
 ## Guide the pose and camera
 
@@ -218,6 +236,9 @@ For the optional command-line downloader, review the bundled documents before us
   history; Krita cannot control browser or OS backups.
 - Normal shutdown stops the managed server before cleanup. Startup removes abandoned
   sessions left by crashes; locks protect other active Krita instances.
+- Make POVs transfers canvas snapshots and results through the local server's RAM
+  cache and renders normal maps through process pipes. Its results stay in session
+  history until you explicitly apply or export them.
 - Metadata, tags and favorites may be cached without image files. Explicit image exports,
   accepted model downloads, explicit recipe/Eagle saves and history embedded in `.kra` remain.
 - External/cloud servers and arbitrary custom workflows require explicit session-scoped

@@ -12,7 +12,7 @@ from PyQt5.QtGui import QImageReader
 from PyQt5.QtWidgets import QMessageBox
 
 from . import eventloop
-from .backend.api import FillMode, InpaintMode
+from .backend.api import FillMode, InpaintMode, WorkflowKind
 from .image import Image, ImageCollection
 from .localization import translate as _
 from .model.control import ControlLayer, ControlLayerList
@@ -256,6 +256,8 @@ class ModelSync:
             self._track_region(region)
 
     def _save_results(self, job: Job):
+        if job.params.workflow_kind is WorkflowKind.pov:
+            return
         if job.kind in [JobKind.diffusion, JobKind.animation] and len(job.results) > 0:
             slot = self._slot_index
             self._slot_index += 1

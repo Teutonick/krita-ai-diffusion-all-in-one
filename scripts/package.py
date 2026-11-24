@@ -25,7 +25,7 @@ package_name = f"krita_ai_diffusion-{version}"
 def convert_markdown_to_html(markdown_file: Path, html_file: Path):
     with open(markdown_file, "r", encoding="utf-8") as f:
         text = f.read()
-    html = markdown(text, extensions=["fenced_code", "codehilite", "tables"])
+    html = markdown(text, extensions=["fenced_code", "codehilite", "tables", "toc"])
     html = html.replace('href="ai_diffusion/licenses/', 'href="licenses/')
     with open(html_file, "w", encoding="utf-8") as f:
         f.write(html)
@@ -117,6 +117,9 @@ def build_package():
         guide.parent.mkdir(exist_ok=True)
         copy(root / "docs" / guide.name, guide)
         copy(root / "docs" / "make-povs-experiment.md", guide.parent)
+        illustration = guide.parent / "screenshots" / "make-povs.webp"
+        illustration.parent.mkdir(exist_ok=True)
+        copy(root / illustration.relative_to(plugin_dst), illustration)
         make_archive(str(build_dir / package_name), "zip", package_dir)
     write_checksums(build_dir, version, [build_dir / f"{package_name}.zip", source_archive])
     print(f"Build artifacts: {build_dir.relative_to(root)}")
