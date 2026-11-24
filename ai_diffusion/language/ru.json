@@ -1082,6 +1082,7 @@
     "Canvas": null,
     "Modify with instruction...": null,
     "Describe the image": null,
+    "Describe object/person": "Описать объект или персонажа",
     "Maximum number of tokens the language model may produce": null,
     "created.": null,
     "random": null,

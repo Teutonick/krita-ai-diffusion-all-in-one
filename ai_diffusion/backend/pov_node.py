@@ -15,7 +15,6 @@ from .anygles import camera_prompt
 from .nodes import _pil_to_tensor, _tensor_to_pil
 from .sam3d_normal import (
     Sam3DNormalGenerator,
-    _base_fit,
     _project,
     _render_in_subprocess,
     _rotate_elevation,
@@ -30,6 +29,23 @@ required_assets = (
     "moge.pt",
     "detector.pth",
 )
+
+
+def _framing_pivot(points, pivot, focal, width, height):
+    frame = np.array([width, height], dtype=np.float32)
+    projection = _project(points, np.zeros(3, dtype=np.float32), focal, width, height)
+    low, high = projection.min(0), projection.max(0)
+    if np.all(low >= 0) and np.all(high <= frame):
+        return pivot
+
+    visible_low = np.maximum(low, 0)
+    visible_high = np.minimum(high, frame)
+    if np.any(visible_low >= visible_high):
+        return pivot
+    center = (visible_low + visible_high) * 0.5
+    anchor = pivot.copy()
+    anchor[:, :2] = (center - frame * 0.5) * anchor[:, 2:3] / focal
+    return anchor
 
 
 def person_boxes(predictions):
@@ -167,13 +183,10 @@ class KritaPOVNormal:
 
     def render(self, geometry, azimuth, elevation, distance, subject_context=""):
         points, faces, pivot, focal, (width, height), count = geometry
+        pivot = _framing_pivot(points, pivot, focal, width, height)
         vertices = _rotate_elevation(_rotate_yaw(points, pivot, azimuth), pivot, elevation)
         camera = np.array([0, 0, pivot[0, 2] * (distance - 1)], dtype=np.float32)
-        projection = _project(vertices, camera, focal, width, height)
-        scale = _base_fit(projection, width, height)
-        center = (projection.min(0) + projection.max(0)) * 0.5
-        offset = (np.array([width / 2, height / 2]) - center) * scale
-        normal = _render_in_subprocess(vertices, faces, camera, focal, width, height, scale, offset)
+        normal = _render_in_subprocess(vertices, faces, camera, focal, width, height, 1.0, (0, 0))
         instructions = (
             "Preserve the two distinct subjects and their relative placement."
             if count == 2
@@ -182,6 +195,8 @@ class KritaPOVNormal:
         instructions += (
             " Match the source design, silhouette, surfaces, materials and colors. "
             "Keep the same scene, lighting and background. Change only the viewpoint. "
+            "Preserve the source shot size, camera distance and lens perspective. "
+            "Keep the source crop, including any body parts or features that extend out of frame. "
             "Keep unspecified areas visually consistent with the source."
         )
         details = "\n".join(filter(None, (subject_context.strip(), instructions)))

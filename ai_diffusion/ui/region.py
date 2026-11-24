@@ -660,6 +660,9 @@ class ActiveRegionWidget(QFrame):
         menu.addSeparator()
         menu.addAction(_("Describe the image"), partial(self._enhance, EnhanceTask.describe))
         menu.addAction(
+            _("Describe object/person"), partial(self._enhance, EnhanceTask.describe_subject)
+        )
+        menu.addAction(
             _("Animation prompt for image"),
             partial(self._enhance, EnhanceTask.describe, animation_prompt=True),
         )
@@ -757,7 +760,7 @@ class ActiveRegionWidget(QFrame):
     def _update_enhance_progress(self):
         elapsed = time.monotonic() - self._enhance_started
         words = len(self._enhance_job.text.split()) if self._enhance_job else 0
-        if self._enhance_task is EnhanceTask.describe:
+        if self._enhance_task.uses_image:
             text = _("Looking at the image...") + f" {elapsed:.0f}s"
         else:
             text = _("Writing prompt...") + f" {elapsed:.0f}s"
@@ -833,7 +836,11 @@ class ActiveRegionWidget(QFrame):
         try:
             family = model.active_style.effective_family(model.arch)
             profile = ollama.Profiles.instance().for_family(family)
-            if profile is None and not animation_prompt:
+            if (
+                profile is None
+                and not animation_prompt
+                and task is not EnhanceTask.describe_subject
+            ):
                 self._report_error(_("No prompt profile found for") + f" {family}")
                 return
 
@@ -845,7 +852,7 @@ class ActiveRegionWidget(QFrame):
                 task, source if edit_prompt else protected.text, count, instruction, to_negative
             )
             images = None
-            if task is EnhanceTask.describe:  # selection presence was checked on entry
+            if task.uses_image:
                 images = [ensure(_canvas_image(model, canvas_selection))]
 
             if settings.ollama_free_comfy_vram:
@@ -858,6 +865,8 @@ class ActiveRegionWidget(QFrame):
                 system=(
                     ollama.animation_frame_system
                     if animation_prompt
+                    else ollama.subject_description_system
+                    if task is EnhanceTask.describe_subject
                     else ollama.prompt_edit_system
                     if edit_prompt
                     else ollama.structure_system_prompt()

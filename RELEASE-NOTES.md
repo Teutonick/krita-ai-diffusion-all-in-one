@@ -1,4 +1,18 @@
-# 1.53.0-all-in-one.45 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.48 — krita-ai-diffusion-all-in-one
+
+Make POVs preserves the source camera scale and uses the visible framing to
+anchor camera turns for cropped subjects. Update the Make POVs server component.
+
+## 1.53.0-all-in-one.47
+
+Prompt AI can describe the main object or character from the canvas in English,
+focusing on distinctive visual traits and omitting pose and scene details.
+
+## 1.53.0-all-in-one.46
+
+Make POVs uses an Anygles reference up to 768 pixels on the longest edge.
+
+## 1.53.0-all-in-one.45
 
 Make POVs applies explicitly tagged Krea 2 LoRAs to every viewpoint at their
 prompt weights, before applying the Anygles camera adapter.

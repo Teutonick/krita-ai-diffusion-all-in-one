@@ -125,7 +125,7 @@ def test_make_povs_workflows():
         clip_id, clip_port = nodes["Krea2AnyglesEncode"]["clip"]
         assert payload["prompt"][clip_id]["class_type"] == "LoraLoader"
         assert clip_port == 1
-        assert nodes["Krea2AnyglesEncode"]["reference_max_edge"] == 576
+        assert nodes["Krea2AnyglesEncode"]["reference_max_edge"] == 768
         camera_inputs.append(nodes["KritaPOVNormal"]["azimuth"])
         assert nodes["KritaPOVNormal"]["subject_context"] == (
             "Subject and scene description: Андроид с плоским керамическим лицом\n"

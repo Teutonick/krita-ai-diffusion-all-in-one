@@ -2432,7 +2432,7 @@ def make_pov(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
         source=source,
         target_normal=normal,
         prompt=prompt,
-        reference_max_edge=576 if context else 384,
+        reference_max_edge=768,
         vlm_reference=True,
     )
     model, projection = w.add(

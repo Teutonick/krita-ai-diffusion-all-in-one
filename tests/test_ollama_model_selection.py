@@ -2,6 +2,13 @@ from ai_diffusion.backend import ollama
 from ai_diffusion.settings import settings
 
 
+def test_describe_subject_request_uses_image_without_existing_prompt():
+    task = ollama.EnhanceTask.describe_subject
+    assert task.uses_image
+    assert ollama.build_prompt(task, "standing under neon lights") == ollama.build_prompt(task, "")
+    assert "Omit pose" in ollama.subject_description_system
+
+
 def test_profile_cannot_override_selected_model(monkeypatch):
     monkeypatch.setattr(settings, "ollama_model", "selected-vision-model")
     profiles = ollama.Profiles({

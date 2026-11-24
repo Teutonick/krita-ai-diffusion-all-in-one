@@ -89,7 +89,26 @@ class EnhanceTask(Enum):
     variations = "variations"
     instruct = "instruct"
     describe = "describe"
+    describe_subject = "describe_subject"
     structure = "structure"
+
+    @property
+    def uses_image(self) -> bool:
+        return self in (EnhanceTask.describe, EnhanceTask.describe_subject)
+
+
+subject_description_system = (
+    "Write one concise paragraph in English describing the visible appearance of only the "
+    "main person, character, or object. Lead with what it is and prioritize distinctive "
+    "features that would help recreate it from another viewpoint. For a character, describe "
+    "visible facial features, hair, build, clothing and worn accessories as relevant. For "
+    "an object, describe its shape, proportions, construction, colors, materials, textures "
+    "and distinctive markings as relevant. Include unusual visible features, including "
+    "smooth or featureless surfaces, when they help identify the subject. "
+    "Omit pose, gesture, action, expression, gaze, orientation, camera angle, lighting, "
+    "background and secondary subjects. Do not guess hidden features or name real people. "
+    "Return only the description, with no heading or commentary."
+)
 
 
 _task_instructions = {
@@ -125,6 +144,7 @@ _task_instructions = {
         " Do not invent anything that is not in the image, do not mention that this is an"
         " image or a description, and answer with the prompt only.{instruction}"
     ),
+    EnhanceTask.describe_subject: "Describe the appearance of the main subject in the image.",
     EnhanceTask.structure: (
         "Sort the following prompt into labelled sections. Keep every detail of the prompt,"
         " add nothing and drop nothing."
@@ -156,6 +176,7 @@ _conservative_tasks = {
     EnhanceTask.instruct,
     EnhanceTask.detail,
     EnhanceTask.describe,
+    EnhanceTask.describe_subject,
     EnhanceTask.structure,
 }
 _conservative_temperature = 0.6
@@ -785,6 +806,8 @@ def build_prompt(
     instruction: str = "",
     want_negative: bool = False,
 ) -> str:
+    if task is EnhanceTask.describe_subject:
+        return _task_instructions[task]
     if task is EnhanceTask.describe:
         # the image carries the content, an existing prompt is not part of the request
         extra = f"\n\nAdditional instruction: {instruction}" if instruction.strip() else ""
