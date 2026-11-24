@@ -2,7 +2,7 @@
 
 **Acly's foundation. Reloaded's workflow tools. Krea 2 Edit V2 integration.**
 
-[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.44-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
+[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.45-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
 [![Code license](https://img.shields.io/badge/plugin_code-GPLv3-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-unofficial_fork-orange)](#credits)
 
@@ -21,6 +21,7 @@ changes in settings, and a policy for temporary media storage.
   and install it, then select a Krea 2 style and click **Make POVs** in Generation.
   Six jobs use the same canvas snapshot and appear in the existing history.
   The active prompt supplies subject and scene context for every view.
+  Tags such as `<lora:character:0.65>` apply compatible Krea 2 LoRAs alongside Anygles.
   The local CUDA workflow targets one or two clearly visible people. It
   reconstructs unseen details and can change the background.
   See [the experiment and limitations](docs/make-povs-experiment.md).

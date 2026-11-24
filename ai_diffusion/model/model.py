@@ -302,12 +302,19 @@ class DocumentModel(QObject, ObservableProperties):
         regions = self.active_regions
         positive = regions.active_or_root.positive
         negative = regions.negative if regions.negative_enabled else ""
+        try:
+            description, prompt_loras = workflow.prepare_pov_prompt(
+                positive, seed, lora, self._connection.client.models
+            )
+        except (ValueError, PluginError, OSError) as error:
+            self.report_error(str(error))
+            return
         context = ConditioningInput(
-            pattern_lora.sub("", eval_wildcards(strip_prompt_comments(positive), seed)).strip(),
+            description,
             pattern_lora.sub("", eval_wildcards(strip_prompt_comments(negative), seed)).strip(),
             language=self.prompt_translation_language,
         )
-        model = CheckpointInput(checkpoint, Arch.krea2, loras=[LoraInput(lora, 1.0)])
+        model = CheckpointInput(checkpoint, Arch.krea2, loras=[LoraInput(lora, 1.0), *prompt_loras])
         sampling = SamplingInput("euler", "simple", 1.0, 8, seed=seed)
         jobs = []
         for name, view in pov.pov_views:
@@ -325,7 +332,7 @@ class DocumentModel(QObject, ObservableProperties):
                 cfg=sampling.cfg_scale,
                 sampler=sampling.sampler,
                 scheduler=sampling.scheduler,
-                loras=[{"name": lora, "weight": 1.0}],
+                loras=[{"name": item.name, "weight": item.strength} for item in model.loras],
                 prompt=positive,
                 negative_prompt=negative,
             )

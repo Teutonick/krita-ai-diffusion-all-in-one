@@ -19,6 +19,7 @@ from ai_diffusion.backend.client import CheckpointInfo, ClientEvent, ClientMessa
 from ai_diffusion.backend.comfy_workflow import ComfyObjectInfo
 from ai_diffusion.backend.resources import Arch, ControlMode
 from ai_diffusion.document import KritaDocument
+from ai_diffusion.files import File, FileCollection, FileLibrary
 from ai_diffusion.image import BlendMode, Bounds, Extent, Image, ImageCollection
 from ai_diffusion.layer import Layer, LayerType
 from ai_diffusion.model.connection import Connection, ConnectionState
@@ -171,7 +172,11 @@ async def test_make_povs_enqueues_one_series(workflows_dir: Path, monkeypatch):
         monkeypatch.setattr(settings, "server_components", [pov.pov_component])
         checkpoint = "krea2_turbo_int8_convrot.safetensors"
         client.models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, Arch.krea2)
-        client.models.loras = [pov.pov_lora]
+        character_lora = File.remote("characters/android.safetensors")
+        files = FileLibrary(FileCollection(), FileCollection())
+        files.loras.add(character_lora)
+        monkeypatch.setattr(FileLibrary, "instance", lambda: files)
+        client.models.loras = [pov.pov_lora, character_lora.id]
         client.models.resources.update({
             "text_encoder-qwen_3vl_4b-krea2": "encoder.safetensors",
             "vae-default-krea2": "vae.safetensors",
@@ -181,7 +186,8 @@ async def test_make_povs_enqueues_one_series(workflows_dir: Path, monkeypatch):
             "input": {"optional": {"subject_context": ["STRING"]}}
         }
         model.style = _make_style(checkpoint)
-        model.regions.positive = "Retain the user prompt"
+        prompt = "Retain the user prompt <lora:android:0.65>"
+        model.regions.positive = prompt
         assert model.pov_available
         model.make_povs()
         model.make_povs()
@@ -190,6 +196,12 @@ async def test_make_povs_enqueues_one_series(workflows_dir: Path, monkeypatch):
         assert len({id(job.image) for job in jobs}) == 1
         assert all(
             job.conditioning and job.conditioning.positive == "Retain the user prompt"
+            for job in jobs
+        )
+        assert all(
+            job.models
+            and [(lora.name, lora.strength) for lora in job.models.loras]
+            == [(pov.pov_lora, 1.0), (character_lora.id, 0.65)]
             for job in jobs
         )
         assert len({job.params.batch_id for job in model.jobs}) == 1
@@ -201,7 +213,7 @@ async def test_make_povs_enqueues_one_series(workflows_dir: Path, monkeypatch):
             -135,
             -90,
         ]
-        assert model.regions.positive == "Retain the user prompt"
+        assert model.regions.positive == prompt
         finished, failed, *remaining = list(model.jobs)
         model.jobs.notify_finished(finished)
         assert failed.id is not None

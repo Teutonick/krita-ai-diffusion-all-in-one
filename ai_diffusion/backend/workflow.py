@@ -2384,11 +2384,21 @@ def krea2_pose_studio(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
     return w
 
 
+def prepare_pov_prompt(prompt: str, seed: int, camera_lora: str, models: ClientModels):
+    files = FileLibrary.instance()
+    text = eval_wildcards(strip_prompt_comments(prompt), seed)
+    text, tagged = extract_loras(text, files.loras)
+    loras = [lora for lora in tagged if lora.name != camera_lora]
+    _check_server_has_loras(loras, models, files, "Make POVs", Arch.krea2)
+    return (text + _collect_lora_triggers(loras, files)).strip(), loras
+
+
 def make_pov(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
     checkpoint = ensure(i.models)
     view = ensure(i.camera_view)
     sampling = ensure(i.sampling)
-    model, clip, vae = load_checkpoint_with_lora(w, replace(checkpoint, loras=[]), models)
+    camera_lora, *prompt_loras = checkpoint.loras
+    model, clip, vae = load_checkpoint_with_lora(w, replace(checkpoint, loras=prompt_loras), models)
     source = w.load_image(i.image)
     geometry = w.add("KritaPOVGeometry", 1, image=source)
     context = ""
@@ -2429,8 +2439,8 @@ def make_pov(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
         "Krea2AnyglesLoadLoRA",
         2,
         model=model,
-        lora_name=checkpoint.loras[0].name,
-        strength=checkpoint.loras[0].strength,
+        lora_name=camera_lora.name,
+        strength=camera_lora.strength,
     )
     model = w.add(
         "Krea2AnyglesModelPatch",

@@ -93,7 +93,8 @@ def test_krea2_edit_graph(kind, edit_kind, cfg):
 
 def test_make_povs_workflows():
     models, template = _edit_work("identity")
-    models.loras = [pov.pov_lora]
+    character_lora = "characters/android.safetensors"
+    models.loras = [pov.pov_lora, character_lora]
     models.node_inputs = ComfyObjectInfo({name: {} for name in pov.pov_nodes})
     assert pov.available_models(models) is None
     models.node_inputs.nodes["KritaPOVNormal"] = {
@@ -108,7 +109,11 @@ def test_make_povs_workflows():
         work = WorkflowInput(
             WorkflowKind.pov,
             images=template.images,
-            models=CheckpointInput(checkpoint, Arch.krea2, loras=[LoraInput(lora, 1.0)]),
+            models=CheckpointInput(
+                checkpoint,
+                Arch.krea2,
+                loras=[LoraInput(lora, 1.0), LoraInput(character_lora, 0.65)],
+            ),
             sampling=SamplingInput("euler", "simple", 1.0, 8, seed=1234),
             conditioning=ConditioningInput("Андроид с плоским керамическим лицом", "Human nose"),
             camera_view=view,
@@ -118,8 +123,8 @@ def test_make_povs_workflows():
         payload = json.loads(json.dumps({"prompt": graph.root}))
         nodes = {node["class_type"]: node["inputs"] for node in payload["prompt"].values()}
         clip_id, clip_port = nodes["Krea2AnyglesEncode"]["clip"]
-        assert payload["prompt"][clip_id]["class_type"] == "CLIPLoader"
-        assert clip_port == 0
+        assert payload["prompt"][clip_id]["class_type"] == "LoraLoader"
+        assert clip_port == 1
         assert nodes["Krea2AnyglesEncode"]["reference_max_edge"] == 576
         camera_inputs.append(nodes["KritaPOVNormal"]["azimuth"])
         assert nodes["KritaPOVNormal"]["subject_context"] == (
@@ -129,6 +134,11 @@ def test_make_povs_workflows():
         image_ids.add(nodes["ETN_LoadImageCache"]["id"])
         assert nodes["KSampler"]["seed"] == 1234
         assert nodes["Krea2AnyglesLoadLoRA"]["lora_name"] == lora
+        lora_id, model_port = nodes["Krea2AnyglesLoadLoRA"]["model"]
+        assert payload["prompt"][lora_id]["class_type"] == "LoraLoader"
+        assert model_port == 0
+        assert nodes["LoraLoader"]["lora_name"] == character_lora
+        assert nodes["LoraLoader"]["strength_model"] == 0.65
     assert camera_inputs == [45, 90, 135, 180, -135, -90]
     assert len(image_ids) == 1
     models.loras = []

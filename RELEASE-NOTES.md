@@ -1,4 +1,9 @@
-# 1.53.0-all-in-one.44 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.45 — krita-ai-diffusion-all-in-one
+
+Make POVs applies explicitly tagged Krea 2 LoRAs to every viewpoint at their
+prompt weights, before applying the Anygles camera adapter.
+
+## 1.53.0-all-in-one.44
 
 Make POVs uses neutral subject-preservation instructions alongside the active
 prompt. Anygles still uses human-shaped geometry to guide the camera.
