@@ -35,7 +35,7 @@ sentencepiece==0.2.1
 soundfile==0.13.1
 spandrel==0.4.2
 stringzilla==4.6.0
-svglib==1.5.1
+svglib==2.3.1
 tokenizers==0.23.3
 tomli==2.4.1
 torchsde==0.2.6

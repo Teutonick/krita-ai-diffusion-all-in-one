@@ -530,7 +530,7 @@ stringzilla==5.1.2
     # via
     #   -r ai_diffusion/backend/requirements/windows-cuda126.txt
     #   albucore
-svglib==1.5.1
+svglib==2.3.1
     # via -r ai_diffusion/backend/requirements/windows-cuda126.txt
 sympy==1.14.0
     # via

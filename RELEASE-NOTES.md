@@ -1,4 +1,9 @@
-# 1.53.0-all-in-one.51 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.52 — krita-ai-diffusion-all-in-one
+
+Update svglib to 2.3.1 to address CVE-2026-132275. Update the managed server
+after installing this build.
+
+## 1.53.0-all-in-one.51
 
 Restores Make POVs canvas previews during sampling and when selecting a result
 in history. Applying a POV result still requires an explicit action.

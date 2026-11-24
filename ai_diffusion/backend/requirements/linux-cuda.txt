@@ -603,7 +603,7 @@ stringzilla==5.1.2
     # via
     #   -r ai_diffusion/backend/requirements/linux-cuda.txt
     #   albucore
-svglib==1.5.1
+svglib==2.3.1
     # via -r ai_diffusion/backend/requirements/linux-cuda.txt
 sympy==1.14.0
     # via

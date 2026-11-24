@@ -50,7 +50,7 @@ python-dateutil
 mediapipe
 # Version pinned because newer version requires pycairo, which does not provide binary
 # packages on Linux/macOS
-svglib==1.5.1
+svglib==2.3.1
 fvcore
 yapf
 omegaconf

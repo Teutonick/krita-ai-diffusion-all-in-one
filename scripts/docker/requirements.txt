@@ -760,7 +760,7 @@ stringzilla==5.1.2
     #   albucore
 svg-path==7.1
     # via -r scripts/docker/requirements.txt
-svglib==1.5.1
+svglib==2.3.1
     # via -r scripts/docker/requirements.txt
 sympy==1.14.0
     # via
