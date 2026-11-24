@@ -2,7 +2,7 @@
 
 **Acly's foundation. Reloaded's workflow tools. Krea 2 Edit V2 integration.**
 
-[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.16-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
+[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.44-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
 [![Code license](https://img.shields.io/badge/plugin_code-GPLv3-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-unofficial_fork-orange)](#credits)
 
@@ -16,6 +16,14 @@ It also adds managed component installation, protection against accidental mouse
 changes in settings, and a policy for temporary media storage.
 
 ## Highlights
+
+- **Make POVs** — enable the optional component in Managed Server → Components
+  and install it, then select a Krea 2 style and click **Make POVs** in Generation.
+  Six jobs use the same canvas snapshot and appear in the existing history.
+  The active prompt supplies subject and scene context for every view.
+  The local CUDA workflow targets one or two clearly visible people. It
+  reconstructs unseen details and can change the background.
+  See [the experiment and limitations](docs/make-povs-experiment.md).
 
 - **Pose Editor** — pose a 3D mannequin inside Krita, save reusable poses, and use
   them as guides for Krea 2 or MiniMax H3 Image. See [Pose Studio](#guide-the-pose-and-camera).

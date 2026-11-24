@@ -18,8 +18,9 @@ from PyQt5.QtCore import QMetaObject, QObject, Qt, QUuid, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor, QImage, QPainter
 
 from .. import eventloop, media_storage, util
-from ..backend import model_licenses, resolution, workflow
+from ..backend import model_licenses, pov, resolution, workflow
 from ..backend.api import (
+    CheckpointInput,
     ConditioningInput,
     ControlInput,
     CustomWorkflowInput,
@@ -28,6 +29,7 @@ from ..backend.api import (
     InpaintContext,
     InpaintMode,
     InpaintParams,
+    LoraInput,
     SamplingInput,
     SegmentInput,
     SegmentMode,
@@ -60,6 +62,7 @@ from ..settings import (
     ApplyRegionBehavior,
     GenerationFinishedAction,
     ImageFileFormat,
+    ServerBackend,
     ServerMode,
     settings,
 )
@@ -67,9 +70,12 @@ from ..style import Arch, Style, Styles
 from ..text import (
     create_ai_generated_xmp,
     create_img_metadata,
+    eval_wildcards,
     extract_layers,
     extract_reference_mentions,
+    pattern_lora,
     sanitize_reference_name,
+    strip_prompt_comments,
 )
 from ..util import PluginError, clamp, ensure, trim_text, unique
 from ..util import client_logger as log
@@ -247,6 +253,104 @@ class DocumentModel(QObject, ObservableProperties):
     def generate(self):
         self._browsing = False  # user wants to see the new generation
         self._generate(self.queue_mode)
+
+    @property
+    def pov_available(self):
+        client = self._connection.client_if_connected
+        return (
+            self.has_document
+            and pov.pov_component in settings.server_components
+            and settings.server_mode is ServerMode.managed
+            and settings.server_backend is ServerBackend.cuda
+            and client is not None
+            and self.arch is Arch.krea2
+            and pov.available_models(client.models) is not None
+        )
+
+    @property
+    def pov_in_progress(self):
+        return any(
+            job.params.workflow_kind is WorkflowKind.pov
+            and job.state in (JobState.queued, JobState.executing)
+            for job in self.jobs
+        )
+
+    def make_povs(self):
+        if not self.pov_available or self.pov_in_progress:
+            return
+        try:
+            bounds = Bounds.from_extent(self._doc.extent)
+            source = self._get_current_image(bounds)
+            extent = (
+                source.extent.scale_keep_aspect(Extent(1280, 1280))
+                if (source.extent.longest_side > 1280)
+                else source.extent
+            )
+            extent = extent.at_least(16).multiple_of(16)
+            images = ImageInput.from_extent(extent)
+            images.initial_image = Image.scale(source, extent)
+            images.extent.target = bounds.extent
+            checkpoint, lora = ensure(pov.available_models(self._connection.client.models))
+        except (ValueError, util.PluginError) as error:
+            self.report_error(str(error))
+            return
+
+        self.clear_error()
+        self._browsing = False
+        batch_id = uuid.uuid4().hex
+        seed = self.seed if self.fixed_seed else workflow.generate_seed()
+        regions = self.active_regions
+        positive = regions.active_or_root.positive
+        negative = regions.negative if regions.negative_enabled else ""
+        context = ConditioningInput(
+            pattern_lora.sub("", eval_wildcards(strip_prompt_comments(positive), seed)).strip(),
+            pattern_lora.sub("", eval_wildcards(strip_prompt_comments(negative), seed)).strip(),
+            language=self.prompt_translation_language,
+        )
+        model = CheckpointInput(checkpoint, Arch.krea2, loras=[LoraInput(lora, 1.0)])
+        sampling = SamplingInput("euler", "simple", 1.0, 8, seed=seed)
+        jobs = []
+        for name, view in pov.pov_views:
+            params = JobParams(
+                bounds,
+                f"Make POVs · {name}",
+                seed=seed,
+                batch_id=batch_id,
+                workflow_kind=WorkflowKind.pov,
+            )
+            params.set_style(self.active_style, checkpoint)
+            params.metadata.update(
+                camera=asdict(view),
+                steps=sampling.total_steps,
+                cfg=sampling.cfg_scale,
+                sampler=sampling.sampler,
+                scheduler=sampling.scheduler,
+                loras=[{"name": lora, "weight": 1.0}],
+                prompt=positive,
+                negative_prompt=negative,
+            )
+            request = WorkflowInput(
+                WorkflowKind.pov,
+                images=images,
+                models=model,
+                sampling=sampling,
+                conditioning=context,
+                camera_view=view,
+                nsfw_filter=settings.nsfw_filter,
+            )
+            jobs.append((self.jobs.add(JobKind.diffusion, params), request))
+        eventloop.run(self._enqueue_povs(jobs))
+
+    async def _enqueue_povs(self, jobs: list[tuple[Job, WorkflowInput]]):
+        for job, request in jobs:
+            if job not in self.jobs:
+                continue
+            try:
+                await self._enqueue_job(job, request)
+            except Exception as error:
+                if job in self.jobs:
+                    self.jobs.remove(job)
+                self.report_error(str(error))
 
     def generate_across(self, apply_each: list, seed: int, restore):
         """Run the current prompt/settings once per configuration, all with the same

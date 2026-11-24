@@ -116,6 +116,7 @@ def build_package():
         guide = plugin_dst / "docs" / "MINIMAX-H3-IMAGE.md"
         guide.parent.mkdir(exist_ok=True)
         copy(root / "docs" / guide.name, guide)
+        copy(root / "docs" / "make-povs-experiment.md", guide.parent)
         make_archive(str(build_dir / package_name), "zip", package_dir)
     write_checksums(build_dir, version, [build_dir / f"{package_name}.zip", source_archive])
     print(f"Build artifacts: {build_dir.relative_to(root)}")

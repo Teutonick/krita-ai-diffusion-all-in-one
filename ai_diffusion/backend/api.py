@@ -22,6 +22,14 @@ class WorkflowKind(Enum):
     custom = 7
     dlss5_enhance = 8
     segment = 9
+    pov = 10
+
+
+@dataclass(frozen=True)
+class CameraView:
+    azimuth: int
+    elevation: float = 0.0
+    distance: float = 1.0
 
 
 @dataclass
@@ -234,6 +242,7 @@ class WorkflowInput:
     color_match: float = 0.0
     nsfw_filter: float = 0.0
     custom_workflow: CustomWorkflowInput | None = None
+    camera_view: CameraView | None = None
 
     @property
     def extent(self):

@@ -1,4 +1,32 @@
-# 1.53.0-all-in-one.39 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.44 — krita-ai-diffusion-all-in-one
+
+Make POVs uses neutral subject-preservation instructions alongside the active
+prompt. Anygles still uses human-shaped geometry to guide the camera.
+Update the installed server node under Managed Server.
+
+## 1.53.0-all-in-one.43
+
+Make POVs uses the active prompt as subject and scene context across the series.
+With prompt context, it encodes a larger visual reference to retain subject details.
+The installed Make POVs server node needs to be updated under Managed Server.
+
+## 1.53.0-all-in-one.42
+
+Make POVs tries full-frame subject reconstruction when the person detector misses a portrait.
+
+## 1.53.0-all-in-one.41
+
+Fixes Make POVs submitting its ComfyUI graph with an unserializable text encoder reference.
+
+## 1.53.0-all-in-one.40
+
+Adds optional Make POVs for Krea 2 Turbo on a managed NVIDIA CUDA server.
+Enable it under Components, review the model terms, and install the
+dependencies. Make POVs uses the visible canvas to queue six camera views
+for scenes with one or two people. The results appear in Generation history.
+Hidden surfaces and background details are reconstructed and may change.
+
+## 1.53.0-all-in-one.39
 
 Adds a dedicated Krea 2 Prompt AI profile with guidance for poses, points of
 contact, spatial relationships, framing, and verbatim lettering.

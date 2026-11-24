@@ -8,8 +8,10 @@ import socket
 import time
 from collections.abc import Callable
 from enum import Enum
+from hashlib import file_digest
 from itertools import chain
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import NamedTuple
 
 from PyQt5.QtNetwork import QNetworkAccessManager, QSslSocket
@@ -35,7 +37,7 @@ from ..vnccs_pose import (
     vnccs_assets_installed,
     vnccs_component,
 )
-from . import model_licenses, resources
+from . import model_licenses, pov, resources
 from .network import DownloadProgress, download
 from .resources import (
     Arch,
@@ -46,6 +48,11 @@ from .resources import (
 )
 
 _exe = ".exe" if is_windows else ""
+
+
+def _sha256(path: Path):
+    with path.open("rb") as file:
+        return file_digest(file, "sha256").hexdigest()
 
 
 def _uv_is_outdated(version: str):
@@ -262,11 +269,50 @@ class Server:
             ])
         )
 
+    def pov_model_dependencies(self):
+        if pov.pov_component not in settings.server_components:
+            return []
+        needed = []
+        for id in (
+            "checkpoint-turbo_fp8-krea2",
+            "text_encoder-qwen_3vl_4b-krea2",
+            "vae-default-krea2",
+        ):
+            model = resources.find_resource(resources.ResourceId.parse(id))
+            assert model is not None
+            if not model.exists_in(self.path) and not (
+                self.comfy_dir and model.exists_in(self.comfy_dir)
+            ):
+                needed.append(id)
+        return needed
+
     def component_installed(self, pkg: CustomNode):
         if self.comfy_dir is None:
             return False
         marker = self.comfy_dir / "custom_nodes" / pkg.folder / ".krita-component-version"
-        return marker.exists() and marker.read_text().strip() == pkg.version
+        if not self._component_runtime_installed(pkg, marker):
+            return False
+        if pkg.name == pov.pov_component:
+            node = marker.parent / "krita_pov.py"
+            return (
+                node.is_file()
+                and node.read_bytes() == Path(__file__).with_name("pov_node.py").read_bytes()
+            )
+        return True
+
+    def _component_runtime_installed(self, pkg: CustomNode, marker: Path):
+        if not marker.is_file() or marker.read_text().strip() != pkg.version:
+            return False
+        if pkg.name == pov.pov_component:
+            assert self.comfy_dir is not None
+            models = self.comfy_dir / "models"
+            if not all((models / name).is_file() for name, _, _ in pov.pov_assets):
+                return False
+            if not (
+                models / "krita_pov" / f"dinov3-{pov.pov_dino_revision}" / "hubconf.py"
+            ).is_file():
+                return False
+        return True
 
     @property
     def needs_vnccs_assets(self):
@@ -289,6 +335,11 @@ class Server:
         previous = self.state
         self.state = ServerState.installing
         try:
+            if (
+                pov.pov_component in settings.server_components
+                and self.backend is not ServerBackend.cuda
+            ):
+                raise util.PluginError(_("Make POVs requires a CUDA-enabled NVIDIA server."))
             if self.needs_vnccs_assets:
 
                 async def download_asset(url: str, target: Path):
@@ -415,6 +466,12 @@ class Server:
         assert self.comfy_dir is not None
 
         folder = self.comfy_dir / "custom_nodes" / pkg.folder
+        if pkg.name == pov.pov_component and self._component_runtime_installed(
+            pkg, folder / ".krita-component-version"
+        ):
+            shutil.copy2(Path(__file__).with_name("pov_node.py"), folder / "krita_pov.py")
+            cb(f"Installing {pkg.name}", f"Updated {pkg.name} server node")
+            return
         resource_url = pkg.url
         if not resource_url.endswith(".zip"):  # git repo URL
             resource_url = f"{pkg.url}/archive/{pkg.version}.zip"
@@ -434,7 +491,39 @@ class Server:
             if managed:
                 requirements = folder / "requirements.txt"
                 if requirements.exists():
-                    await self._pip_install(pkg.name, ["-r", str(requirements)], cb)
+                    if pkg.name == pov.pov_component:
+                        runtime = [
+                            line
+                            for line in requirements.read_text(encoding="utf-8").splitlines()
+                            if line and not line.startswith(("#", "git+")) and line != "pyrender"
+                        ]
+                        await self._pip_install(
+                            pkg.name,
+                            [
+                                *runtime,
+                                "freetype-py",
+                                "imageio",
+                                "networkx",
+                                "scipy",
+                                "six",
+                                "PyOpenGL>=3.1.8",
+                            ],
+                            cb,
+                        )
+                    else:
+                        await self._pip_install(pkg.name, ["-r", str(requirements)], cb)
+                if pkg.name == pov.pov_component:
+                    await self._pip_install(
+                        pkg.name,
+                        [
+                            "--no-deps",
+                            "pyrender==0.1.45",
+                            "https://github.com/microsoft/MoGe/archive/07444410f1e33f402353b99d6ccd26bd31e469e8.zip",
+                            "https://github.com/EasternJournalist/utils3d/archive/3fab839f0be9931dac7c8488eb0e1600c236e183.zip",
+                        ],
+                        cb,
+                    )
+                    await self._install_pov(folder, network, cb)
                 (folder / ".krita-component-version").write_text(pkg.version)
         except Exception:
             if managed and folder.exists():
@@ -445,6 +534,72 @@ class Server:
         if backup.exists():
             remove_subdir(backup, origin=backup.parent)
         cb(f"Installing {pkg.name}", f"Finished installing {pkg.name}")
+
+    async def _install_pov(self, folder: Path, network: QNetworkAccessManager, cb: InternalCB):
+        assert self.comfy_dir is not None
+        models = self.comfy_dir / "models"
+        for name, url, digest in pov.pov_assets:
+            destination = models / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            if destination.is_file() and await asyncio.to_thread(_sha256, destination) == digest:
+                continue
+            pending = destination.with_suffix(destination.suffix + ".krita-download")
+            if QSslSocket.supportsSsl():
+                await _download_cached(pov.pov_component, network, url, pending, cb)
+            else:
+                cb("Downloading Make POVs", destination.name)
+                await asyncio.to_thread(download_vnccs_asset_https, url, pending)
+            if await asyncio.to_thread(_sha256, pending) != digest:
+                pending.unlink()
+                raise util.PluginError(f"Make POVs checksum mismatch: {destination.name}")
+            pending.replace(destination)
+
+        revision = pov.pov_dino_revision
+        asset_dir = models / "krita_pov"
+        dino = asset_dir / f"dinov3-{revision}"
+        if not (dino / "hubconf.py").is_file():
+            archive = self._cache_dir / f"dinov3-{revision}.zip"
+            url = f"https://github.com/facebookresearch/dinov3/archive/{revision}.zip"
+            if QSslSocket.supportsSsl():
+                await _download_cached(pov.pov_component, network, url, archive, cb)
+            elif not archive.is_file():
+                pending = archive.with_suffix(".partial")
+                await asyncio.to_thread(download_vnccs_asset_https, url, pending)
+                pending.replace(archive)
+            if await asyncio.to_thread(_sha256, archive) != pov.pov_dino_sha256:
+                archive.unlink()
+                raise util.PluginError("Make POVs checksum mismatch: DINOv3")
+            with TemporaryDirectory(prefix="dinov3-", dir=asset_dir) as temporary:
+                await _extract_archive("DINOv3", archive, Path(temporary), cb)
+                extracted = Path(temporary) / dino.name
+                if not (extracted / "hubconf.py").is_file():
+                    raise util.PluginError("Make POVs DINOv3 archive is incomplete.")
+                if dino.exists():
+                    remove_subdir(dino, origin=asset_dir)
+                extracted.rename(dino)
+
+        backbone = folder / "sam_3d_body" / "models" / "backbones" / "dinov3.py"
+        source = backbone.read_text(encoding="utf-8")
+        source = source.replace(
+            "import torch",
+            "from pathlib import Path\nfrom folder_paths import models_dir\n\nimport torch",
+            1,
+        )
+        source = source.replace(
+            '"facebookresearch/dinov3"',
+            f'str(Path(models_dir) / "krita_pov" / "dinov3-{revision}")',
+        ).replace('source="github"', 'source="local"')
+        backbone.write_text(source, encoding="utf-8")
+        loader = folder / "sam_3d_body" / "build_models.py"
+        source = loader.read_text(encoding="utf-8").replace(
+            "weights_only=False", "weights_only=True"
+        )
+        loader.write_text(source, encoding="utf-8")
+        shutil.copy2(Path(__file__).with_name("pov_node.py"), folder / "krita_pov.py")
+        with (folder / "__init__.py").open("a", encoding="utf-8") as file:
+            file.write(
+                "\nfrom .krita_pov import node_mappings\nNODE_CLASS_MAPPINGS.update(node_mappings)\n"
+            )
 
     async def install(self, callback: Callback):
         def cb(stage: str, message: str | DownloadProgress):

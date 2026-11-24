@@ -13,8 +13,10 @@ from krita import Document as MockKritaDocument
 from krita import Krita, Selection
 from PyQt5.QtCore import QByteArray, Qt
 
+from ai_diffusion.backend import pov
 from ai_diffusion.backend.api import ConditioningInput, WorkflowInput, WorkflowKind
 from ai_diffusion.backend.client import CheckpointInfo, ClientEvent, ClientMessage
+from ai_diffusion.backend.comfy_workflow import ComfyObjectInfo
 from ai_diffusion.backend.resources import Arch, ControlMode
 from ai_diffusion.document import KritaDocument
 from ai_diffusion.image import BlendMode, Bounds, Extent, Image, ImageCollection
@@ -24,7 +26,13 @@ from ai_diffusion.model.custom_workflow import WorkflowCollection
 from ai_diffusion.model.jobs import Job, JobKind, JobParams, JobRegion, JobState
 from ai_diffusion.model.model import DocumentModel, ErrorKind, ProgressKind, no_error
 from ai_diffusion.pose_studio import PoseScene
-from ai_diffusion.settings import ApplyBehavior, ApplyRegionBehavior
+from ai_diffusion.settings import (
+    ApplyBehavior,
+    ApplyRegionBehavior,
+    ServerBackend,
+    ServerMode,
+    settings,
+)
 from ai_diffusion.style import Style, Styles
 
 from .conftest import qtapp
@@ -147,6 +155,64 @@ async def test_generate_simple(workflows_dir: Path):
         # Pure generation: no input image is passed to the workflow
         assert result[0].images is not None
         assert result[0].images.initial_image is None
+
+
+@qtapp
+async def test_make_povs_enqueues_one_series(workflows_dir: Path, monkeypatch):
+    krita_doc = Krita.instance().openDocument("test")
+    layer = krita_doc.createNode("Source", "paintlayer")
+    image = Image.create(Extent(512, 512), fill=Qt.GlobalColor.blue)
+    layer.setPixelData(image.to_packed_bytes(), 0, 0, 512, 512)
+    krita_doc.rootNode().addChildNode(layer, None)
+
+    async with _model_env(krita_doc, workflows_dir) as (model, client):
+        monkeypatch.setattr(settings, "server_mode", ServerMode.managed)
+        monkeypatch.setattr(settings, "server_backend", ServerBackend.cuda)
+        monkeypatch.setattr(settings, "server_components", [pov.pov_component])
+        checkpoint = "krea2_turbo_int8_convrot.safetensors"
+        client.models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, Arch.krea2)
+        client.models.loras = [pov.pov_lora]
+        client.models.resources.update({
+            "text_encoder-qwen_3vl_4b-krea2": "encoder.safetensors",
+            "vae-default-krea2": "vae.safetensors",
+        })
+        client.models.node_inputs = ComfyObjectInfo({name: {} for name in pov.pov_nodes})
+        client.models.node_inputs.nodes["KritaPOVNormal"] = {
+            "input": {"optional": {"subject_context": ["STRING"]}}
+        }
+        model.style = _make_style(checkpoint)
+        model.regions.positive = "Retain the user prompt"
+        assert model.pov_available
+        model.make_povs()
+        model.make_povs()
+        jobs = await _wait_for_enqueue(client, count=6)
+        assert len(client.enqueued) == 6
+        assert len({id(job.image) for job in jobs}) == 1
+        assert all(
+            job.conditioning and job.conditioning.positive == "Retain the user prompt"
+            for job in jobs
+        )
+        assert len({job.params.batch_id for job in model.jobs}) == 1
+        assert [job.params.metadata["camera"]["azimuth"] for job in model.jobs] == [
+            45,
+            90,
+            135,
+            180,
+            -135,
+            -90,
+        ]
+        assert model.regions.positive == "Retain the user prompt"
+        finished, failed, *remaining = list(model.jobs)
+        model.jobs.notify_finished(finished)
+        assert failed.id is not None
+        model.handle_message(
+            ClientMessage(ClientEvent.error, failed.id, error="Test render failure")
+        )
+        assert finished.state is JobState.finished
+        assert failed.state is JobState.cancelled
+        assert all(job.state is JobState.queued for job in remaining)
+        assert model.clear_queued() == [job.id for job in remaining]
+        assert list(model.history) == [finished]
 
 
 @qtapp

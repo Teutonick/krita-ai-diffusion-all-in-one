@@ -30,7 +30,7 @@ from PyQt5.QtWidgets import (
 )
 
 from .. import eventloop, util
-from ..backend import model_licenses, resources, server
+from ..backend import model_licenses, pov, resources, server
 from ..backend.comfy_client import ComfyClient
 from ..backend.network import DownloadProgress
 from ..backend.resources import CustomNode, ModelResource, ResourceId
@@ -950,6 +950,9 @@ class ComponentsTab(QWidget):
         layout = QVBoxLayout(self)
         self._checkboxes: dict[str, QCheckBox] = {}
         descriptions = {
+            pov.pov_component: _(
+                "Six camera viewpoints for one or two people. Requires NVIDIA CUDA and about 4.4 GB of additional model downloads."
+            ),
             "Krea 2 Edit": _(
                 "Installs Krea 2 Edit V2 nodes automatically. Select Krea models in Workloads."
             ),
@@ -974,7 +977,10 @@ class ComponentsTab(QWidget):
             desc = QLabel(descriptions[name], self)
             desc.setWordWrap(True)
             layout.addWidget(desc)
-            box.toggled.connect(self._save)
+            if name == pov.pov_component:
+                box.toggled.connect(self._toggle_pov)
+            else:
+                box.toggled.connect(self._save)
         self.eagle_setup = QCheckBox(_("Download and launch Eagle setup"), self)
         layout.addWidget(self.eagle_setup)
         desc = QLabel(
@@ -989,6 +995,32 @@ class ComponentsTab(QWidget):
         self.eagle_setup.setEnabled(is_windows or is_macos)
         self.eagle_setup.toggled.connect(self.changed)
         layout.addStretch()
+
+    def _toggle_pov(self, enabled: bool):
+        if enabled:
+            description = _(
+                "Install Make POVs and accept the component licenses below? Models are downloaded from public sources and run locally."
+            )
+            terms = (
+                '<a href="https://www.krea.ai/krea-2-licensing">Krea 2 Community License</a><br>'
+                '<a href="https://huggingface.co/Blendcap/sam-3d-body/blob/fa738e386f37c7c00ed3befb46cf995f4ed3131c/LICENSE">SAM License</a><br>'
+                '<a href="https://github.com/facebookresearch/dinov3/blob/6876159a11b4df116f30f667f8c9888617df0751/LICENSE.md">DINOv3 License</a>'
+            )
+            dialog = QMessageBox(
+                QMessageBox.Question,
+                _("Make POVs"),
+                f"<p>{description}</p>{terms}",
+                QMessageBox.Yes | QMessageBox.No,
+                self,
+            )
+            dialog.setDefaultButton(QMessageBox.No)
+            if dialog.exec_() != QMessageBox.Yes:
+                box = self._checkboxes[pov.pov_component]
+                blocked = box.blockSignals(True)
+                box.setChecked(False)
+                box.blockSignals(blocked)
+                return
+        self._save()
 
     def _save(self):
         settings.server_components = [
@@ -1005,6 +1037,7 @@ class ComponentsTab(QWidget):
         return (
             self.eagle_setup.isChecked()
             or self._server.needs_vnccs_assets
+            or bool(self._server.pov_model_dependencies())
             or any(
                 not self._server.component_installed(pkg)
                 for pkg in self._server.selected_custom_nodes
@@ -1245,8 +1278,11 @@ class ServerWidget(QWidget):
                 self._components_tab.eagle_setup.setChecked(False)
             self._custom_tab.update_installed()
 
-            if len(self.selected_models) > 0:
-                await self._server.download(self.selected_models, self._handle_progress)
+            models = list(
+                dict.fromkeys([*self.selected_models, *self._server.pov_model_dependencies()])
+            )
+            if models:
+                await self._server.download(models, self._handle_progress)
 
             self.selected_models = []
             self._custom_tab.update_installed()

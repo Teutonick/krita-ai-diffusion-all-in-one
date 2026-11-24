@@ -9,7 +9,7 @@ from urllib.request import urlopen
 import pytest
 import requests
 
-from ai_diffusion.backend import workflow
+from ai_diffusion.backend import pov, workflow
 from ai_diffusion.backend.api import (
     CheckpointInput,
     ConditioningInput,
@@ -32,7 +32,9 @@ from ai_diffusion.settings import PerformanceSettings
 from ai_diffusion.style import Style
 from scripts.check_krea2_server import request
 
-from .config import image_dir, result_dir
+from .config import image_dir, result_dir, root_dir
+
+pov_result_dir = root_dir / ".appdata" / "pov-poc" / "results"
 
 
 def _edit_work(edit_kind, kind=WorkflowKind.refine, cfg=1.0):
@@ -87,6 +89,50 @@ def test_krea2_edit_graph(kind, edit_kind, cfg):
     positive = [n["inputs"]["prompt"] for n in grounded if n["inputs"]["prompt"]]
     assert work.conditioning is not None
     assert positive == [work.conditioning.positive]
+
+
+def test_make_povs_workflows():
+    models, template = _edit_work("identity")
+    models.loras = [pov.pov_lora]
+    models.node_inputs = ComfyObjectInfo({name: {} for name in pov.pov_nodes})
+    assert pov.available_models(models) is None
+    models.node_inputs.nodes["KritaPOVNormal"] = {
+        "input": {"optional": {"subject_context": ["STRING"]}}
+    }
+    available = pov.available_models(models)
+    assert available is not None
+    checkpoint, lora = available
+    camera_inputs = []
+    image_ids = set()
+    for _, view in pov.pov_views:
+        work = WorkflowInput(
+            WorkflowKind.pov,
+            images=template.images,
+            models=CheckpointInput(checkpoint, Arch.krea2, loras=[LoraInput(lora, 1.0)]),
+            sampling=SamplingInput("euler", "simple", 1.0, 8, seed=1234),
+            conditioning=ConditioningInput("Андроид с плоским керамическим лицом", "Human nose"),
+            camera_view=view,
+        )
+        assert WorkflowInput.from_dict(work.to_dict()).camera_view == view
+        graph = workflow.create(work, models)
+        payload = json.loads(json.dumps({"prompt": graph.root}))
+        nodes = {node["class_type"]: node["inputs"] for node in payload["prompt"].values()}
+        clip_id, clip_port = nodes["Krea2AnyglesEncode"]["clip"]
+        assert payload["prompt"][clip_id]["class_type"] == "CLIPLoader"
+        assert clip_port == 0
+        assert nodes["Krea2AnyglesEncode"]["reference_max_edge"] == 576
+        camera_inputs.append(nodes["KritaPOVNormal"]["azimuth"])
+        assert nodes["KritaPOVNormal"]["subject_context"] == (
+            "Subject and scene description: Андроид с плоским керамическим лицом\n"
+            "Avoid these changes or details: Human nose"
+        )
+        image_ids.add(nodes["ETN_LoadImageCache"]["id"])
+        assert nodes["KSampler"]["seed"] == 1234
+        assert nodes["Krea2AnyglesLoadLoRA"]["lora_name"] == lora
+    assert camera_inputs == [45, 90, 135, 180, -135, -90]
+    assert len(image_ids) == 1
+    models.loras = []
+    assert pov.available_models(models) is None
 
 
 @pytest.mark.parametrize("reference_type", ["named", "canvas"])
@@ -201,13 +247,153 @@ def test_krea2_v2_edit(pytestconfig, edit_kind):
     assert patch["inputs"]["ref_boost"] == (2.0 if edit_kind == "identity" else 4.0)
     assert "target_latent" in patch["inputs"]
     assert any(n["class_type"] == "Krea2EditGroundedEncode" for n in graph.root.values())
+    _run_edit_graph(url, graph, f"krea2-{edit_kind}-v2", work)
+
+
+@pytest.mark.parametrize("edit_kind", ["identity", "general"])
+@pytest.mark.parametrize("view", ["right profile", "directly behind"])
+@pytest.mark.parametrize("conditioning_mode", ["refine", "reference"])
+def test_krea2_pov_experiment(pytestconfig, edit_kind, view, conditioning_mode):
+    source = os.environ.get("AI_DIFFUSION_POV_SOURCE")
+    if pytestconfig.getoption("--ci") or not source:
+        pytest.skip("Set AI_DIFFUSION_POV_SOURCE to opt into the viewpoint experiment")
+    url = os.environ.get("AI_DIFFUSION_TEST_URL", "http://127.0.0.1:8197").rstrip("/")
+    kind = WorkflowKind.refine if conditioning_mode == "refine" else WorkflowKind.generate
+    models, work = _edit_work(edit_kind, kind=kind)
+    models.node_inputs = ComfyObjectInfo(request(url + "/object_info"))
+    image = Image.load(source)
+    work.images = _pov_images(image)
+    assert work.conditioning
+    work.conditioning.positive = (
+        f"Rephotograph the reference scene from {view}. Move the camera around the stationary "
+        "scene at the original height and distance. Keep the subject's identity, clothing, pose, "
+        "object layout, environment, lighting and visual style. Show the parts now visible "
+        "from the new camera position."
+    )
+    if kind is WorkflowKind.generate:
+        work.conditioning.edit_reference = False
+        work.conditioning.control = [
+            ControlInput(ControlMode.reference, work.images.initial_image, strength=0.5)
+        ]
+    name = f"pov-krea2-{edit_kind}-{view.replace(' ', '-')}"
+    if kind is WorkflowKind.generate:
+        name += "-reference"
+    _run_edit_graph(url, workflow.create(work, models), name, work, pov_result_dir)
+
+
+@pytest.mark.parametrize("edit_kind", ["identity", "general"])
+@pytest.mark.parametrize("azimuth", [90, 180])
+@pytest.mark.parametrize("placement", ["aligned (trained)", "beside (right of target)"])
+def test_krea2_pov_placement_experiment(pytestconfig, edit_kind, azimuth, placement):
+    if pytestconfig.getoption("--ci") or os.getenv("AI_DIFFUSION_POV_PLACEMENT") != "1":
+        pytest.skip("Set AI_DIFFUSION_POV_PLACEMENT=1 for the controlled camera experiment")
+    url = os.environ.get("AI_DIFFUSION_TEST_URL", "http://127.0.0.1:8197").rstrip("/")
+    models, work = _edit_work(edit_kind, kind=WorkflowKind.generate)
+    models.node_inputs = ComfyObjectInfo(request(url + "/object_info"))
+    assert work.conditioning and work.sampling
+    work.images = _pov_images(Image.load(image_dir / "adobe_stock.jpg"), 768 * 512)
+    relaxed = os.getenv("AI_DIFFUSION_POV_RELAXED") == "1"
+    work.conditioning.edit_reference = False
+    work.conditioning.control = [
+        ControlInput(
+            ControlMode.reference, work.images.initial_image, strength=0.5 if relaxed else 1
+        )
+    ]
+    if relaxed:
+        viewpoint = (
+            "The short edge of the countertop recedes in perspective. A side-on view shows "
+            "her nose in silhouette and her ponytail behind her head."
+            if azimuth == 90
+            else "Her back and ponytail are in the foreground. The counter and its vegetables "
+            "are visible beyond her shoulders, across the kitchen."
+        )
+        work.conditioning.positive = (
+            f"A candid photograph of the same kitchen and the same woman cutting carrots. "
+            f"{viewpoint} She wears a charcoal cardigan over a grey shirt and holds the "
+            "red-handled knife. Same pose, kitchen furniture and natural window light."
+        )
+    else:
+        direction = (
+            "right-side profile, 90 degrees around the counter, with only one eye visible"
+            if azimuth == 90
+            else "directly behind the woman, 180 degrees around the counter, with her face hidden"
+        )
+        work.conditioning.positive = (
+            f"Rephotograph the same kitchen from the {direction}. Move the camera around the "
+            "stationary woman and counter at the same height and distance. Keep her looking down "
+            "and cutting carrots with a red-handled knife. Preserve her ponytail, grey shirt and "
+            "dark cardigan, the positions of the windows, cabinets, counter and vegetables, and "
+            "the natural daylight. Show the counter and kitchen from the new perspective."
+        )
+    work.sampling.seed = int(os.getenv("AI_DIFFUSION_POV_SEED", "1234"))
+    graph = workflow.create(work, models)
+    patch = next(n for n in graph.root.values() if n["class_type"] == "Krea2EditModelPatch")
+    patch["inputs"]["ref_position"] = placement
+    name = f"pov-placement-{edit_kind}-{azimuth}-{placement.split()[0]}-{work.sampling.seed}"
+    if relaxed:
+        name += "-relaxed"
+    _run_edit_graph(url, graph, name, work, pov_result_dir)
+
+
+def _pov_images(image: Image, pixel_count=512 * 512):
+    extent = image.extent.scale_to_pixel_count(pixel_count).multiple_of(16)
+    images = ImageInput.from_extent(extent)
+    images.initial_image = Image.scale(image, extent)
+    return images
+
+
+@pytest.mark.parametrize("start_step", [4, 10])
+def test_moss_pov_experiment(pytestconfig, start_step):
+    source = os.environ.get("AI_DIFFUSION_POV_SOURCE")
+    url = os.environ.get("AI_DIFFUSION_MOSS_TEST_URL")
+    if pytestconfig.getoption("--ci") or not source or not url:
+        pytest.skip("Set AI_DIFFUSION_POV_SOURCE and AI_DIFFUSION_MOSS_TEST_URL for MOSS")
+    url = url.rstrip("/")
+    info = request(url + "/object_info")
+
+    def installed(node, field, fragment):
+        names = info[node]["input"]["required"][field][0]
+        match = next((name for name in names if fragment in name.lower()), None)
+        if match is None:
+            pytest.fail(f"{node}: no installed {field} matching {fragment}")
+        return match
+
+    checkpoint = installed("UNETLoader", "unet_name", "moss_image_sft")
+    models = ClientModels()
+    models.node_inputs = ComfyObjectInfo(info)
+    models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, Arch.moss, FileFormat.diffusion)
+    models.resources = {
+        resource_id(ResourceKind.text_encoder, Arch.moss, "qwen_3.5_9b"): installed(
+            "CLIPLoader", "clip_name", "qwen3.5_9b"
+        ),
+        resource_id(ResourceKind.vae, Arch.moss, "default"): installed(
+            "VAELoader", "vae_name", "flux2-vae.safetensors"
+        ),
+    }
+    work = WorkflowInput(
+        WorkflowKind.refine,
+        models=CheckpointInput(checkpoint, Arch.moss),
+        images=_pov_images(Image.load(source)),
+        conditioning=ConditioningInput(
+            "A photograph of the same stationary scene from its right side, a 90 degree "
+            "side view at the original camera height and distance. Keep the same subject, "
+            "outfit, pose, surroundings and lighting."
+        ),
+        sampling=SamplingInput("euler", "simple", 3.0, 20, start_step=start_step, seed=1234),
+    )
+    _run_edit_graph(
+        url, workflow.create(work, models), f"pov-moss-start-{start_step}", work, pov_result_dir
+    )
+
+
+def _run_edit_graph(url, graph, name, work, output_dir=result_dir):
     # Use standard image transport so this test only needs the Krea2 node pack.
     for node in graph.root.values():
         if node["class_type"] == "ETN_LoadImageCache":
             data = graph.image_data[node["inputs"]["id"]]
             upload = requests.post(
                 url + "/upload/image",
-                files={"image": (f"krea2-{edit_kind}-source.webp", data, "image/webp")},
+                files={"image": (f"{name}-source.webp", data, "image/webp")},
                 data={"overwrite": "true"},
                 timeout=30,
             )
@@ -218,10 +404,11 @@ def test_krea2_v2_edit(pytestconfig, edit_kind):
                 class_type="SaveImage",
                 inputs={
                     "images": node["inputs"]["images"],
-                    "filename_prefix": f"krea2-{edit_kind}-v2",
+                    "filename_prefix": name,
                 },
             )
-    (result_dir / f"krea2-{edit_kind}-v2.json").write_text(json.dumps(graph.root, indent=2))
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / f"{name}.json").write_text(json.dumps(graph.root, indent=2))
     try:
         submitted = request(url + "/prompt", {"prompt": graph.root})
     except HTTPError as error:
@@ -235,7 +422,7 @@ def test_krea2_v2_edit(pytestconfig, edit_kind):
             output = next(o for o in entry["outputs"].values() if "images" in o)["images"][0]
             with urlopen(url + "/view?" + urlencode(output), timeout=30) as response:
                 data = response.read()
-            path = result_dir / f"krea2-{edit_kind}-v2.png"
+            path = output_dir / f"{name}.png"
             path.write_bytes(data)
             image = Image.load(path)
             assert work.images is not None and work.images.initial_image is not None
@@ -243,4 +430,4 @@ def test_krea2_v2_edit(pytestconfig, edit_kind):
             assert image.to_numpy_format() != work.images.initial_image.to_numpy_format()
             return
         time.sleep(0.5)
-    pytest.fail(f"Krea2 job timed out: {prompt_id}; inspect the server before rerunning")
+    pytest.fail(f"{name} timed out: {prompt_id}; inspect the server before rerunning")

@@ -2384,12 +2384,92 @@ def krea2_pose_studio(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
     return w
 
 
+def make_pov(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
+    checkpoint = ensure(i.models)
+    view = ensure(i.camera_view)
+    sampling = ensure(i.sampling)
+    model, clip, vae = load_checkpoint_with_lora(w, replace(checkpoint, loras=[]), models)
+    source = w.load_image(i.image)
+    geometry = w.add("KritaPOVGeometry", 1, image=source)
+    context = ""
+    if cond := i.conditioning:
+        parts = []
+        if cond.positive:
+            parts.append(
+                "Subject and scene description: " + merge_prompt(cond.positive, "", cond.language)
+            )
+        if cond.negative:
+            parts.append(
+                "Avoid these changes or details: " + merge_prompt(cond.negative, "", cond.language)
+            )
+        context = "\n".join(parts)
+    normal, prompt = w.add(
+        "KritaPOVNormal",
+        2,
+        geometry=geometry,
+        azimuth=view.azimuth,
+        elevation=view.elevation,
+        distance=view.distance,
+        subject_context=w.translate(context)
+        if context and i.conditioning and i.conditioning.language
+        else context,
+    )
+    positive, control = w.add(
+        "Krea2AnyglesEncode",
+        2,
+        clip=clip.model,
+        vae=vae,
+        source=source,
+        target_normal=normal,
+        prompt=prompt,
+        reference_max_edge=576 if context else 384,
+        vlm_reference=True,
+    )
+    model, projection = w.add(
+        "Krea2AnyglesLoadLoRA",
+        2,
+        model=model,
+        lora_name=checkpoint.loras[0].name,
+        strength=checkpoint.loras[0].strength,
+    )
+    model = w.add(
+        "Krea2AnyglesModelPatch",
+        1,
+        model=model,
+        anygles_control=control,
+        anygles_projection=projection,
+        kv_cache=True,
+    )
+    latent = w.empty_latent_image(i.image.extent, Arch.krea2, 1)
+    samples = w.add(
+        "KSampler",
+        1,
+        model=model,
+        seed=sampling.seed,
+        steps=sampling.total_steps,
+        cfg=sampling.cfg_scale,
+        sampler_name=sampling.sampler,
+        scheduler=sampling.scheduler,
+        positive=positive,
+        negative=positive,
+        latent_image=latent,
+        denoise=1.0,
+    )
+    output = w.nsfw_filter(w.vae_decode(vae, samples), i.nsfw_filter)
+    if i.image.extent != i.extent.target:
+        output = w.scale_image(output, i.extent.target)
+    w.send_image(output)
+    return w
+
+
 def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.server) -> ComfyWorkflow:
     """
     Takes a WorkflowInput object and creates the corresponding ComfyUI workflow prompt.
     This should be a pure function, the workflow is entirely defined by the input.
     """
     workflow = ComfyWorkflow(models.node_inputs, comfy_mode)
+    if i.kind is WorkflowKind.pov:
+        return make_pov(workflow, i, models)
     layer_count = i.images.layer_count if i.images else 1
     misc = MiscParams(i.batch_count, layer_count, i.color_match, i.nsfw_filter)
 

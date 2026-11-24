@@ -90,6 +90,13 @@ pose_studio_custom_nodes = [
 
 selectable_custom_nodes = [
     CustomNode(
+        "Make POVs",
+        "krea2-anygles",
+        "https://github.com/alexw5702-afk/krea2-anygles",
+        "92d8ed712aabd1000768465c4dba55e1e94a8ab0",
+        [],
+    ),
+    CustomNode(
         "Krea 2 Edit",
         "comfyui-krea2edit",
         "https://github.com/lbouaraba/comfyui-krea2edit",

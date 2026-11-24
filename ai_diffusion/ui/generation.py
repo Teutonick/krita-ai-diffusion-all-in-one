@@ -1406,6 +1406,14 @@ class GenerationWidget(QWidget):
         )
         strength_layout = QHBoxLayout()
         strength_layout.addWidget(self.pose_studio_controls)
+        self.pov_button = QPushButton(_("Make POVs"), self)
+        self.pov_button.setToolTip(
+            _(
+                "Generate six different camera viewpoints of the current image while preserving its identity and visual style."
+            )
+        )
+        self.pov_button.hide()
+        strength_layout.addWidget(self.pov_button)
         strength_layout.addWidget(self.strength_slider, 1)
         self.sweep_button = QToolButton(self)
         self.sweep_button.setText("⇅")
@@ -1656,6 +1664,9 @@ class GenerationWidget(QWidget):
                 self.add_region_button.clicked.connect(self.add_region),
                 self.region_prompt.activated.connect(model.generate),
                 self.generate_button.clicked.connect(model.generate),
+                self.pov_button.clicked.connect(model.make_povs),
+                model.jobs.count_changed.connect(self._update_pov),
+                settings.changed.connect(self._update_pov),
                 self.generate_button.ctrl_clicked.connect(model.generate_replace),
                 bind_toggle(model, "loop_generate", self.loop_button),
                 model.jobs.count_changed.connect(self._update_skip_button),
@@ -1935,8 +1946,14 @@ class GenerationWidget(QWidget):
         )
         self.pose_studio_toggle.blockSignals(blocked)
 
+    def _update_pov(self, *_):
+        model = self.model
+        self.pov_button.setVisible(model.pov_available)
+        self.pov_button.setEnabled(not model.pov_in_progress)
+
     def update_generate_options(self):
         self._update_pose_studio()
+        self._update_pov()
         if not self.model.has_document:
             return
 

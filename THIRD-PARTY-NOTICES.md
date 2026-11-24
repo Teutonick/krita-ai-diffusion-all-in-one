@@ -101,3 +101,14 @@ MIT permits free use and redistribution, including commercial use, provided
 the relevant copyright and license notices accompany redistributed copies.
 If bundling the runtime or weights separately, keep their upstream notices
 and any notices accompanying third-party files in the runtime distribution.
+## Make POVs optional component
+
+The component downloads separate runtime dependencies when enabled in Managed Server.
+
+- [Anygles ComfyUI nodes](https://github.com/alexw5702-afk/krea2-anygles) publish an MIT notice and include SAM inference code under the SAM License.
+- [Krea 2 Anygles weights](https://huggingface.co/yijunwang2/krea2-anygles) are subject to the [Krea 2 Community License](https://www.krea.ai/krea-2-licensing).
+- [SAM 3D Body and MHR weights](https://huggingface.co/Blendcap/sam-3d-body) are downloaded with the SAM License from a public mirror.
+- [DINOv3](https://github.com/facebookresearch/dinov3) is installed from a pinned revision under the DINOv3 License.
+- [MoGe-2 code](https://github.com/microsoft/MoGe) (MIT with Apache-2.0 DINOv2 code) and [MoGe-2 weights](https://huggingface.co/Ruicheng/moge-2-vitl-normal) (MIT) provide camera intrinsics.
+- [TorchVision SSDLite](https://docs.pytorch.org/vision/stable/models/generated/torchvision.models.detection.ssdlite320_mobilenet_v3_large.html) provides person detection with its published COCO weights.
+- [LoRA Dataset Studio](https://github.com/perfectgf/lora-dataset-studio) provided architectural inspiration for independent camera-view jobs.

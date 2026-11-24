@@ -1234,6 +1234,11 @@
     "Start dictation": "Начать запись",
     "Click Open in Browser to edit the pose in your browser.": null,
     "The language model did not return applicable prompt edits": null,
-    "The language model did not suggest any prompt changes": null
+    "The language model did not suggest any prompt changes": null,
+    "Make POVs requires a CUDA-enabled NVIDIA server.": "Для Make POVs нужен сервер с NVIDIA CUDA.",
+    "Make POVs": "Make POVs",
+    "Generate six different camera viewpoints of the current image while preserving its identity and visual style.": "Создать шесть ракурсов текущего изображения с сохранением внешности и визуального стиля.",
+    "Six camera viewpoints for one or two people. Requires NVIDIA CUDA and about 4.4 GB of additional model downloads.": "Шесть ракурсов для одного или двух человек. Требуются NVIDIA CUDA и около 4,4 ГБ дополнительных моделей.",
+    "Install Make POVs and accept the component licenses below? Models are downloaded from public sources and run locally.": "Установить Make POVs и принять условия перечисленных ниже лицензий? Модели скачиваются из публичных источников и работают локально."
   }
 }
