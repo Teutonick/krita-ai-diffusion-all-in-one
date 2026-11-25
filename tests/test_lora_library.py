@@ -193,7 +193,7 @@ def test_base_model_filter_excludes_unknown_and_other_architectures():
 
 
 @qtapp
-async def test_civitai_h3_lora_filter_uses_video_base_label(monkeypatch):
+async def test_civitai_h3_lora_filter_uses_only_image_versions(monkeypatch):
     from ai_diffusion.backend import civitai
     from ai_diffusion.backend.lora_manager import arch_for_base_model
 
@@ -202,6 +202,16 @@ async def test_civitai_h3_lora_filter_uses_video_base_label(monkeypatch):
     monkeypatch.setattr(civitai, "requests", lambda: request)
     await civitai.search_models(base_models=civitai.civitai_base_models["minimax_h3_image"])
     url = request.get.call_args.args[0]
-    assert parse_qs(urlsplit(url).query)["baseModels"] == ["MiniMax H3"]
-    assert arch_for_base_model("MiniMax H3 (FL2VA)") == "minimax_h3_image"
+    assert parse_qs(urlsplit(url).query)["baseModels"] == ["MiniMax H3 Image"]
+    assert arch_for_base_model("MiniMax H3 (FL2VA)") == ""
     assert arch_for_base_model("minimax_h3_image") == "minimax_h3_image"
+    model = civitai.CivitaiModel.from_api({
+        "modelVersions": [
+            {"id": 1, "baseModel": "MiniMax H3"},
+            {"id": 3478369, "baseModel": "MiniMax H3 Image"},
+            {"id": 2, "baseModel": "MiniMax H3 (FL2VA)"},
+        ]
+    })
+    assert [version.id for version in civitai.matching_versions(model, "minimax_h3_image")] == [
+        3478369
+    ]

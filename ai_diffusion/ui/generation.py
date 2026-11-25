@@ -33,6 +33,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QListView,
@@ -49,6 +50,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from ..backend import moss_layout
 from ..backend.api import InpaintContext, SegmentMode
 from ..backend.resources import Arch
 from ..backend.workflow import FillMode, InpaintMode
@@ -1406,6 +1408,13 @@ class GenerationWidget(QWidget):
         )
         strength_layout = QHBoxLayout()
         strength_layout.addWidget(self.pose_studio_controls)
+        self.moss_box_button = QPushButton(_("Add prompt box"), self)
+        self.moss_box_button.setToolTip(
+            _("Draw a rectangle with Krita's selection tool, then add a prompt for it.")
+        )
+        self.moss_box_button.clicked.connect(self._add_moss_prompt_box)
+        self.moss_box_button.hide()
+        strength_layout.addWidget(self.moss_box_button)
         self.pov_button = QPushButton(_("Make POVs"), self)
         self.pov_button.setToolTip(
             _(
@@ -1903,6 +1912,19 @@ class GenerationWidget(QWidget):
     def toggle_region_only(self, checked: bool):
         self.model.region_only = checked
 
+    def _add_moss_prompt_box(self):
+        document = self.model.document
+        if (bounds := document.selection_bounds) is None:
+            self.model.report_error(_("Draw a rectangular selection on the canvas first."))
+            return
+        prompt, accepted = QInputDialog.getText(self, _("Add prompt box"), _("Describe this area"))
+        if accepted and prompt.strip():
+            region = self.model.active_regions
+            box = moss_layout.box_prompt(bounds, document.extent, prompt.strip())
+            region.positive = "\n".join(filter(None, (region.positive.rstrip(), box)))
+            if action := Krita.instance().action("deselect"):
+                action.trigger()
+
     def add_region(self):
         self.model.active_regions.create_region_group()
 
@@ -1968,6 +1990,14 @@ class GenerationWidget(QWidget):
     def update_generate_options(self):
         self._update_pose_studio()
         self._update_pov()
+        self.moss_box_button.setVisible(self.model.arch is Arch.moss)
+        self.moss_box_button.setToolTip(
+            _(
+                "Draw a rectangle with Krita's selection tool, then describe what to change inside it."
+            )
+            if self.model.is_editing
+            else _("Draw a rectangle and describe what to place there in a newly generated image.")
+        )
         if not self.model.has_document:
             return
 

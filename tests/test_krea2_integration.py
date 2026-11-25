@@ -9,7 +9,7 @@ from urllib.request import urlopen
 import pytest
 import requests
 
-from ai_diffusion.backend import pov, workflow
+from ai_diffusion.backend import moss_layout, pov, workflow
 from ai_diffusion.backend.api import (
     CheckpointInput,
     ConditioningInput,
@@ -68,6 +68,64 @@ def _edit_work(edit_kind, kind=WorkflowKind.refine, cfg=1.0):
         images.hires_mask = Image.create(extent, 255)
         work.inpaint = InpaintParams(InpaintMode.custom, Bounds.from_extent(extent))
     return models, work
+
+
+@pytest.mark.parametrize("use_boxes", [False, True])
+def test_moss_edit_uses_reference_and_compositing_mask(use_boxes):
+    kind = WorkflowKind.refine if use_boxes else WorkflowKind.refine_region
+    models, work = _edit_work("identity", kind, 4)
+    checkpoint = "moss_image_sft_int8_convrot.safetensors"
+    models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, Arch.moss, FileFormat.diffusion)
+    models.resources = {
+        resource_id(ResourceKind.text_encoder, Arch.moss, "qwen_3.5_9b"): "qwen.safetensors",
+        resource_id(ResourceKind.vae, Arch.moss, "default"): "flux2-vae.safetensors",
+    }
+    work.models = CheckpointInput(
+        checkpoint, Arch.moss, loras=[LoraInput(moss_layout.edit_lora, 1)]
+    )
+    if use_boxes:
+        assert work.conditioning is not None
+        work.conditioning.positive = (
+            "[Box 0,0,5000,5000] Make the eye black\n"
+            "[Box 5000,5000,10000,10000] Add a silver button"
+        )
+    graph = workflow.create(work, models)
+    encoders = [
+        node["inputs"]
+        for node in graph.root.values()
+        if node["class_type"] == "TextEncodeMOSSImageEdit"
+    ]
+    assert len(encoders) == (3 if use_boxes else 2)
+    assert all(encoder["images.image_0"] == encoders[0]["images.image_0"] for encoder in encoders)
+    assert all(encoder["edit_format"] == "Moss-Image-Edit" for encoder in encoders)
+    output = next(
+        node for node in graph.root.values() if node["class_type"] == "ETN_SaveImageCache"
+    )
+    if use_boxes:
+        assert "Make the eye black" in encoders[1]["prompt"]
+        assert "Add a silver button" in encoders[2]["prompt"]
+        samplers = [n for n in graph.root.values() if n["class_type"] == "KSampler"]
+        assert len(samplers) == 2
+        masked_latents = [graph.root[n["inputs"]["latent_image"][0]] for n in samplers]
+        assert all(n["class_type"] == "SetLatentNoiseMask" for n in masked_latents)
+        first_latent, second_latent = [n["inputs"] for n in masked_latents]
+        assert first_latent["samples"] == second_latent["samples"]
+        assert first_latent["mask"] != second_latent["mask"]
+        assert graph.root[first_latent["samples"][0]]["class_type"] == "VAEEncode"
+        patches = [
+            (key, node["inputs"])
+            for key, node in graph.root.items()
+            if node["class_type"] == "ImageCompositeMasked"
+        ]
+        assert len(patches) == 2
+        first, second = patches
+        assert first[1]["destination"] == encoders[0]["images.image_0"]
+        assert second[1]["destination"] == [first[0], 0]
+        assert second[1]["x"] == work.extent.target.width // 2
+        assert second[1]["y"] == work.extent.target.height // 2
+        assert output["inputs"]["images"] == [second[0], 0]
+        return
+    assert "mask" in graph.root[output["inputs"]["images"][0]]["inputs"]
 
 
 @pytest.mark.parametrize("kind", [WorkflowKind.refine, WorkflowKind.refine_region])

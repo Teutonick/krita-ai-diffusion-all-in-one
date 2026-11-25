@@ -243,29 +243,64 @@ class Server:
 
     @property
     def selected_custom_nodes(self):
-        selected = [
-            p for p in resources.selectable_custom_nodes if p.name in settings.server_components
-        ]
+        selected_names = set(settings.server_components)
+        if any(
+            model.arch is Arch.krea2
+            and model.id.kind is resources.ResourceKind.lora
+            and self._model_exists(model)
+            for model in resources.optional_models
+        ):
+            selected_names.add("Krea 2 Edit")
+        selected = [p for p in resources.selectable_custom_nodes if p.name in selected_names]
         if self.pose_studio_selected:
             selected.extend(resources.pose_studio_custom_nodes)
         return selected
 
+    def _model_exists(self, model: resources.ModelResource):
+        return model.exists_in(self.path) or (
+            self.comfy_dir is not None and model.exists_in(self.comfy_dir)
+        )
+
+    def enable_model_components(self, packages: list[str]):
+        if any(p.startswith("lora-") and p.endswith("-krea2") for p in packages):
+            if "Krea 2 Edit" not in settings.server_components:
+                settings.server_components = [*settings.server_components, "Krea 2 Edit"]
+                settings.save()
+
     def resolve_model_dependencies(self, packages: list[str]):
-        if not any(p.endswith("-krea2") for p in packages):
-            return packages
-        dependencies = [m for m in resources.required_models if m.arch in (Arch.all, Arch.krea2)]
-        base = resources.find_resource(resources.ResourceId.parse("checkpoint-turbo_fp8-krea2"))
-        assert base is not None
-        dependencies.append(base)
+        if not packages:
+            return []
+        selected = [resources.ResourceId.parse(package) for package in packages]
+        archs = {item.arch for item in selected}
+        if archs.intersection((Arch.illu, Arch.illu_v)):
+            archs.add(Arch.sdxl)
+        if Arch.flux_k in archs:
+            archs.add(Arch.flux)
+        if Arch.flux2_9b in archs:
+            archs.add(Arch.flux2_4b)
+        dependencies = [m for m in resources.required_models if m.arch in archs | {Arch.all}]
+
+        for arch, default in (
+            (Arch.krea2, "checkpoint-turbo_fp8-krea2"),
+            (Arch.moss, "checkpoint-sft_int8_convrot-moss"),
+        ):
+            if arch not in archs:
+                continue
+            checkpoints = [m for m in resources.default_checkpoints if m.arch is arch]
+            if not any(m.id.string in packages or self._model_exists(m) for m in checkpoints):
+                dependencies.append(next(m for m in checkpoints if m.id.string == default))
+
+        if Arch.minimax_h3_image in archs:
+            h3 = [m for m in resources.optional_models if m.arch is Arch.minimax_h3_image]
+            encoders = [m for m in h3 if m.id.kind is resources.ResourceKind.text_encoder]
+            if not any(m.id.string in packages or self._model_exists(m) for m in encoders):
+                dependencies.append(next(m for m in encoders if m.id.identifier == "h3_qwen3vl"))
+            dependencies.extend(m for m in h3 if m.id.kind is resources.ResourceKind.vae)
+
         return list(
             dict.fromkeys([
                 *packages,
-                *(
-                    m.id.string
-                    for m in dependencies
-                    if not m.exists_in(self.path)
-                    and not (self.comfy_dir and m.exists_in(self.comfy_dir))
-                ),
+                *(m.id.string for m in dependencies if not self._model_exists(m)),
             ])
         )
 

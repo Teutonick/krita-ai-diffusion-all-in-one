@@ -180,6 +180,25 @@ def test_krea_selection_installs_base_and_encoders(tmp_path: Path):
     assert "checkpoint-turbo_fp8-krea2" not in srv.resolve_model_dependencies([
         "lora-identity_edit-krea2"
     ])
-    assert srv.resolve_model_dependencies(["checkpoint-realvis-sdxl"]) == [
-        "checkpoint-realvis-sdxl"
-    ]
+    sdxl = srv.resolve_model_dependencies(["checkpoint-realvis-sdxl"])
+    assert "checkpoint-realvis-sdxl" in sdxl
+    assert "checkpoint-turbo_fp8-krea2" not in sdxl
+    assert all(
+        model.id.string in sdxl for model in resources.required_models if model.arch is Arch.sdxl
+    )
+
+
+def test_moss_edit_dependencies_reuse_existing_checkpoint(tmp_path: Path):
+    srv = Server(str(tmp_path))
+    edit = "lora-image_edit-moss"
+    sft = "checkpoint-sft_int8_convrot-moss"
+    bf16 = "checkpoint-sft_bf16-moss"
+    selected = srv.resolve_model_dependencies([edit])
+    assert {edit, sft, "text_encoder-qwen_3.5_9b-moss", "vae-default-moss"} <= set(selected)
+    assert sft not in srv.resolve_model_dependencies([edit, bf16])
+    checkpoint = resources.find_resource(resources.ResourceId.parse(bf16))
+    assert checkpoint is not None
+    path = tmp_path / checkpoint.files[0].path
+    path.parent.mkdir(parents=True)
+    path.touch()
+    assert sft not in srv.resolve_model_dependencies([edit])

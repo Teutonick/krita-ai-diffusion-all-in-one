@@ -126,10 +126,6 @@ class LoraInfo:
 # Longer/more specific keys must come before shorter ones they overlap with
 # (e.g. "illustrious" before "sd xl", "flux kontext" before "flux").
 _BASE_MODEL_MAP = [
-    ("minimax h3", "minimax_h3_image"),
-    ("minimax-h3", "minimax_h3_image"),
-    ("minimax_h3", "minimax_h3_image"),
-    ("minimaxh3", "minimax_h3_image"),
     ("illustrious", "illu"),
     ("pony", "sdxl"),
     ("sdxl", "sdxl"),
@@ -155,6 +151,8 @@ _BASE_MODEL_MAP = [
 def arch_for_base_model(base_model: str) -> str:
     """Return Arch enum name (e.g. 'sdxl') for a base_model string, or '' if unknown."""
     lower = base_model.lower()
+    if lower.translate(str.maketrans("", "", " -_")) == "minimaxh3image":
+        return "minimax_h3_image"
     for key, arch in _BASE_MODEL_MAP:
         if key in lower:
             return arch

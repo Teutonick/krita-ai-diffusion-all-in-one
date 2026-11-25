@@ -1,4 +1,41 @@
-# 1.53.0-all-in-one.52 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.59 — krita-ai-diffusion-all-in-one
+
+The MiniMax H3 Image filter in the LoRA browser selects Image versions in CivitAI
+and in the local library.
+
+## 1.53.0-all-in-one.58
+
+CivitAI searches use the MOSS Image server filter and show matching versions
+of models published for multiple architectures.
+
+## 1.53.0-all-in-one.57
+
+Prompt AI updates the MOSS prompt box at the text cursor and preserves its coordinates.
+Image descriptions use the area inside that box.
+
+## 1.53.0-all-in-one.56
+
+MOSS Edit prompt boxes use masked sampling on the source image, with feathered edges
+inside each rectangle.
+
+## 1.53.0-all-in-one.55
+
+In MOSS Edit, Add prompt box applies each instruction inside its own rectangle.
+The inactive region list scrolls when several regions are added.
+
+## 1.53.0-all-in-one.54
+
+Managed Server groups selectable models by family in a single Models tab.
+MOSS Image includes generation checkpoints and Edit, with automatic dependencies.
+Krea 2 Edit installs its ComfyUI nodes when an Edit model is selected.
+
+## 1.53.0-all-in-one.53
+
+MOSS Image supports reference editing with the optional MOSS Image Edit LoRA.
+Use a Krita selection to restrict where the edit is applied. For generation,
+Add prompt box records a rectangular selection and its own prompt.
+
+## 1.53.0-all-in-one.52
 
 Update svglib to 2.3.1 to address CVE-2026-132275. Update the managed server
 after installing this build.

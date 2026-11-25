@@ -6,7 +6,7 @@ from urllib.parse import quote
 
 from ..settings import settings
 from ..util import client_logger as log
-from .lora_manager import commercial_use_from_license
+from .lora_manager import arch_for_base_model, commercial_use_from_license
 from .network import RequestManager
 
 
@@ -38,8 +38,8 @@ civitai_base_models = {
     "zimage": ["ZImageTurbo"],
     "ernie": ["Ernie"],
     "krea2": ["Krea 2"],
-    "moss": [],
-    "minimax_h3_image": ["MiniMax H3"],
+    "moss": ["MOSS Image"],
+    "minimax_h3_image": ["MiniMax H3 Image"],
 }
 
 # CivitAI model types which can hold a LoRA-style file. LoCon/DoRA load through the
@@ -170,6 +170,18 @@ class CivitaiModel:
         )
 
 
+def matching_versions(model: CivitaiModel, arch: str | None) -> list[CivitaiVersion]:
+    if arch is None:
+        return model.versions
+    labels = {label.casefold() for label in civitai_base_models.get(arch, [])}
+    return [
+        version
+        for version in model.versions
+        if version.base_model.strip().casefold() in labels
+        or arch_for_base_model(version.base_model) == arch
+    ]
+
+
 def is_video_url(url: str) -> bool:
     lower = url.lower().split("?")[0]
     return any(lower.endswith(ext) for ext in _video_extensions)
@@ -260,7 +272,9 @@ async def search_models(
     return models, next_cursor
 
 
-async def fetch_model_preview(model_id: int, api_key: str = "") -> tuple[str, int]:
+async def fetch_model_preview(
+    model_id: int, api_key: str = "", *, version_id: int | None = None
+) -> tuple[str, int]:
     """Preview image url and its rating for a single model, via the detail endpoint.
 
     The list endpoint returns no images at all for models rated R and above (~a third
@@ -278,6 +292,8 @@ async def fetch_model_preview(model_id: int, api_key: str = "") -> tuple[str, in
         model_level = int(data.get("nsfwLevel") or 0)
         adult_rating = model_level if model_level >= 8 else 8 if data.get("nsfw") is True else 0
         for version in data.get("modelVersions") or []:
+            if version_id is not None and version.get("id") != version_id:
+                continue
             for image in version.get("images") or []:
                 if url := image.get("url"):
                     return url, max(adult_rating, int(image.get("nsfwLevel") or 0))

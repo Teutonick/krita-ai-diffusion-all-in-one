@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from ai_diffusion.backend import civitai
 from ai_diffusion.backend.lora_manager import start_download
 from ai_diffusion.settings import ServerMode, settings
 
@@ -34,3 +35,21 @@ async def test_settings_failure_prevents_unauthenticated_download(monkeypatch):
     result = await start_download(requests, "http://localhost:8188", 123)
     assert result["success"] is False
     assert requests.post.await_count == 1
+
+
+def test_civitai_architecture_filter_uses_all_versions():
+    model = civitai.CivitaiModel.from_api({
+        "id": 1862761,
+        "modelVersions": [
+            {"id": 3448140, "baseModel": "Krea 2"},
+            {"id": 3410486, "baseModel": "MOSS Image"},
+            {"id": 3352079, "baseModel": "Qwen 2.1"},
+            {"id": 3075498, "baseModel": "Krea 2"},
+            {"id": 5, "baseModel": "NoobAI"},
+        ],
+    })
+    assert [v.id for v in civitai.matching_versions(model, "moss")] == [3410486]
+    assert [v.id for v in civitai.matching_versions(model, "krea2")] == [3448140, 3075498]
+    assert [v.id for v in civitai.matching_versions(model, "qwen")] == [3352079]
+    assert [v.id for v in civitai.matching_versions(model, "illu")] == [5]
+    assert civitai.matching_versions(model, None) == model.versions

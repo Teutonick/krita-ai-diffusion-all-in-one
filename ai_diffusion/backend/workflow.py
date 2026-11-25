@@ -22,7 +22,7 @@ from ..text import (
     strip_prompt_comments,
 )
 from ..util import ensure, median_or_zero, unique
-from . import resolution, resources
+from . import moss_layout, resolution, resources
 from .api import (
     CheckpointInput,
     ConditioningInput,
@@ -955,6 +955,12 @@ def generate(
     model = apply_regional_ip_adapter(w, model, cond.regions, extent.initial, models)
     if models.arch is Arch.moss:
         model = w.skip_layer_guidance(model)
+        if layout := moss_layout.compile_layout(
+            cond.positive.text, extent.initial, cond.style_prompt
+        ):
+            cond = cond.copy()
+            cond.positive = TextPrompt(layout, "")
+            cond.style_prompt = ""
     latent = w.empty_latent_image(extent.initial, models.arch, misc.batch_count)
     prompt = encode_prompt(w, cond, clip, regions)
     model, prompt = apply_control(w, model, prompt, cond.all_control, extent.initial, vae, models)
@@ -1987,6 +1993,23 @@ def prepare(
     i.models.tiled_vae = perf.tiled_vae
     arch = i.models.version = resolve_arch(style, models)
 
+    is_moss_edit = (
+        arch is Arch.moss
+        and cond.edit_reference
+        and kind in (WorkflowKind.refine, WorkflowKind.refine_region)
+    )
+    if is_moss_edit:
+        if "TextEncodeMOSSImageEdit" not in models.node_inputs:
+            raise ValueError(_("Update ComfyUI to use native MOSS image editing."))
+        adapter = next((name for name in models.loras if moss_layout.is_edit_lora(name)), None)
+        if adapter is None:
+            raise ValueError(_("Install the MOSS Image Edit LoRA to edit an image."))
+        if not any(moss_layout.is_edit_lora(lora.name) for lora in i.models.loras):
+            i.models.loras.append(LoraInput(adapter, 1.0))
+        i.sampling = SamplingInput("euler", "normal", 4.0, 30, seed=seed)
+        if moss_layout.has_boxes(cond.positive):
+            i.sampling.start_step = min(29, max(0, round(30 * (1 - strength))))
+
     if arch is Arch.krea2 and cond.pose_guide is not None:
         i.models.dynamic_caching = i.models.tiled_vae = False
         identity = next((name for name in models.loras if _is_krea_pose_lora(name)), None)
@@ -2002,8 +2025,10 @@ def prepare(
 
     model_set = models.for_arch(arch)
     has_ip_adapter = model_set.ip_adapter.find(ControlMode.reference) is not None
-    if arch is not Arch.minimax_h3_image and not (
-        arch is Arch.krea2 and cond.pose_guide is not None
+    if (
+        not is_moss_edit
+        and arch is not Arch.minimax_h3_image
+        and not (arch is Arch.krea2 and cond.pose_guide is not None)
     ):
         i.models.loras += _get_sampling_lora(style, is_live, model_set, models)
         all_control = cond.control + [c for r in cond.regions for c in r.control]
@@ -2069,6 +2094,9 @@ def prepare(
         i.images, i.batch_count = resolution.prepare_image(
             canvas, arch, style, perf, downscale=False
         )
+        if is_moss_edit and moss_layout.has_boxes(i.conditioning.positive):
+            if ensure(i.images.initial_image).extent != canvas.extent:
+                i.images.hires_image = canvas
         downscale_all_control_images(i.conditioning, canvas.extent, i.images.extent.desired)
 
     elif kind is WorkflowKind.refine_region:
@@ -2472,6 +2500,133 @@ def make_pov(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
     return w
 
 
+def moss_edit(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
+    checkpoint = ensure(i.models)
+    conditioning = ensure(i.conditioning)
+    sampling = ensure(i.sampling)
+    model, clip, vae = load_checkpoint_with_lora(w, checkpoint, models)
+    extent = ScaledExtent.from_input(i.extent)
+    family = models.for_arch(Arch.moss)
+    original = w.load_image(i.image)
+    source = scale_to_initial(extent, w, original, family)
+    inputs = {
+        "clip": clip.model,
+        "vae": vae,
+        "edit_format": "Moss-Image-Edit",
+        "images.image_0": source,
+        "image_strength": 1.0,
+    }
+    references = [
+        control.image
+        for control in conditioning.control
+        if control.mode.is_ip_adapter and control.image is not None
+    ]
+    if len(references) > 3:
+        raise ValueError(_("MOSS Image Edit supports the source and up to three extra references."))
+    for index, image in enumerate(references, 1):
+        inputs[f"images.image_{index}"] = w.load_image(image)
+    negative: str | Output = merge_prompt(conditioning.negative, "", conditioning.language)
+    if conditioning.language and conditioning.negative:
+        negative = w.translate(negative)
+    negative_cond = w.add("TextEncodeMOSSImageEdit", 1, prompt=negative, **inputs)
+    model = w.skip_layer_guidance(model)
+
+    def render(prompt: str, latent: Output, denoise=1.0):
+        positive: str | Output = merge_prompt(prompt, conditioning.style, conditioning.language)
+        if conditioning.language and prompt:
+            positive = w.translate(positive)
+        cond = ConditioningOutput(
+            w.add("TextEncodeMOSSImageEdit", 1, prompt=positive, **inputs), negative_cond
+        )
+        samples = w.ksampler(
+            model,
+            cond,
+            latent,
+            sampling.sampler,
+            sampling.scheduler,
+            sampling.total_steps,
+            sampling.cfg_scale,
+            denoise=denoise,
+            seed=sampling.seed,
+        )
+        return w.vae_decode(vae, samples)
+
+    summary, boxes = moss_layout.split_prompt(conditioning.positive)
+    if boxes:
+        width, height = extent.target
+        source_latent = w.batch_latent(
+            vae_encode(w, vae, source, checkpoint.tiled_vae), i.batch_count
+        )
+        canvas_mask = w.solid_mask(extent.target, 0.0)
+        full_size = ensure(i.images).hires_image
+        output = w.load_image(full_size) if full_size is not None else original
+        if (full_size if full_size is not None else i.image).extent != extent.target:
+            output = w.scale_image(output, extent.target)
+        if i.batch_count > 1:
+            output = w.add("RepeatImageBatch", 1, image=output, amount=i.batch_count)
+        for (top, left, bottom, right), caption in boxes:
+            x = min(width - 1, round(left * width / 10000))
+            y = min(height - 1, round(top * height / 10000))
+            bounds = Bounds(
+                x,
+                y,
+                max(1, round(right * width / 10000) - x),
+                max(1, round(bottom * height / 10000) - y),
+            )
+            prompt = (
+                f"Change only the area {left / 100:g}% to {right / 100:g}% from the left "
+                f"and {top / 100:g}% to {bottom / 100:g}% from the top. "
+                f"{caption}\nKeep the rest of the image unchanged."
+            )
+            box_mask = w.solid_mask(bounds.extent)
+            sampling_mask = w.add(
+                "MaskComposite",
+                1,
+                destination=canvas_mask,
+                source=box_mask,
+                x=x,
+                y=y,
+                operation="add",
+            )
+            sampling_mask = w.scale_mask(sampling_mask, extent.initial)
+            latent = w.set_latent_noise_mask(source_latent, sampling_mask)
+            candidate = scale_to_target(
+                extent,
+                w,
+                render(
+                    "\n".join(filter(None, (summary, prompt))), latent, sampling.denoise_strength
+                ),
+                family,
+            )
+            patch = w.crop_image(candidate, bounds)
+            feather = min(16, min(bounds.width, bounds.height) // 12)
+            if feather:
+                box_mask = w.add(
+                    "FeatherMask",
+                    1,
+                    mask=box_mask,
+                    left=feather if x else 0,
+                    top=feather if y else 0,
+                    right=feather if x + bounds.width < width else 0,
+                    bottom=feather if y + bounds.height < height else 0,
+                )
+            output = w.composite_image_masked(patch, output, box_mask, x, y)
+        output = w.nsfw_filter(output, i.nsfw_filter)
+    else:
+        latent = w.empty_latent_image(extent.initial, Arch.moss, i.batch_count)
+        output = w.nsfw_filter(render(conditioning.positive, latent), i.nsfw_filter)
+        output = scale_to_target(extent, w, output, family)
+    if i.kind is WorkflowKind.refine_region:
+        params = ensure(i.inpaint)
+        mask = w.load_mask(ensure(ensure(i.images).hires_mask))
+        if extent.target != params.target_bounds.extent:
+            output = w.crop_image(output, params.target_bounds)
+            mask = w.crop_mask(mask, params.target_bounds)
+        output = w.apply_mask(output, mask)
+    w.send_image(output)
+    return w
+
+
 def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.server) -> ComfyWorkflow:
     """
     Takes a WorkflowInput object and creates the corresponding ComfyUI workflow prompt.
@@ -2480,6 +2635,15 @@ def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.serve
     workflow = ComfyWorkflow(models.node_inputs, comfy_mode)
     if i.kind is WorkflowKind.pov:
         return make_pov(workflow, i, models)
+    if (
+        i.models
+        and i.models.version is Arch.moss
+        and i.conditioning
+        and i.conditioning.edit_reference
+        and i.kind in (WorkflowKind.refine, WorkflowKind.refine_region)
+        and any(moss_layout.is_edit_lora(lora.name) for lora in i.models.loras)
+    ):
+        return moss_edit(workflow, i, models)
     layer_count = i.images.layer_count if i.images else 1
     misc = MiscParams(i.batch_count, layer_count, i.color_match, i.nsfw_filter)
 

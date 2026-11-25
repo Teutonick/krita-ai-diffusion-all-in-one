@@ -258,6 +258,32 @@
       "alternatives": [
         "models/vae/qwen_image.safetensors"
       ]
+    },
+    {
+      "id": "text_encoder-qwen_3.5_9b-moss",
+      "name": "MOSS Image text encoder",
+      "files": [
+        {
+          "path": "models/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors"
+        }
+      ],
+      "alternatives": [
+        "models/text_encoders/qwen3.5_9b_int8_convrot.safetensors"
+      ]
+    },
+    {
+      "id": "vae-default-moss",
+      "name": "MOSS Image VAE",
+      "files": [
+        {
+          "path": "models/vae/flux2-vae_small.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors"
+        }
+      ],
+      "alternatives": [
+        "models/vae/flux2-vae.safetensors"
+      ]
     }
   ],
   "checkpoints": [
@@ -406,6 +432,46 @@
         "models/diffusion_models/krea2_turbo_bf16.safetensors",
         "models/diffusion_models/krea2_turbo_int8_convrot.safetensors",
         "models/diffusion_models/krea2_turbo_nvfp4.safetensors"
+      ]
+    },
+    {
+      "id": "checkpoint-sft_int8_convrot-moss",
+      "name": "MOSS Image SFT [INT8]",
+      "files": [
+        {
+          "path": "models/diffusion_models/moss_image_sft_int8_convrot.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_int8_convrot.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "checkpoint-sft_bf16-moss",
+      "name": "MOSS Image SFT [BF16]",
+      "files": [
+        {
+          "path": "models/diffusion_models/moss_image_sft_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "checkpoint-base_int8_convrot-moss",
+      "name": "MOSS Image Base [INT8]",
+      "files": [
+        {
+          "path": "models/diffusion_models/moss_image_base_int8_convrot.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_base_int8_convrot.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "checkpoint-base_bf16-moss",
+      "name": "MOSS Image Base [BF16]",
+      "files": [
+        {
+          "path": "models/diffusion_models/moss_image_base_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_base_bf16.safetensors"
+        }
       ]
     }
   ],
@@ -847,6 +913,17 @@
           "path": "models/loras/krea2_identity_edit_v2.safetensors",
           "url": "https://huggingface.co/conradlocke/krea2-identity-edit/resolve/f33b26291c640e8ec50b0da420bfee3c9a660daa/krea2_identity_edit_v2.safetensors",
           "sha256": "c53843f9451963a6cb3c22dc4975205056b93a6575fb9347dd2bc6e055ef9877"
+        }
+      ]
+    },
+    {
+      "id": "lora-image_edit-moss",
+      "name": "MOSS Image Edit (rank 64)",
+      "files": [
+        {
+          "path": "models/loras/moss_image_edit_lora_rank_64_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/loras/moss_image_edit_lora_rank_64_bf16.safetensors",
+          "sha256": "17a48b8c605dcffdedb92a2b887d18cf316505be90802717669fb6556098dcdf"
         }
       ]
     },

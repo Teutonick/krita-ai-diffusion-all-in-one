@@ -18,7 +18,7 @@ from PyQt5.QtCore import QMetaObject, QObject, Qt, QUuid, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor, QImage, QPainter
 
 from .. import eventloop, media_storage, util
-from ..backend import model_licenses, pov, resolution, workflow
+from ..backend import model_licenses, moss_layout, pov, resolution, workflow
 from ..backend.api import (
     CheckpointInput,
     ConditioningInput,
@@ -452,21 +452,32 @@ class DocumentModel(QObject, ObservableProperties):
         region_layer = None
 
         smod = get_selection_modifiers(arch, self.inpaint.mode, strength)
-        mask, selection_bounds = self._doc.create_mask_from_selection(smod)
+        moss_box_edit = (
+            arch is Arch.moss and self.is_editing and moss_layout.has_boxes(regions.positive)
+        )
+        mask, selection_bounds = (
+            (None, None) if moss_box_edit else self._doc.create_mask_from_selection(smod)
+        )
         bounds = Bounds(0, 0, *extent)
-        if mask is None:  # Check for region inpaint
+        if not moss_box_edit and mask is None:  # Check for region inpaint
             region_layer = regions.get_active_region_layer(use_parent=not self.region_only)
             if not region_layer.is_root:
                 mask = get_region_inpaint_mask(region_layer, extent)
                 bounds = mask.bounds
                 inpaint_mode = InpaintMode.add_object
-        else:  # Selection inpaint or refine
+        elif mask is not None:  # Selection inpaint or refine
             bounds = compute_bounds(extent, mask.bounds if mask else None, workflow_kind)
             bounds = self.inpaint.get_context(self, mask) or bounds
             inpaint_mode = self.resolve_inpaint_mode()
 
         if not dryrun:
-            conditioning, job_regions = process_regions(regions, bounds, region_layer)
+            if moss_box_edit:
+                conditioning = ConditioningInput(
+                    regions.positive, regions.negative, control=regions.control.to_api(bounds)
+                )
+                job_regions = []
+            else:
+                conditioning, job_regions = process_regions(regions, bounds, region_layer)
             conditioning.language = self.prompt_translation_language
         else:
             conditioning, job_regions = ConditioningInput("", ""), []

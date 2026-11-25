@@ -27,16 +27,19 @@ from PyQt5.QtWidgets import (
     QMenu,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
+    QSizePolicy,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from .. import eventloop
-from ..backend import ollama
+from ..backend import moss_layout, ollama
 from ..backend.client import Client
 from ..backend.network import NetworkError
 from ..backend.ollama import EnhanceTask
+from ..backend.resources import Arch
 from ..document import LayerType
 from ..image import Bounds, Extent, Image
 from ..localization import translate as _
@@ -73,6 +76,7 @@ class InactiveRegionWidget(QFrame):
         thumbnail = RegionThumbnailWidget(region, self)
 
         self._prompt = QLabel(self)
+        self._prompt.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self._prompt.setCursor(Qt.CursorShape.IBeamCursor)
 
         layout = QHBoxLayout()
@@ -109,12 +113,12 @@ class InactiveRegionWidget(QFrame):
 describe_max_extent = Extent(1024, 1024)
 
 
-def _canvas_image(model, require_selection: bool = False) -> str | None:
+def _canvas_image(model, require_selection: bool = False, area: Bounds | None = None) -> str | None:
     """The current canvas as base64 PNG, cropped to the selection if there is one.
     With require_selection, returns None instead of silently falling back to the
     whole canvas when nothing is selected."""
     doc = model.document
-    bounds = doc.selection_bounds
+    bounds = area if area is not None else doc.selection_bounds
     if require_selection and bounds is None:
         return None
     image = doc.get_image(bounds)
@@ -817,6 +821,8 @@ class ActiveRegionWidget(QFrame):
 
         original = region.positive
         selection: tuple[int, int] | None = None
+        box_area: Bounds | None = None
+        box_caption = False
         if use_selection:
             cursor = self.positive.textCursor()
             if not cursor.hasSelection():
@@ -827,6 +833,34 @@ class ActiveRegionWidget(QFrame):
             source = original[start:end]
         else:
             source = original
+
+        if model.arch is Arch.moss and not animation_prompt and moss_layout.has_boxes(original):
+            position = char16_index_to_str_index(original, self.positive.textCursor().position())
+            box = moss_layout.caption_at(original, *(selection or (position, position)))
+            if box is None:
+                self._report_error(_("Place the cursor in a MOSS prompt box first."))
+                return
+            caption, (top, left, bottom, right) = box
+            if selection and not (caption[0] <= selection[0] <= selection[1] <= caption[1]):
+                self._report_error(_("Select only the description inside one MOSS prompt box."))
+                return
+            selection = selection or caption
+            source = original[selection[0] : selection[1]]
+            box_caption = True
+            if task.uses_image:
+                width, height = model.document.extent
+                x, y = left * width // 10000, top * height // 10000
+                box_area = Bounds(
+                    x,
+                    y,
+                    (right * width + 9999) // 10000 - x,
+                    (bottom * height + 9999) // 10000 - y,
+                )
+                if canvas_selection and (selected := model.document.selection_bounds):
+                    box_area = Bounds.intersection(box_area, selected)
+                if box_area.is_zero:
+                    self._report_error(_("No image area inside this MOSS prompt box."))
+                    return
 
         # Like Generate: a new attempt replaces the last error instead of leaving it
         # standing (and pushing the history down) after the problem is gone.
@@ -853,26 +887,33 @@ class ActiveRegionWidget(QFrame):
             )
             images = None
             if task.uses_image:
-                images = [ensure(_canvas_image(model, canvas_selection))]
+                images = [ensure(_canvas_image(model, canvas_selection, box_area))]
 
             if settings.ollama_free_comfy_vram:
                 if client := root.connection.client_if_connected:
                     await ollama.free_comfy_vram(client)
 
             self._enhance_job = ollama.Generation()
+            system = (
+                ollama.animation_frame_system
+                if animation_prompt
+                else ollama.subject_description_system
+                if task is EnhanceTask.describe_subject
+                else ollama.prompt_edit_system
+                if edit_prompt
+                else ollama.structure_system_prompt()
+                if task is EnhanceTask.structure
+                else ensure(profile).system_for(task)
+            )
+            if box_caption:
+                system += (
+                    " The input is a local prompt for one small area of an existing image. "
+                    "Keep the response focused on that area and its requested change. "
+                    "Avoid inventing the rest of the scene, camera setup, or background."
+                )
             response = await self._enhance_job.run(
                 "Describe the visible first frame." if animation_prompt else request,
-                system=(
-                    ollama.animation_frame_system
-                    if animation_prompt
-                    else ollama.subject_description_system
-                    if task is EnhanceTask.describe_subject
-                    else ollama.prompt_edit_system
-                    if edit_prompt
-                    else ollama.structure_system_prompt()
-                    if task is EnhanceTask.structure
-                    else ensure(profile).system_for(task)
-                ),
+                system=system,
                 temperature=ollama.temperature_for(task),
                 images=images,
                 output_schema=ollama.prompt_edit_schema if edit_prompt else None,
@@ -921,7 +962,7 @@ class ActiveRegionWidget(QFrame):
             elif task is EnhanceTask.structure:
                 result = ollama.format_sections(response, protected.text, protected.tokens)
                 protected = ollama.ProtectedPrompt(result, [])  # already in their sections
-            elif task is EnhanceTask.detail and not selection:
+            elif task is EnhanceTask.detail and not use_selection:
                 result = f"{source.rstrip(' ,')}, {response}" if source.strip() else response
                 protected = ollama.ProtectedPrompt(result, [])  # tokens are still in `source`
             else:
@@ -929,7 +970,17 @@ class ActiveRegionWidget(QFrame):
             if not edit_prompt:
                 result = protected.restore(result)
 
-            if self.region is not region or region.positive != original:
+            if box_caption:
+                result = " ".join(line.strip() for line in result.splitlines() if line.strip())
+                if not result:
+                    self._report_error(_("The language model returned an empty response"))
+                    return
+
+            if (
+                self.region is not region
+                or region.positive != original
+                or (box_caption and (root.active_model is not model or model.arch is not Arch.moss))
+            ):
                 return  # the prompt changed underneath us while the model was writing
 
             if selection:
@@ -1238,7 +1289,6 @@ class RegionPromptWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._regions: RootRegion = root.active_model.regions
-        self._inactive_regions: list[InactiveRegionWidget] = []
         self._bindings: list[QMetaObject.Connection] = []
 
         self._prompt = ActiveRegionWidget(self._regions, self)
@@ -1248,18 +1298,30 @@ class RegionPromptWidget(QWidget):
         self._control = ControlListWidget(self._regions.active_or_root.control, parent=self)
         self._regions_above = QVBoxLayout()
         self._regions_below = QVBoxLayout()
+        self._region_lists = []
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
-        layout.addLayout(self._regions_above)
+        layout.addWidget(self._region_list(self._regions_above))
         layout.addWidget(self._prompt)
-        layout.addLayout(self._regions_below)
+        layout.addWidget(self._region_list(self._regions_below))
         layout.addSpacing(4)
         layout.addWidget(self._control)
         self.setLayout(layout)
 
         self._update_active()
+
+    def _region_list(self, rows: QVBoxLayout):
+        content = QWidget()
+        rows.setContentsMargins(0, 0, 0, 0)
+        content.setLayout(rows)
+        scroll = QScrollArea(self)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(content)
+        self._region_lists.append((scroll, rows))
+        return scroll
 
     @property
     def regions(self):
@@ -1304,15 +1366,18 @@ class RegionPromptWidget(QWidget):
     def _add_inactive_region(self, region: RootRegion | Region, layout: QVBoxLayout):
         widget = InactiveRegionWidget(region, self)
         widget.activated.connect(self._activate_region)
-        self._inactive_regions.append(widget)
         layout.addWidget(widget)
+        widget.show()
 
     def _show_inactive_regions(self):
         active = self._regions.active_or_root
 
-        for widget in self._inactive_regions:
-            widget.deleteLater()
-        self._inactive_regions.clear()
+        for scroll, rows in self._region_lists:
+            while rows.count():
+                item = rows.takeAt(0)
+                if item and (widget := item.widget()):
+                    widget.hide()
+                    widget.deleteLater()
 
         below, above = active.siblings  # sorted from bottom to top
         for region in (r for r in self._regions if r != active and not r.has_links):
@@ -1323,6 +1388,10 @@ class RegionPromptWidget(QWidget):
             self._add_inactive_region(region, self._regions_below)
         if not isinstance(active, RootRegion):
             self._add_inactive_region(self._regions, self._regions_below)
+        for scroll, rows in self._region_lists:
+            rows.activate()
+            scroll.setFixedHeight(min(rows.sizeHint().height(), 6 * self.fontMetrics().height()))
+            scroll.setVisible(rows.count() > 0)
 
     def _activate_region(self, region: RootRegion | Region):
         self._regions.active = region

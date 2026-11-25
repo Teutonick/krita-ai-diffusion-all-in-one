@@ -95,7 +95,7 @@ _ARCH_LABELS = {
     "ernie": "ERNIE Image",
     "krea2": "Krea 2",
     "moss": "MOSS-Image",
-    "minimax_h3_image": "MiniMax H3",
+    "minimax_h3_image": "MiniMax H3 Image",
 }
 _VIDEO_EXTENSIONS = (".mp4", ".webm", ".mov")
 
@@ -557,8 +557,6 @@ class LoraBrowser(QWidget):
                 return False
             if arch:
                 model_arch = arch_for_base_model(lora.base_model)
-                if not model_arch and arch == "minimax_h3_image":
-                    model_arch = arch_for_base_model(lora.name)
                 if model_arch != arch:
                     return False
             if active_tag and active_tag != _TAG_ALL:

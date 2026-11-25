@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 
 from PyQt5.QtCore import QRect, QSize, Qt, QTimer, QUrl
 from PyQt5.QtGui import (
@@ -32,7 +33,6 @@ from .. import eventloop
 from ..backend import civitai
 from ..backend.civitai import CivitaiModel, CivitaiVersion
 from ..backend.lora_manager import (
-    arch_for_base_model,
     cancel_download,
     clear_lora_cache,
     fetch_download_progress,
@@ -227,14 +227,9 @@ class CivitaiBrowser(QWidget):
         self._arch_combo = QComboBox(self)
         self._arch_combo.addItem(_("Any base model"), _ARCH_ANY)
         for arch in sorted(civitai.civitai_base_models, key=lambda a: _ARCH_LABELS.get(a, a)):
-            if arch == "minimax_h3_image":
-                if self._kind == _KIND_CHECKPOINT:
-                    continue
-                self._arch_combo.addItem(
-                    _("MiniMax H3 (video LoRAs, experimental for Image)"), arch
-                )
-            else:
-                self._arch_combo.addItem(_ARCH_LABELS.get(arch, arch), arch)
+            if arch == "minimax_h3_image" and self._kind == _KIND_CHECKPOINT:
+                continue
+            self._arch_combo.addItem(_ARCH_LABELS.get(arch, arch), arch)
         index = self._arch_combo.findData(current_arch)
         self._arch_combo.setCurrentIndex(max(index, 0))
         self._arch_combo.currentIndexChanged.connect(self._start_search)
@@ -620,29 +615,25 @@ class CivitaiBrowser(QWidget):
     def _visible_models(self) -> list[tuple[CivitaiModel, CivitaiVersion]]:
         nsfw_mode = self._nsfw_combo.currentData()
         arch = self._arch_combo.currentData()
-        # only needed where CivitAI has no usable baseModels label (see civitai.py)
-        client_side_arch = arch != _ARCH_ANY and not civitai.civitai_base_models.get(arch)
+        show = self._show_combo.currentData()
         result = []
         for model in self._models:
-            version = model.versions[0] if model.versions else None
-            if version is None:
-                continue
             if self._commercial_check.isChecked() and model.commercial != "yes":
                 continue
-            if not matches_content_rating(nsfw_mode, _version_rating(model, version)):
-                continue
-            if client_side_arch and arch_for_base_model(version.base_model) != arch:
-                continue
-            show = self._show_combo.currentData()
-            installed = self._state_of(model, version) != _STATE_NEW
-            if show == _SHOW_NEW and installed:
-                continue
-            if show == _SHOW_INSTALLED and not installed:
-                continue
-            result.append((model, version))
+            versions = []
+            for version in civitai.matching_versions(model, None if arch == _ARCH_ANY else arch):
+                if not matches_content_rating(nsfw_mode, _version_rating(model, version)):
+                    continue
+                installed = self._state_of(model, version) != _STATE_NEW
+                if (show == _SHOW_NEW and installed) or (show == _SHOW_INSTALLED and not installed):
+                    continue
+                versions.append(version)
+            if versions:
+                result.append((replace(model, versions=versions), versions[0]))
         return result
 
     def _apply_filter(self):
+        selected_version = self._version_combo.currentData()
         selected_ids = {
             item.data(Qt.ItemDataRole.UserRole).id for item in self._grid.selectedItems()
         }
@@ -666,6 +657,11 @@ class CivitaiBrowser(QWidget):
                 self._grid.addItem(item)
                 if model.id in selected_ids:
                     item.setSelected(True)
+        self._on_selection_changed()
+        if selected_version is not None:
+            index = self._version_combo.findData(selected_version)
+            if index >= 0:
+                self._version_combo.setCurrentIndex(index)
         # the grid lays out asynchronously, so the scroll position only sticks once
         # the new items have been arranged
         QTimer.singleShot(0, lambda: ensure(self._grid.verticalScrollBar()).setValue(scroll))
@@ -685,15 +681,6 @@ class CivitaiBrowser(QWidget):
         if model.creator:
             lines.append(f"{_('By')}: {model.creator}")
         lines.append(f"{_('Type')}: {model.type} · {version.base_model or '?'}")
-        if (
-            self._kind != _KIND_CHECKPOINT
-            and arch_for_base_model(version.base_model) == "minimax_h3_image"
-        ):
-            lines.append(
-                _(
-                    "Video LoRAs are experimental on H3 Image. Start with a style or character LoRA; avoid motion and video turbo LoRAs."
-                )
-            )
         if size := _size_label(version.size_mb):
             lines.append(f"{_('Version')}: {version.name or '?'} · {size}")
         lines.append(f"{_('Downloads')}: {model.downloads}")
@@ -766,8 +753,8 @@ class CivitaiBrowser(QWidget):
             if not version.preview_url:
                 # the search endpoint omits images for models rated R and above; the
                 # detail endpoint still has them, so fetch one for this tile only
-                if model.id not in self._pending_details:
-                    self._pending_details.add(model.id)
+                if version.id not in self._pending_details:
+                    self._pending_details.add(version.id)
                     eventloop.run(self._load_missing_preview(model, version, item))
                 continue
             self._pending_previews.add(version.id)
@@ -776,15 +763,17 @@ class CivitaiBrowser(QWidget):
     async def _load_missing_preview(
         self, model: CivitaiModel, version: CivitaiVersion, item: QListWidgetItem
     ):
-        url, nsfw_level = await civitai.fetch_model_preview(model.id, self._api_key())
-        if not url:
-            return
+        url, nsfw_level = await civitai.fetch_model_preview(
+            model.id, self._api_key(), version_id=version.id
+        )
         version.preview_url = url
         version.preview_nsfw_level = nsfw_level
         if not matches_content_rating(
             self._nsfw_combo.currentData(), _version_rating(model, version)
         ):
             self._apply_filter()
+            return
+        if not url:
             return
         if version.id in self._pending_previews:
             return
