@@ -301,6 +301,7 @@ class QueuePopup(QMenu):
             bind_combo(model, "queue_mode", self._queue_mode_combo),
             model.jobs.count_changed.connect(self._update_job_count),
         ]
+        self._update_resolution_multiplier()
         self._update_job_count()
 
     def _create_cancel_button(self, name: str, action: Callable[[], None]):
@@ -341,9 +342,11 @@ class QueuePopup(QMenu):
         root.connection.update_vram()
 
     def _update_resolution_multiplier(self):
-        slider_value = round(self.model.resolution_multiplier * 10)
-        if self._resolution_multiplier_slider.value() != slider_value:
+        multiplier = self.model.resolution_multiplier
+        slider_value = round(multiplier * 10)
+        with SignalBlocker(self._resolution_multiplier_slider):
             self._resolution_multiplier_slider.setValue(slider_value)
+        self._resolution_multiplier_display.setText(f"{multiplier:.1f} x")
 
     def _set_resolution_multiplier(self, value: int):
         self.model.resolution_multiplier = value / 10

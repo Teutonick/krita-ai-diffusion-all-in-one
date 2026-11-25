@@ -10,6 +10,7 @@ from PyQt5.QtGui import (
     QFontMetrics,
     QGuiApplication,
     QPainter,
+    QPixmap,
 )
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -1170,6 +1171,19 @@ class AboutSettings(SettingsTab):
         header_text.setFont(extra_large)
         header_layout.addWidget(header_logo)
         header_layout.addWidget(header_text)
+        badge = QLabel(self)
+        badge.setAccessibleName("NotBad by Teutonick")
+        pixmap = QPixmap(str(util.plugin_dir / "icons" / "notbad-hardware.png"))
+        if not pixmap.isNull():
+            ratio = self.devicePixelRatioF()
+            pixmap = pixmap.scaledToHeight(
+                round(font_height * 2 * ratio), Qt.TransformationMode.SmoothTransformation
+            )
+            pixmap.setDevicePixelRatio(ratio)
+            badge.setPixmap(pixmap)
+            header_layout.addSpacing(font_height // 2)
+            header_layout.addWidget(badge, alignment=Qt.AlignmentFlag.AlignVCenter)
+        header_layout.addStretch()
 
         current_version_name = QLabel(_("Current version") + ":", self)
         current_version_value = QLabel(__version__, self)

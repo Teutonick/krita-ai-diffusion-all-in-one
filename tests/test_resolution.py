@@ -390,3 +390,18 @@ def test_tile_layout(test_set):
         coord = layout.coord(i)
         assert layout.start(coord) == expected["start"]
         assert layout.end(coord) == expected["end"]
+
+
+@pytest.mark.parametrize(
+    "arch, extent, vram, batch, expected",
+    [
+        (Arch.moss, Extent(1696, 2112), 16, 1, 0.5),
+        (Arch.moss, Extent(1024, 1024), 16, 1, None),
+        (Arch.moss, Extent(1024, 1024), 16, 2, 0.7),
+        (Arch.moss, Extent(1280, 1536), 24, 1, None),
+        (Arch.moss, Extent(1696, 2112), 0, 1, None),
+        (Arch.krea2, Extent(1696, 2112), 16, 1, None),
+    ],
+)
+def test_suggested_edit_resolution(arch, extent, vram, batch, expected):
+    assert resolution.suggested_edit_resolution(arch, extent, vram, 1.0, batch) == expected

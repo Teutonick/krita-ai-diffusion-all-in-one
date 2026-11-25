@@ -1196,6 +1196,10 @@
     "Draw a rectangle and describe what to place there in a newly generated image.": null,
     "Select only the description inside one MOSS prompt box.": null,
     "Place the cursor in a MOSS prompt box first.": null,
-    "No image area inside this MOSS prompt box.": null
+    "No image area inside this MOSS prompt box.": null,
+    "Try setting Resolution to {multiplier}×.": null,
+    "Click the generation button again to continue.": null,
+    "Try lowering the batch size or using a smaller source image.": null,
+    "MOSS Edit at {width} × {height} with {vram} GB VRAM may be slow or run out of memory.": null
   }
 }

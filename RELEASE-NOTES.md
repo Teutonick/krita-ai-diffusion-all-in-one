@@ -1,4 +1,13 @@
-# 1.53.0-all-in-one.59 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.61 — krita-ai-diffusion-all-in-one
+
+The Plugin information page displays the NotBad by Teutonick badge.
+
+## 1.53.0-all-in-one.60
+
+The Resolution slider now displays the selected multiplier.
+MOSS Edit warns before queuing large jobs and suggests a lower multiplier based on GPU memory.
+
+## 1.53.0-all-in-one.59
 
 The MiniMax H3 Image filter in the LoRA browser selects Image versions in CivitAI
 and in the local library.

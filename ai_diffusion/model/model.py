@@ -126,6 +126,7 @@ class ErrorKind(Enum):
     warning = 300
     incompatible_lora = 301
     validation_warning = 302
+    resolution_warning = 303
 
     @property
     def is_warning(self):
@@ -252,7 +253,7 @@ class DocumentModel(QObject, ObservableProperties):
 
     def generate(self):
         self._browsing = False  # user wants to see the new generation
-        self._generate(self.queue_mode)
+        self._generate(self.queue_mode, allow_resolution_retry=True)
 
     @property
     def pov_available(self):
@@ -377,7 +378,8 @@ class DocumentModel(QObject, ObservableProperties):
                 apply()
                 # generate() reads the config synchronously before enqueuing, so
                 # mutating it between calls queues one batch per configuration
-                self.generate()
+                self._browsing = False
+                self._generate(self.queue_mode)
         finally:
             restore()
             self.fixed_seed = original_fixed
@@ -386,7 +388,7 @@ class DocumentModel(QObject, ObservableProperties):
 
     def generate_replace(self):
         self._browsing = False
-        self._generate(QueueMode.replace)
+        self._generate(QueueMode.replace, allow_resolution_retry=True)
 
     def set_loop_generate(self, value: bool):
         was_active = self._loop_generate
@@ -402,7 +404,7 @@ class DocumentModel(QObject, ObservableProperties):
         if pending == 0:
             self._generate(self.queue_mode)
 
-    def _generate(self, queue_mode: QueueMode):
+    def _generate(self, queue_mode: QueueMode, allow_resolution_retry=False):
         """Enqueue image generation for the current setup."""
         ok, msg = self._doc.check_color_mode()
         if not ok and msg:
@@ -414,6 +416,9 @@ class DocumentModel(QObject, ObservableProperties):
             input, job_params, cond_orig, prompt_loras_0 = self._prepare_workflow()
         except Exception as e:
             self.report_error(util.log_error(e))
+            self.loop_generate = False
+            return
+        if self._warn_edit_resolution(input, queue_mode, allow_resolution_retry):
             self.loop_generate = False
             return
         self.clear_error()
@@ -428,6 +433,55 @@ class DocumentModel(QObject, ObservableProperties):
         )
         eventloop.run(_report_errors(self, jobs))
         self._advance_seed_increment(self.batch_count)
+
+    def _warn_edit_resolution(self, input: WorkflowInput, mode: QueueMode, allow_retry: bool):
+        if (
+            input.models is None
+            or input.models.version is not Arch.moss
+            or input.conditioning is None
+            or not input.conditioning.edit_reference
+            or input.kind not in (WorkflowKind.refine, WorkflowKind.refine_region)
+        ):
+            return False
+        client = self._connection.client
+        vram = client.device_info.vram
+        extent = input.extent.initial
+        multiplier = self._performance_settings(client).resolution_multiplier
+        suggestion = resolution.suggested_edit_resolution(
+            input.models.version, extent, vram, multiplier, input.batch_count
+        )
+        if suggestion is None:
+            return False
+        details = {
+            "checkpoint": input.models.checkpoint,
+            "extent": extent,
+            "vram": vram,
+            "batch_size": input.batch_count,
+            "multiplier": multiplier,
+            "queue_mode": mode,
+        }
+        if (
+            allow_retry
+            and self.error.kind is ErrorKind.resolution_warning
+            and self.error.data == details
+        ):
+            return False
+        if suggestion == 1.0 and client.performance_settings.resolution_multiplier > 1.0:
+            suggestion = 0.9
+        hint = (
+            _("Try setting Resolution to {multiplier}×.", multiplier=f"{suggestion:.1f}")
+            if suggestion < multiplier
+            else _("Try lowering the batch size or using a smaller source image.")
+        )
+        message = _(
+            "MOSS Edit at {width} × {height} with {vram} GB VRAM may be slow or run out of memory.",
+            width=extent.width,
+            height=extent.height,
+            vram=vram,
+        )
+        message = " ".join((message, hint, _("Click the generation button again to continue.")))
+        self.report_error(Error(ErrorKind.resolution_warning, message, details))
+        return True
 
     def _prepare_workflow(self, dryrun=False):
         arch = self.arch

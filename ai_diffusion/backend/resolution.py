@@ -178,6 +178,19 @@ def apply_resolution_settings(extent: Extent, settings: PerformanceSettings):
     return result
 
 
+def suggested_edit_resolution(
+    arch: Arch, extent: Extent, vram: int, multiplier: float, batch_size: int
+) -> float | None:
+    if arch is not Arch.moss or vram <= 0:
+        return None
+    # Advisory budgets for native MOSS edits. Model precision and offloading affect actual usage.
+    budget = 1.0 if vram < 16 else 1.25 if vram < 24 else 2.0 if vram < 32 else 3.0
+    pixels = extent.pixel_count * batch_size
+    if pixels <= budget * 1_000_000:
+        return None
+    return max(0.3, math.floor(10 * multiplier * math.sqrt(budget * 1_000_000 / pixels)) / 10)
+
+
 def prepare_diffusion_input(
     extent: Extent,
     image: Image | None,
