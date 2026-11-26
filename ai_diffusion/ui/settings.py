@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from html import escape
+
 from krita import Krita
 from PyQt5.QtCore import QMetaObject, QSize, Qt, QUrl, pyqtSignal
 from PyQt5.QtGui import (
@@ -822,6 +824,21 @@ def _section(layout: QVBoxLayout, title: str, description: str = ""):
         layout.addWidget(hint)
 
 
+def wangp_settings_hint():
+    mcp = _("In WanGP, enable Configuration → Agents → Enable MCP with Web UI, then restart WanGP.")
+    docs = _("WanGP instructions for enabling MCP")
+    saved_settings = _(
+        "In WanGP's Generate tab, select the video model, apply your settings, "
+        "and click Set Settings as Default. From the WanGP installation folder, open "
+        "settings/<model_type>_settings.json. For example, "
+        "settings/minimax_h3_fl2va_PinkCherry_settings.json belongs to MiniMax H3 FL2VA Pink Cherry. "
+        "If WanGP was started with --settings, look in that folder instead. "
+        "Select the file for your model once. Krita reads it again on each send."
+    )
+    url = "https://github.com/deepbeepmeep/WanGP/blob/main/docs/API.md#mcp-server-inside-the-web-ui"
+    return f'<p>{escape(mcp)} <a href="{url}">{escape(docs)}</a></p><p>{escape(saved_settings)}</p>'
+
+
 class IntegrationSettings(SettingsTab):
     """Everything that talks to a service outside the plugin: the local language
     model for prompt enhancement, CivitAI, and ComfyUI-Lora-Manager."""
@@ -882,6 +899,21 @@ class IntegrationSettings(SettingsTab):
         self._reload_profiles = QPushButton(_("Reload Profiles"), self)
         self._reload_profiles.clicked.connect(self._do_reload_profiles)
         self._layout.addWidget(self._reload_profiles, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        _section(
+            self._layout,
+            _("WanGP Video"),
+            _("Generate video from an animation prompt using saved WanGP Generate settings."),
+        )
+        self.add("wangp_mcp_url", TextSetting(S._wangp_mcp_url, parent=self))
+        self.add(
+            "wangp_video_settings_path", TextSetting(S._wangp_video_settings_path, parent=self)
+        )
+        wangp_hint = QLabel(wangp_settings_hint(), self)
+        wangp_hint.setTextFormat(Qt.TextFormat.RichText)
+        wangp_hint.setOpenExternalLinks(True)
+        wangp_hint.setWordWrap(True)
+        self._layout.addWidget(wangp_hint)
 
         _section(
             self._layout,

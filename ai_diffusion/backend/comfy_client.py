@@ -187,6 +187,9 @@ class ComfyClient(Client):
         self._is_connected = False
         self._resumed = asyncio.Event()  # cleared while the queue is paused
         self._resumed.set()
+        self._user_paused = False
+        self._video_paused = False
+        self._posting_job = False
         self._held_job: JobInfo | None = None  # taken off the queue, waiting for resume
         self._last_preview = 0.0
 
@@ -381,10 +384,13 @@ class ComfyClient(Client):
                         continue
                     self._held_job = None
                 try:
+                    self._posting_job = True
                     await self._run_job(job)
                 except Exception as e:
                     log.exception(f"Unhandled exception while processing {job}")
                     await self._report(ClientEvent.error, job.id, error=str(e))
+                finally:
+                    self._posting_job = False
         except asyncio.CancelledError:
             pass
 
@@ -555,11 +561,42 @@ class ComfyClient(Client):
             )
 
     def set_paused(self, paused: bool):
-        if paused:
+        self._user_paused = paused
+        self._update_pause()
+        return True
+
+    def pause_for_video(self, paused: bool):
+        self._video_paused = paused
+        self._update_pause()
+
+    def _update_pause(self):
+        if self._user_paused or self._video_paused:
             self._resumed.clear()
         else:
             self._resumed.set()
-        return True
+
+    async def release_gpu_for_video(self):
+        async def drain_and_release():
+            while True:
+                queue = await self._get("queue", timeout=10)
+                if not (self._posting_job or queue["queue_running"] or queue["queue_pending"]):
+                    break
+                await asyncio.sleep(0.5)
+            await self.free_memory()
+            while True:
+                devices = (await self._get("system_stats", timeout=10))["devices"]
+                if devices and all(
+                    device["type"] == "cpu"
+                    or (device["type"] != "mps" and device.get("torch_vram_total") == 0)
+                    for device in devices
+                ):
+                    return
+                await asyncio.sleep(0.5)
+
+        try:
+            await asyncio.wait_for(drain_and_release(), timeout=120)
+        except asyncio.TimeoutError as e:
+            raise RuntimeError(_("Timed out waiting for ComfyUI to release GPU memory.")) from e
 
     async def take_back_waiting_job(self):
         # The next job is posted as soon as the previous one starts, so without this a pause

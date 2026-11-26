@@ -377,6 +377,19 @@ class Settings(QObject):
         _("Show a button which rewrites the prompt with a local Ollama language model"),
     )
 
+    wangp_mcp_url: str
+    _wangp_mcp_url = Setting(
+        _("WanGP MCP URL"),
+        "http://127.0.0.1:8000/mcp",
+        _("WanGP address with Enable MCP with Web UI turned on"),
+    )
+    wangp_video_settings_path: str
+    _wangp_video_settings_path = Setting(
+        _("WanGP video settings JSON"),
+        "",
+        _("Path to the JSON updated by Set Settings as Default in WanGP."),
+    )
+
     ollama_url: str
     _ollama_url = Setting(
         _("Ollama Server URL"),

@@ -80,6 +80,7 @@ class Request(NamedTuple):
     url: str
     future: asyncio.Future
     buffer: QBuffer | None = None
+    response_headers: bool = False
 
 
 Headers = list[tuple[str, str]]
@@ -121,13 +122,22 @@ class RequestManager:
         self,
         method,
         url: str,
-        data: dict | QByteArray | None = None,
+        data: dict | QByteArray | bytes | None = None,
         timeout: float | None = None,
         bearer: str | None = None,
+        headers: Headers | None = None,
+        response_headers: bool = False,
+        follow_redirects: bool = True,
     ):
         self._cleanup()
 
         request = self._prepare_request(url, timeout, bearer)
+        if not follow_redirects:
+            request.setAttribute(
+                QNetworkRequest.RedirectPolicyAttribute, QNetworkRequest.ManualRedirectPolicy
+            )
+        for key, value in headers or ():
+            request.setRawHeader(key.encode(), value.encode())
 
         assert method in ["GET", "POST", "PUT"]
         if method == "POST":
@@ -150,7 +160,7 @@ class RequestManager:
 
         assert reply is not None, f"Network request for {url} failed: reply is None"
         future = asyncio.get_running_loop().create_future()
-        self._requests[reply] = Request(url, future)
+        self._requests[reply] = Request(url, future, response_headers=response_headers)
         return future
 
     def get(self, url: str, timeout: float | None = None, bearer: str | None = None):
@@ -272,10 +282,18 @@ class RequestManager:
                 else:
                     content_type = reply.header(QNetworkRequest.KnownHeaders.ContentTypeHeader)
                     data = reply.readAll().data()
-                    if content_type and ("application/json" in content_type):
-                        future.set_result(json.loads(data))
-                    else:
-                        future.set_result(data)
+                    result = (
+                        json.loads(data)
+                        if data and content_type and "application/json" in content_type
+                        else data
+                    )
+                    if tracker.response_headers:
+                        headers = {
+                            bytes(key).decode().lower(): bytes(value).decode()
+                            for key, value in reply.rawHeaderPairs()
+                        }
+                        result = result, headers
+                    future.set_result(result)
             else:
                 future.set_exception(NetworkError.from_reply(reply))
         except Exception as e:

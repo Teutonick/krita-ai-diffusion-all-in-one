@@ -1,4 +1,36 @@
-# 1.53.0-all-in-one.65 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.70 — krita-ai-diffusion-all-in-one
+
+The first WanGP send and the integration settings explain how to enable MCP and
+where to find the selected model's settings file relative to the WanGP folder.
+
+## 1.53.0-all-in-one.69
+
+**Generate prompt for video (ext)** sends video jobs to WanGP with the settings
+saved through **Set Settings as Default** in Generate. The plugin rereads the
+selected JSON on each click, independently of Deepy templates.
+
+## 1.53.0-all-in-one.68
+
+WanGP status tracking handles queued and running job snapshots without a
+top-level status field so the plugin can wait for completion and clean up its
+temporary upload.
+
+## 1.53.0-all-in-one.67
+
+- WanGP requests recover from a deleted workspace assignment and use the same
+  workspace for the temporary upload, queue submission, status, and cleanup.
+- Animation prompts use the visible first frame and the active image prompt
+  to shape motion and story.
+
+## 1.53.0-all-in-one.66
+
+- Send the animation prompt and source frame to a running WanGP instance using
+  its default video template. The plugin checks that ComfyUI has released GPU
+  memory before submission and removes the temporary WanGP upload after the job.
+- The LoRA browser picks up the active model architecture on each open and
+  scrolls through cards in smaller steps.
+
+## 1.53.0-all-in-one.65
 
 H3 Make POVs uses camera instructions based on H3 Camera Prompt Adapter with
 the existing Standard W4A8 checkpoint, text encoder, and VAE.

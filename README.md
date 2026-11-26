@@ -46,6 +46,8 @@ and outpainting are available separately, depending on the model.
   or selection, and create motion-focused video prompts from an image with Prompt AI.
   Mention reference images and Krita layers by name with `@Name`; use wildcards to
   explore variations. Image description requires a vision model in Ollama.
+- **Video via WanGP MCP** — send a prompt and the first frame from Krita to the
+  running WanGP video queue. [WanGP repository](https://github.com/deepbeepmeep/WanGP)
 - **Local voice dictation** — speak prompts and Prompt AI instructions for images or
   video on Windows x64. [Whisper runs on your CPU](#voice-dictation-windows-x64)
   without uploading the recording.
@@ -173,6 +175,45 @@ The workflow uses [Anygles ComfyUI nodes](https://github.com/alexw5702-afk/krea2
 and [Meta SAM 3D Body](https://github.com/facebookresearch/sam-3d-body).
 The [third-party notices](THIRD-PARTY-NOTICES.md#make-povs-optional-component) list
 the component licenses and the terms applicable to the illustration.
+
+## Generate videos using WanGP
+
+**Generate prompt for video (ext)** analyzes the canvas or selection as the
+first frame and uses the active prompt as story context. It writes a
+**MiniMax H3 I2VA** prompt with motion, camera direction, and a soundscape.
+The dialog lets you refine the prompt before sending it and the full-resolution
+frame to WanGP. WanGP runs the video generation with a compatible MiniMax H3
+video model.
+
+![Krita canvas and the MiniMax H3 video prompt dialog with the Generate Video in WanGP button](docs/screenshots/wangp-video-prompt.png)
+
+1. Install and run **Ollama** separately, install a local vision-capable LLM,
+   and enable **Prompt AI** in Krita under **Settings → Integrations**.
+   Connect to Ollama and select the model. [Prompt AI setup](#prompt-ai) ·
+   [Ollama](https://ollama.com)
+2. In WanGP, enable **Configuration → Agents → Enable MCP with Web UI** and
+   restart WanGP. Krita uses MCP v2.1 over Streamable HTTP. If you changed the
+   MCP URL, enter it under **Settings → Integrations → WanGP Video**.
+   [Enable MCP in the WanGP web UI](https://github.com/deepbeepmeep/WanGP/blob/main/docs/API.md#mcp-server-inside-the-web-ui)
+3. In WanGP’s **Generate** tab, choose your video model and settings, then click
+   **Set Settings as Default**. On the first send from Krita, select the model’s
+   `settings/<model_type>_settings.json` relative to the WanGP installation
+   folder. If WanGP was started with `--settings`, use that directory. Krita
+   rereads the file on each send. To change models, select the corresponding
+   file under **Settings → Integrations → WanGP Video**.
+4. In Krita’s **AI** menu, choose **Generate prompt for video (ext)**. Review
+   the prompt and click **Generate Video in WanGP**. Track the result in WanGP.
+   If ComfyUI is connected, Krita waits for its server queue to drain and for
+   GPU memory to be released before submitting the video. New image jobs wait
+   until the WanGP job ends.
+
+Krita keeps the prompt and frame in memory. WanGP receives the PNG as a scoped
+workspace upload outside the Gallery. Krita deletes the upload after a confirmed
+terminal job state or a preflight rejection. External MCP URLs require HTTPS.
+WanGP controls its own output metadata and queue snapshots. For minimal
+retention, disable source-image embedding and generation metadata in WanGP.
+If the connection drops during upload or a job's outcome cannot be confirmed,
+WanGP may retain its upload or partial file.
 
 ## Guide the pose and camera
 
@@ -502,7 +543,7 @@ An **AI** button next to the prompt rewrites it with a local language model
 through [Ollama](https://ollama.com). Everything runs on your machine: no
 account, no cloud service, nothing leaves your network. You need Ollama
 installed and at least one model pulled (`ollama pull ...`). Turn it on under
-**Settings → Prompt AI**, enter the server URL (default `127.0.0.1:11434`),
+**Settings → Integrations → Prompt AI**, enter the server URL (default `127.0.0.1:11434`),
 press **Connect** and pick a model from the list.
 
 Clicking the button runs **Enhance**; the arrow next to it opens the rest:
@@ -528,6 +569,9 @@ Clicking the button runs **Enhance**; the arrow next to it opens the rest:
   without duplicating terms already there
 * **Prompt batch for generation...** - see below
 * **Revert** - steps back through earlier versions of the prompt
+
+* **Generate prompt for video (ext)** - creates a MiniMax H3 video prompt from
+  the current image and active prompt. [Send the frame and prompt to WanGP](#generate-videos-using-wangp)
 
 LoRA tags `<lora:...>`, file wildcards `__name__` and wildcard groups `{a|b}`
 and `[[a|b]]` are taken out before the prompt goes to the model and put back

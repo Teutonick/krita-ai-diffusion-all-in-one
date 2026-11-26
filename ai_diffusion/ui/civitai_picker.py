@@ -230,8 +230,7 @@ class CivitaiBrowser(QWidget):
             if arch == "minimax_h3_image" and self._kind == _KIND_CHECKPOINT:
                 continue
             self._arch_combo.addItem(_ARCH_LABELS.get(arch, arch), arch)
-        index = self._arch_combo.findData(current_arch)
-        self._arch_combo.setCurrentIndex(max(index, 0))
+        self.set_arch(current_arch)
         self._arch_combo.currentIndexChanged.connect(self._start_search)
 
         self._tag_combo = QComboBox(self)
@@ -300,6 +299,9 @@ class CivitaiBrowser(QWidget):
         self._grid.setGridSize(QSize(self._preview_size + 16, self._preview_size + 44))
         self._grid.setResizeMode(QListWidget.ResizeMode.Adjust)
         self._grid.setMovement(QListWidget.Movement.Static)
+        if self._kind == _KIND_LORA:
+            self._grid.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
+            ensure(self._grid.verticalScrollBar()).setSingleStep((self._preview_size + 44) // 12)
         self._grid.setWordWrap(True)
         self._grid.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._grid.customContextMenuRequested.connect(self._show_context_menu)
@@ -401,6 +403,9 @@ class CivitaiBrowser(QWidget):
 
     def _api_key(self) -> str:
         return settings.civitai_api_key.strip()
+
+    def set_arch(self, arch: str):
+        self._arch_combo.setCurrentIndex(max(self._arch_combo.findData(arch), 0))
 
     def reset_content_filter(self):
         self._nsfw_combo.setCurrentIndex(self._nsfw_combo.findData(SFW))
@@ -725,6 +730,8 @@ class CivitaiBrowser(QWidget):
         self._preview_size = value
         self._grid.setIconSize(QSize(value, value))
         self._grid.setGridSize(QSize(value + 16, value + 44))
+        if self._kind == _KIND_LORA:
+            ensure(self._grid.verticalScrollBar()).setSingleStep((value + 44) // 12)
         for i in range(self._grid.count()):
             item = ensure(self._grid.item(i))
             model: CivitaiModel = item.data(Qt.ItemDataRole.UserRole)

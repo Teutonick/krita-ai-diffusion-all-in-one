@@ -211,7 +211,6 @@ class LoraBrowser(QWidget):
 
     def __init__(self, current_arch: str, parent: QWidget | None = None):
         super().__init__(parent)
-        self._current_arch = current_arch
         self._all_loras: list[LoraInfo] = []
         self._filtered: list[LoraInfo] = []
         self._preview_cache: dict[str, QPixmap] = {}  # original, unscaled
@@ -250,8 +249,7 @@ class LoraBrowser(QWidget):
         self._arch_combo.addItem(_("Any"), _ARCH_ANY)
         for arch in sorted(_KNOWN_ARCHES, key=lambda a: _ARCH_LABELS.get(a, a)):
             self._arch_combo.addItem(_ARCH_LABELS.get(arch, arch), arch)
-        idx = self._arch_combo.findData(current_arch)
-        self._arch_combo.setCurrentIndex(max(idx, 0))
+        self.set_arch(current_arch)
         self._arch_combo.currentIndexChanged.connect(self._apply_filter)
 
         tag_label = QLabel(_("Tag:"), self)
@@ -304,7 +302,9 @@ class LoraBrowser(QWidget):
         self._grid.setResizeMode(QListWidget.ResizeMode.Adjust)
         self._grid.setMovement(QListWidget.Movement.Static)
         self._grid.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
-        ensure(self._grid.verticalScrollBar()).setSingleStep(max(1, (self._preview_size + 40) // 6))
+        ensure(self._grid.verticalScrollBar()).setSingleStep(
+            max(1, (self._preview_size + 40) // 12)
+        )
         self._grid.setWordWrap(True)
         self._grid.setSpacing(4)
         self._grid.itemSelectionChanged.connect(self._on_selection_changed)
@@ -494,6 +494,9 @@ class LoraBrowser(QWidget):
             self._loading = False
             self._rescan_btn.setEnabled(True)
 
+    def set_arch(self, arch: str):
+        self._arch_combo.setCurrentIndex(max(self._arch_combo.findData(arch), 0))
+
     def reset_content_filter(self):
         self._nsfw_combo.setCurrentIndex(self._nsfw_combo.findData(SFW))
 
@@ -644,7 +647,7 @@ class LoraBrowser(QWidget):
         self._preview_size = value
         self._grid.setIconSize(QSize(value, value))
         self._grid.setGridSize(QSize(value + 16, value + 40))
-        ensure(self._grid.verticalScrollBar()).setSingleStep(max(1, (value + 40) // 6))
+        ensure(self._grid.verticalScrollBar()).setSingleStep(max(1, (value + 40) // 12))
         for i in range(self._grid.count()):
             item = ensure(self._grid.item(i))
             lora: LoraInfo = item.data(Qt.ItemDataRole.UserRole)
@@ -957,6 +960,10 @@ class LoraPickerDialog(QDialog):
         layout.addWidget(self._tabs, 1)
         layout.addLayout(bottom)
         self.setLayout(layout)
+
+    def set_arch(self, arch: str):
+        self.library.set_arch(arch)
+        self.civitai.set_arch(arch)
 
     def showEvent(self, a0):
         self.library.reset_content_filter()

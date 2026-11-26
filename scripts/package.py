@@ -117,9 +117,10 @@ def build_package():
         guide.parent.mkdir(exist_ok=True)
         copy(root / "docs" / guide.name, guide)
         copy(root / "docs" / "make-povs-experiment.md", guide.parent)
-        illustration = guide.parent / "screenshots" / "make-povs.webp"
-        illustration.parent.mkdir(exist_ok=True)
-        copy(root / illustration.relative_to(plugin_dst), illustration)
+        screenshots = guide.parent / "screenshots"
+        screenshots.mkdir(exist_ok=True)
+        for name in ("make-povs.webp", "wangp-video-prompt.png"):
+            copy(root / "docs" / "screenshots" / name, screenshots)
         make_archive(str(build_dir / package_name), "zip", package_dir)
     write_checksums(build_dir, version, [build_dir / f"{package_name}.zip", source_archive])
     print(f"Build artifacts: {build_dir.relative_to(root)}")

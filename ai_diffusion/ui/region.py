@@ -4,6 +4,7 @@ import asyncio
 import time
 from enum import Enum
 from functools import partial
+from pathlib import Path
 
 from PyQt5.QtCore import QEvent, QMetaObject, QObject, QPoint, QSize, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import (
@@ -20,11 +21,13 @@ from PyQt5.QtGui import (
 from PyQt5.QtWidgets import (
     QCheckBox,
     QDialog,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMenu,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
@@ -35,8 +38,9 @@ from PyQt5.QtWidgets import (
 )
 
 from .. import eventloop
-from ..backend import moss_layout, ollama
+from ..backend import moss_layout, ollama, wangp
 from ..backend.client import Client
+from ..backend.comfy_client import ComfyClient
 from ..backend.network import NetworkError
 from ..backend.ollama import EnhanceTask
 from ..backend.resources import Arch
@@ -53,7 +57,7 @@ from . import theme
 from .control import ControlListWidget
 from .dictation import dictation_row
 from .lora_picker import LoraPickerDialog
-from .settings import settings
+from .settings import settings, wangp_settings_hint
 from .widget import TextPromptWidget
 
 
@@ -113,20 +117,17 @@ class InactiveRegionWidget(QFrame):
 describe_max_extent = Extent(1024, 1024)
 
 
-def _canvas_image(model, require_selection: bool = False, area: Bounds | None = None) -> str | None:
-    """The current canvas as base64 PNG, cropped to the selection if there is one.
+def _canvas_image(
+    model, require_selection: bool = False, area: Bounds | None = None
+) -> Image | None:
+    """The current canvas, cropped to the selection if there is one.
     With require_selection, returns None instead of silently falling back to the
     whole canvas when nothing is selected."""
     doc = model.document
     bounds = area if area is not None else doc.selection_bounds
     if require_selection and bounds is None:
         return None
-    image = doc.get_image(bounds)
-    if image.extent.width > describe_max_extent.width or (
-        image.extent.height > describe_max_extent.height
-    ):
-        image = Image.scale_to_fit(image, describe_max_extent)
-    return image.to_base64()
+    return doc.get_image(bounds)
 
 
 class PromptHeader(Enum):
@@ -667,7 +668,7 @@ class ActiveRegionWidget(QFrame):
             _("Describe object/person"), partial(self._enhance, EnhanceTask.describe_subject)
         )
         menu.addAction(
-            _("Animation prompt for image"),
+            _("Generate prompt for video (ext)"),
             partial(self._enhance, EnhanceTask.describe, animation_prompt=True),
         )
         self._describe_selection_action = ensure(
@@ -886,8 +887,17 @@ class ActiveRegionWidget(QFrame):
                 task, source if edit_prompt else protected.text, count, instruction, to_negative
             )
             images = None
+            animation_frame = None
             if task.uses_image:
-                images = [ensure(_canvas_image(model, canvas_selection, box_area))]
+                image = ensure(_canvas_image(model, canvas_selection, box_area))
+                if animation_prompt:
+                    animation_frame = image
+                if (
+                    image.extent.width > describe_max_extent.width
+                    or image.extent.height > describe_max_extent.height
+                ):
+                    image = Image.scale_to_fit(image, describe_max_extent)
+                images = [image.to_base64()]
 
             if settings.ollama_free_comfy_vram:
                 if client := root.connection.client_if_connected:
@@ -925,9 +935,14 @@ class ActiveRegionWidget(QFrame):
             negative_terms = ""
             if animation_prompt:
                 self._enhance_job = ollama.Generation()
+                animation_request = f"First-frame description:\n{response}"
+                animation_system = ollama.animation_prompt_system
+                if context := original.strip():
+                    animation_request += f"\n\nOriginal image-generation prompt:\n{context}"
+                    animation_system += ollama.animation_context_system
                 prompt = await self._enhance_job.run(
-                    f"First-frame description:\n{response}",
-                    system=ollama.animation_prompt_system,
+                    animation_request,
+                    system=animation_system,
                     temperature=0.2,
                     output_schema=ollama.animation_prompt_schema,
                 )
@@ -937,7 +952,7 @@ class ActiveRegionWidget(QFrame):
                         _("The language model did not return a valid animation prompt")
                     )
                 elif root.active_model is model:
-                    self._show_animation_prompt(prompt)
+                    self._show_animation_prompt(prompt, ensure(animation_frame))
                 return
 
             if edit_prompt:
@@ -1015,10 +1030,10 @@ class ActiveRegionWidget(QFrame):
             self._enhance_job = None
             self._end_enhance_progress()
 
-    def _show_animation_prompt(self, prompt: str):
+    def _show_animation_prompt(self, prompt: str, frame: Image):
         dialog = QDialog(self)
         dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        dialog.setWindowTitle(_("Animation prompt for image"))
+        dialog.setWindowTitle(_("Generate prompt for video (ext)"))
         layout = QVBoxLayout(dialog)
         editor = QPlainTextEdit(prompt, dialog)
         editor.setReadOnly(True)
@@ -1029,6 +1044,7 @@ class ActiveRegionWidget(QFrame):
         instruction_row, _mic = dictation_row(instruction)
         layout.addWidget(instruction_row)
         status = QLabel(dialog)
+        status.setTextFormat(Qt.TextFormat.PlainText)
         status.setWordWrap(True)
         layout.addWidget(status)
         modify = QPushButton(_("Modify animation with instruction"), dialog)
@@ -1040,6 +1056,8 @@ class ActiveRegionWidget(QFrame):
         copy.clicked.connect(editor.selectAll)
         copy.clicked.connect(editor.copy)
         buttons.addWidget(copy)
+        video = QPushButton(_("Generate Video in WanGP"), dialog)
+        buttons.addWidget(video)
         close = QPushButton(_("Close"), dialog)
         close.clicked.connect(dialog.reject)
         buttons.addWidget(close)
@@ -1047,6 +1065,7 @@ class ActiveRegionWidget(QFrame):
 
         job: ollama.Generation | None = None
         closed = False
+        sending_video = False
 
         def on_finished(_result):
             nonlocal closed
@@ -1069,6 +1088,7 @@ class ActiveRegionWidget(QFrame):
             original = editor.toPlainText()
             modify.setEnabled(False)
             instruction.setEnabled(False)
+            video.setEnabled(False)
             status.setText(_("Generating..."))
             job = ollama.Generation()
             try:
@@ -1104,22 +1124,83 @@ class ActiveRegionWidget(QFrame):
                 if not closed:
                     modify.setEnabled(True)
                     instruction.setEnabled(True)
+                    video.setEnabled(True)
                     instruction.setFocus()
 
+        async def send_video():
+            nonlocal sending_video
+            if sending_video or job is not None:
+                return
+            sending_video = True
+            video.setEnabled(False)
+            modify.setEnabled(False)
+            instruction.setEnabled(False)
+
+            def show_status(message: str):
+                if not closed:
+                    status.setText(message)
+
+            try:
+                filename = settings.wangp_video_settings_path.strip()
+                if not filename:
+                    hint = QMessageBox(dialog)
+                    hint.setWindowTitle(_("Select WanGP video settings JSON"))
+                    hint.setTextFormat(Qt.TextFormat.RichText)
+                    hint.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+                    hint.setText(wangp_settings_hint())
+                    hint.addButton(QMessageBox.StandardButton.Ok)
+                    hint.addButton(QMessageBox.StandardButton.Cancel)
+                    if hint.exec_() != QMessageBox.StandardButton.Ok:
+                        return
+                    filename, _filter = QFileDialog.getOpenFileName(
+                        dialog, _("Select WanGP video settings JSON"), "", "JSON (*.json)"
+                    )
+                    if not filename:
+                        return
+                video_settings = wangp.read_video_settings(Path(filename))
+                if filename != settings.wangp_video_settings_path:
+                    settings.wangp_video_settings_path = filename
+                    settings.save()
+                client = root.connection.client_if_connected
+                await wangp.generate_video(
+                    settings.wangp_mcp_url,
+                    video_settings,
+                    editor.toPlainText().strip(),
+                    bytes(frame.to_bytes()),
+                    client if isinstance(client, ComfyClient) else None,
+                    show_status,
+                )
+            except Exception as e:
+                log.warning("WanGP video request failed (%s)", type(e).__name__)
+                show_status(_("WanGP video request failed") + f": {e}")
+            finally:
+                sending_video = False
+                if not closed:
+                    video.setEnabled(True)
+                    modify.setEnabled(True)
+                    instruction.setEnabled(True)
+
         def start_modification():
-            if instruction.text().strip() and job is None:
+            if instruction.text().strip() and job is None and not sending_video:
                 eventloop.run(apply_instruction())
 
+        def start_video():
+            if not sending_video and job is None:
+                eventloop.run(send_video())
+
+        video.clicked.connect(start_video)
         modify.clicked.connect(start_modification)
         instruction.returnPressed.connect(start_modification)
         dialog.resize(560, 330)
         dialog.show()
 
     def _open_lora_picker(self):
+        model = root.active_model
+        arch = model.arch.name if model else ""
         if self._lora_dialog is None:
-            model = root.active_model
-            arch = model.arch.name if model else ""
             self._lora_dialog = LoraPickerDialog(arch, parent=self)
+        else:
+            self._lora_dialog.set_arch(arch)
         self._lora_dialog.show()
         self._lora_dialog.raise_()
         self._lora_dialog.activateWindow()
