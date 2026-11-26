@@ -1,6 +1,6 @@
-# krita-ai-diffusion-all-in-one
+<img align="right" src="ai_diffusion/icons/notbad-hardware.png" alt="NotBad by Teutonick" width="144">
 
-<img src="ai_diffusion/icons/notbad-hardware.png" alt="NotBad by Teutonick" width="360">
+# krita-ai-diffusion-all-in-one
 
 **Generate and edit with Krea 2, MOSS Image, and MiniMax H3 Image in Krita.**
 
@@ -11,13 +11,28 @@
 An independent community fork of Acly's Krita AI Diffusion 1.53.0 with workflow
 tools from Krita AI Reloaded. See [Credits](#credits).
 
-## Featured models
+## Supported models
+
+The Editing column lists dedicated image editing workflows. General inpainting
+and outpainting are available separately, depending on the model.
 
 | Model | Generation | Editing | Pose Studio | Make POVs | LoRAs |
 | --- | --- | --- | --- | --- | --- |
 | **[Krea 2](#generate-or-edit-with-krea-2)** | Turbo | Identity Edit V2 and General Edit V2, with up to two input images | [3D pose and camera](#guide-the-pose-and-camera) | [Six landscape or five portrait views](#make-povs) with Turbo | Krea 2 LoRAs, including tagged LoRAs in Make POVs |
 | **MOSS Image** | Text-to-image with optional prompt boxes | Source image and up to three extra references, with selection and prompt-box edits | — | — | MOSS Image LoRAs, including the Edit LoRA required for editing |
 | **[MiniMax H3 Image](docs/MINIMAX-H3-IMAGE.md)** | Standard and experimental two-step pDMD | Edit a source image or a Krita selection | [3D pose and camera](#guide-the-pose-and-camera) | — | H3 Image LoRAs |
+| **FLUX.2 Klein 4B / 9B** | Text-to-image | Reference-based image editing | — | — | Compatible Klein LoRAs |
+| **FLUX.1** | Text-to-image | — | — | — | Compatible FLUX.1 LoRAs |
+| **FLUX.1 Kontext** | — | Edit an image with text instructions | — | — | Compatible Kontext LoRAs |
+| **Qwen Image** | Text-to-image | — | — | — | Compatible Qwen Image LoRAs |
+| **Qwen Image Edit / Edit Plus** | — | Edit an image with text instructions, with multiple image inputs in Edit Plus | — | — | Compatible Edit LoRAs |
+| **Qwen Image Layered** | — | Decompose a source image into separate layers | — | — | Compatible Layered LoRAs |
+| **Z-Image / Z-Image Turbo** | Text-to-image | — | — | — | Compatible Z-Image LoRAs |
+| **ERNIE Image / ERNIE Image Turbo** | Text-to-image | — | — | — | Compatible ERNIE Image LoRAs |
+| **Anima** | Text-to-image | — | — | — | Compatible Anima LoRAs |
+| **Chroma** | Text-to-image | — | — | — | Compatible Chroma LoRAs |
+| **Stable Diffusion 1.5 / XL / 3** | Text-to-image | — | — | — | LoRAs for the corresponding architecture |
+| **Illustrious / Illustrious v-prediction** | Text-to-image | — | — | — | Compatible Illustrious LoRAs |
 
 ## Workflow tools
 
