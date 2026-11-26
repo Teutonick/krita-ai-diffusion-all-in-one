@@ -2,7 +2,7 @@ from pathlib import PurePosixPath
 
 from .api import CameraView
 from .client import ClientModels
-from .resources import Arch
+from .resources import Arch, ResourceId, ResourceKind
 
 pov_component = "Make POVs"
 pov_lora = "krea2_anygles_rank32.safetensors"
@@ -85,6 +85,24 @@ pov_vertical_views = (
 
 def _basename(name: str):
     return PurePosixPath(name.replace("\\", "/")).name.lower()
+
+
+def h3_checkpoint(models: ClientModels):
+    if "MiniMaxH3ImageConditioning" not in models.node_inputs:
+        return None
+    h3 = models.for_arch(Arch.minimax_h3_image)
+    if not models.find(ResourceId(ResourceKind.vae, Arch.minimax_h3_image, "default")):
+        return None
+    if not (h3.text_encoder.find("h3_heretic") or h3.text_encoder.find("h3_qwen3vl")):
+        return None
+    return next(
+        (
+            name
+            for name in models.checkpoints
+            if _basename(name) == "minimax_h3_image_pruned_w4a8.safetensors"
+        ),
+        None,
+    )
 
 
 def available_models(models: ClientModels):

@@ -258,12 +258,17 @@ class DocumentModel(QObject, ObservableProperties):
     @property
     def pov_available(self):
         client = self._connection.client_if_connected
+        if not self.has_document or client is None:
+            return False
+        if self.arch is Arch.minimax_h3_image:
+            return (
+                settings.server_mode is not ServerMode.cloud
+                and pov.h3_checkpoint(client.models) is not None
+            )
         return (
-            self.has_document
-            and pov.pov_component in settings.server_components
+            pov.pov_component in settings.server_components
             and settings.server_mode is ServerMode.managed
             and settings.server_backend is ServerBackend.cuda
-            and client is not None
             and self.arch is Arch.krea2
             and pov.available_models(client.models) is not None
         )
@@ -279,6 +284,9 @@ class DocumentModel(QObject, ObservableProperties):
     def make_povs(self, vertical: bool = False):
         if not self.pov_available or self.pov_in_progress:
             return
+        models = self._connection.client.models
+        arch = self.arch
+        lora = ""
         try:
             bounds = Bounds.from_extent(self._doc.extent)
             source = self._get_current_image(bounds)
@@ -291,7 +299,10 @@ class DocumentModel(QObject, ObservableProperties):
             images = ImageInput.from_extent(extent)
             images.initial_image = Image.scale(source, extent)
             images.extent.target = bounds.extent
-            checkpoint, lora = ensure(pov.available_models(self._connection.client.models))
+            if arch is Arch.minimax_h3_image:
+                checkpoint = ensure(pov.h3_checkpoint(models))
+            else:
+                checkpoint, lora = ensure(pov.available_models(models))
         except (ValueError, util.PluginError) as error:
             self.report_error(str(error))
             return
@@ -303,10 +314,19 @@ class DocumentModel(QObject, ObservableProperties):
         regions = self.active_regions
         positive = regions.active_or_root.positive
         negative = regions.negative if regions.negative_enabled else ""
+        loras = []
+        steps = 6
         try:
-            description, prompt_loras = workflow.prepare_pov_prompt(
-                positive, seed, lora, self._connection.client.models
-            )
+            if arch is Arch.minimax_h3_image:
+                description, loras = workflow.prepare_h3_pov_prompt(
+                    positive, seed, self.active_style, models, FileLibrary.instance()
+                )
+            else:
+                description, prompt_loras = workflow.prepare_pov_prompt(
+                    positive, seed, lora, models
+                )
+                loras = [LoraInput(lora, 1.0), *prompt_loras]
+                steps = 8
         except (ValueError, PluginError, OSError) as error:
             self.report_error(str(error))
             return
@@ -315,8 +335,8 @@ class DocumentModel(QObject, ObservableProperties):
             pattern_lora.sub("", eval_wildcards(strip_prompt_comments(negative), seed)).strip(),
             language=self.prompt_translation_language,
         )
-        model = CheckpointInput(checkpoint, Arch.krea2, loras=[LoraInput(lora, 1.0), *prompt_loras])
-        sampling = SamplingInput("euler", "simple", 1.0, 8, seed=seed)
+        model = CheckpointInput(checkpoint, arch, loras=loras)
+        sampling = SamplingInput("euler", "simple", 1.0, steps, seed=seed)
         jobs = []
         views = pov.pov_vertical_views if vertical else pov.pov_views
         for name, view in views:

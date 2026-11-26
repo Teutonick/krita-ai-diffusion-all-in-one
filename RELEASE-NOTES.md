@@ -1,4 +1,23 @@
-# 1.53.0-all-in-one.61 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.65 — krita-ai-diffusion-all-in-one
+
+H3 Make POVs uses camera instructions based on H3 Camera Prompt Adapter with
+the existing Standard W4A8 checkpoint, text encoder, and VAE.
+
+## 1.53.0-all-in-one.64
+
+H3 Make POVs uses the shorter camera instructions from build .63.
+
+## 1.53.0-all-in-one.63
+
+H3 Make POVs applies enabled style LoRAs and LoRA tags in the prompt to every view.
+
+## 1.53.0-all-in-one.62
+
+Make POVs supports MiniMax H3 Image Standard W4A8 with six horizontal or five
+vertical views. It uses the current canvas and the installed H3 models.
+Camera angles are approximate.
+
+## 1.53.0-all-in-one.61
 
 The Plugin information page displays the NotBad by Teutonick badge.
 

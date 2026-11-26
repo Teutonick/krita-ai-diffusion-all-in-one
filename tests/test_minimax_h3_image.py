@@ -1,8 +1,9 @@
 import json
+from pathlib import Path
 
 import pytest
 
-from ai_diffusion.backend import workflow
+from ai_diffusion.backend import pov, workflow
 from ai_diffusion.backend.api import (
     CheckpointInput,
     ConditioningInput,
@@ -18,9 +19,75 @@ from ai_diffusion.backend.api import (
 from ai_diffusion.backend.client import CheckpointInfo, ClientModels
 from ai_diffusion.backend.comfy_workflow import ComfyObjectInfo
 from ai_diffusion.backend.resources import Arch, ControlMode, ResourceKind, resource_id
-from ai_diffusion.files import FileFormat
+from ai_diffusion.files import File, FileCollection, FileFormat, FileLibrary
 from ai_diffusion.image import Bounds, Extent, Image, Mask
 from ai_diffusion.pose_studio import PoseScene
+from ai_diffusion.style import Style
+
+
+@pytest.mark.parametrize("with_loras", [False, True])
+def test_h3_make_povs(with_loras):
+    arch = Arch.minimax_h3_image
+    checkpoint = "minimax_h3_image_pruned_w4a8.safetensors"
+    models = ClientModels()
+    models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, arch, FileFormat.diffusion)
+    models.resources = {
+        resource_id(ResourceKind.text_encoder, Arch.all, "h3_qwen3vl"): "official.safetensors",
+        resource_id(ResourceKind.vae, arch, "default"): "h3_image_vae.safetensors",
+    }
+    assert pov.h3_checkpoint(models) is None
+    models.node_inputs = ComfyObjectInfo({"MiniMaxH3ImageConditioning": {}})
+    assert pov.h3_checkpoint(models) == checkpoint
+    files = FileLibrary(FileCollection(), FileCollection())
+    style = Style(Path("test-h3.json"))
+    prompt = "Porcelain android."
+    expected_loras = {}
+    if with_loras:
+        expected_loras = {"style.safetensors": 0.6, "tagged.safetensors": 0.4}
+        models.loras = list(expected_loras)
+        files.loras.extend([File.remote(name) for name in models.loras])
+        style.loras = [
+            {"name": "style.safetensors", "strength": 0.6},
+            {"name": "disabled.safetensors", "strength": 1.0, "enabled": False},
+        ]
+        prompt += " <lora:style:0.9> <lora:tagged:0.4>"
+    description, loras = workflow.prepare_h3_pov_prompt(prompt, 1234, style, models, files)
+    extent = Extent(96, 64)
+    images = ImageInput.from_extent(extent)
+    images.initial_image = Image.create(extent, 0xFF193246)
+    prompts = set()
+    for _, view in (*pov.pov_views, *pov.pov_vertical_views):
+        work = WorkflowInput(
+            WorkflowKind.pov,
+            images=images,
+            models=CheckpointInput(checkpoint, arch, loras=loras),
+            conditioning=ConditioningInput(description, "Changed costume."),
+            sampling=SamplingInput("euler", "simple", 1.0, 6, seed=1234),
+            camera_view=view,
+        )
+        graph = workflow.create(work, models)
+        nodes = {node["class_type"]: node["inputs"] for node in graph.root.values()}
+        assert "KritaPOVGeometry" not in nodes
+        applied = {
+            node["inputs"]["lora_name"]: node["inputs"]["strength_model"]
+            for node in graph.root.values()
+            if node["class_type"] == "LoraLoader"
+        }
+        assert applied == expected_loras
+        cond = nodes["MiniMaxH3ImageConditioning"]
+        assert [key for key in cond if key.startswith("images.")] == ["images.image_0"]
+        assert "Porcelain android." in cond["prompt"] and "Changed costume." in cond["prompt"]
+        assert cond["prompt"].startswith("<sks> ")
+        assert "Show the existing background from the new camera position" in cond["prompt"]
+        if view.azimuth == 180:
+            assert cond["prompt"].startswith("<sks> back view ")
+        if view.elevation == -60:
+            assert "low-angle shot" in cond["prompt"] and "60 degrees upward" in cond["prompt"]
+        assert "<lora:" not in cond["prompt"]
+        assert nodes["KSampler"]["seed"] == 1234
+        assert nodes["KSampler"]["steps"] == 6
+        prompts.add(cond["prompt"])
+    assert len(prompts) == 10  # Both series include the 180-degree eye-level view.
 
 
 @pytest.mark.parametrize(

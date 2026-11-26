@@ -24,6 +24,7 @@ from ..text import (
 from ..util import ensure, median_or_zero, unique
 from . import moss_layout, resolution, resources
 from .api import (
+    CameraView,
     CheckpointInput,
     ConditioningInput,
     ControlInput,
@@ -2196,6 +2197,63 @@ def _h3_steps(checkpoint: str):
     return 2 if filename == "minimax_h3_image_pdmd_2step_bf16.safetensors" else 6
 
 
+def _h3_pov_prompt(view: CameraView, description: str, avoid: str):
+    azimuth = (view.azimuth + 180) % 360 - 180
+    direction = (
+        "front view",
+        "front-right quarter view",
+        "right side view",
+        "back-right quarter view",
+        "back view",
+        "back-left quarter view",
+        "left side view",
+        "front-left quarter view",
+    )[int((azimuth % 360 + 22.5) // 45) % 8]
+
+    elevation = round(view.elevation)
+    if elevation < -15:
+        angle = "low-angle shot"
+    elif elevation < 15:
+        angle = "eye-level shot"
+    elif elevation < 45:
+        angle = "elevated shot"
+    else:
+        angle = "high-angle shot"
+
+    if azimuth == 0:
+        bearing = "0 degrees at the reference viewpoint"
+    elif azimuth == -180:
+        bearing = "180 degrees from the reference viewpoint"
+    else:
+        side = "right" if azimuth > 0 else "left"
+        bearing = f"{abs(azimuth)} degrees to the {side} of the reference viewpoint"
+
+    tilt = "Keep the camera level."
+    if elevation:
+        tilt_direction = "downward" if elevation > 0 else "upward"
+        tilt = f"Camera tilt: {abs(elevation)} degrees {tilt_direction}."
+
+    instruction = f"Camera azimuth: {bearing}. {tilt}"
+    if 75 <= abs(azimuth) <= 105:
+        instruction += (
+            " Use a near-profile camera view, showing mainly the side of the subject "
+            "and only a narrow view of the front."
+        )
+    parts = [
+        f"<sks> {direction} {angle} medium shot",
+        instruction,
+        (
+            "Show the existing background from the new camera position, with perspective and "
+            "visibility consistent with that viewpoint."
+        ),
+    ]
+    if description:
+        parts.append(f"Subject and scene description: {description}")
+    if avoid:
+        parts.append(f"Avoid these changes or details: {avoid}")
+    return "\n".join(parts)
+
+
 def minimax_h3_image(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
     if models.node_inputs and "MiniMaxH3ImageConditioning" not in models.node_inputs:
         raise ValueError(_("Update ComfyUI to a version with MiniMaxH3ImageConditioning."))
@@ -2249,6 +2307,10 @@ def minimax_h3_image(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
             f"<Picture {len(references)}> are white. Keep the rest of <Picture 1> unchanged. "
             f"Do not render the mask. {prompt}"
         )
+    elif i.kind is WorkflowKind.pov:
+        prompt = _h3_pov_prompt(
+            ensure(i.camera_view), prompt, merge_prompt(cond.negative, "", cond.language)
+        )
     elif source is not None and pose_guide is None:
         prompt = f"Edit <Picture 1>. {prompt}"
 
@@ -2262,7 +2324,9 @@ def minimax_h3_image(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
         2,
         clip=clip.model,
         vae=vae,
-        prompt=w.translate(prompt) if cond.language and cond.positive else prompt,
+        prompt=w.translate(prompt)
+        if cond.language and (cond.positive or (i.kind is WorkflowKind.pov and cond.negative))
+        else prompt,
         width=extent.width,
         height=extent.height,
         **{f"images.image_{n}": image for n, image in enumerate(references)},
@@ -2410,6 +2474,16 @@ def krea2_pose_studio(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
         image = w.scale_image(image, i.extent.target)
     w.send_image(w.nsfw_filter(image, sensitivity=i.nsfw_filter))
     return w
+
+
+def prepare_h3_pov_prompt(
+    prompt: str, seed: int, style: Style, models: ClientModels, files: FileLibrary
+):
+    text = eval_wildcards(strip_prompt_comments(prompt), seed)
+    text, tagged = extract_loras(text, files.loras)
+    loras = unique(style.get_models(models.checkpoints).loras + tagged, key=lambda lora: lora.name)
+    _check_server_has_loras(loras, models, files, style.name, Arch.minimax_h3_image)
+    return (text + _collect_lora_triggers(loras, files)).strip(), loras
 
 
 def prepare_pov_prompt(prompt: str, seed: int, camera_lora: str, models: ClientModels):
@@ -2634,6 +2708,8 @@ def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.serve
     """
     workflow = ComfyWorkflow(models.node_inputs, comfy_mode)
     if i.kind is WorkflowKind.pov:
+        if i.models and i.models.version is Arch.minimax_h3_image:
+            return minimax_h3_image(workflow, i, models)
         return make_pov(workflow, i, models)
     if (
         i.models

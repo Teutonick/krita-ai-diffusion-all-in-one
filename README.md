@@ -4,7 +4,7 @@
 
 **Generate and edit with Krea 2, MOSS Image, and MiniMax H3 Image in Krita.**
 
-[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.51-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
+[![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.65-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
 [![Code license](https://img.shields.io/badge/plugin_code-GPLv3-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-unofficial_fork-orange)](#credits)
 
@@ -20,7 +20,7 @@ and outpainting are available separately, depending on the model.
 | --- | --- | --- | --- | --- | --- |
 | **[Krea 2](#generate-or-edit-with-krea-2)** | Turbo | Identity Edit V2 and General Edit V2, with up to two input images | [3D pose and camera](#guide-the-pose-and-camera) | [Six landscape or five portrait views](#make-povs) with Turbo | Krea 2 LoRAs, including tagged LoRAs in Make POVs |
 | **MOSS Image** | Text-to-image with optional prompt boxes | Source image and up to three extra references, with selection and prompt-box edits | — | — | MOSS Image LoRAs, including the Edit LoRA required for editing |
-| **[MiniMax H3 Image](docs/MINIMAX-H3-IMAGE.md)** | Standard and experimental two-step pDMD | Edit a source image or a Krita selection | [3D pose and camera](#guide-the-pose-and-camera) | — | H3 Image LoRAs |
+| **[MiniMax H3 Image](docs/MINIMAX-H3-IMAGE.md)** | Standard and experimental two-step pDMD | Edit a source image or a Krita selection | [3D pose and camera](#guide-the-pose-and-camera) | [Six horizontal or five vertical views](#make-povs) with Standard W4A8 | H3 Image LoRAs, including style and prompt-tag LoRAs in Make POVs |
 | **FLUX.2 Klein 4B / 9B** | Text-to-image | Reference-based image editing | — | — | Compatible Klein LoRAs |
 | **FLUX.1** | Text-to-image | — | — | — | Compatible FLUX.1 LoRAs |
 | **FLUX.1 Kontext** | — | Edit an image with text instructions | — | — | Compatible Kontext LoRAs |
@@ -88,7 +88,7 @@ See the [security update report](SECURITY-UPDATE.md) for fixes and validation li
 
 ## Install once, choose your components
 
-1. Download `krita_ai_diffusion-1.53.0-all-in-one.61.zip` from this fork’s release assets when published, or use the locally built archive.
+1. Download `krita_ai_diffusion-1.53.0-all-in-one.65.zip` from this fork’s release assets when published, or use the locally built archive.
 2. In Krita, choose **Tools → Scripts → Import Python Plugin from File**.
 3. Restart Krita and enable the plugin if prompted.
 4. Open **Managed Server → Models**, expand a model family, and select the variants to install. Managed Server adds missing dependencies. Selecting either Krea 2 Edit model also installs its ComfyUI nodes.
@@ -138,6 +138,19 @@ The style browser has an **All tasks / Generate / Edit** filter, wrapped full na
 operation labels and tooltips with checkpoint/LoRA details.
 
 ## Make POVs
+
+With **MiniMax H3 Image Standard W4A8**, Make POVs uses the current canvas as
+a single reference and builds each instruction using the camera vocabulary from
+[H3 Camera Prompt Adapter](https://github.com/ukr8b3g-cmyk/ComfyUI-H3-Camera-Prompt-Adapter)
+and [Qwen Multiangle Camera](https://github.com/jtydhr88/ComfyUI-qwenmultiangle).
+It uses the installed H3 checkpoint, text encoder, and VAE. The angles are approximate,
+and neighboring rear views can look alike. Select an H3 Image style and click
+**↔** for six horizontal views or **↕** for five vertical views, then click
+**Make POVs**. Enabled style LoRAs and compatible prompt tags such as
+`<lora:character:0.65>` apply to every view. If a LoRA appears in both
+places, the style weight takes precedence.
+
+### Make POVs with Krea 2
 
 ![Make POVs example showing a Krea 2 portrait and six camera views generated from it](docs/screenshots/make-povs.webp)
 
