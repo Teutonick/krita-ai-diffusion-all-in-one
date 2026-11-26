@@ -91,10 +91,10 @@ class WanGPClient:
         return json.loads(result["content"][0]["text"])
 
     async def resolve_workspace(self):
-        context = _workspace_contexts.get(self.url)
+        previous = _workspace_contexts.get(self.url)
         try:
             result = await self.call(
-                "wangp_workspace", **({"agent_context": context} if context else {})
+                "wangp_workspace", **({"agent_context": previous} if previous else {})
             )
         except RuntimeError as e:
             if not any(reason in str(e) for reason in _missing_workspace_errors):
@@ -114,8 +114,20 @@ class WanGPClient:
                 result = await self.call(
                     "wangp_workspace", action="create", name="Krita", storage_mode="shared"
                 )
-            _workspace_contexts[self.url] = result["agent_context"]
-        self._agent_context = result["agent_context"]
+        context: str = result["agent_context"]
+        self._agent_context = context
+        gallery = await self.call("wangp_list_gallery", media_type="video", selected_only=True)
+        viewed = (gallery.get("selection_workspace") or {}).get("workspace_id")
+        if viewed and viewed != result.get("workspace_id"):
+            result = await self.call(
+                "wangp_workspace",
+                action="attach",
+                workspace_id=viewed,
+                agent_context=self._agent_context,
+            )
+            context = result["agent_context"]
+            self._agent_context = context
+        _workspace_contexts[self.url] = context
 
     async def upload_frame(self, png: bytes):
         filename = f"krita-{uuid4().hex}.png"

@@ -34,6 +34,7 @@ def allowed(path: Path):
         "docs/MINIMAX-H3-IMAGE.md",
         "docs/make-povs-experiment.md",
         "docs/screenshots/make-povs.webp",
+        "docs/screenshots/wangp-video-prompt.png",
     }:
         return True
     if path.parts[0] not in source_folders:

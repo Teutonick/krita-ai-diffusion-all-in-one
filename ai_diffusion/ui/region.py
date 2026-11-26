@@ -1097,6 +1097,9 @@ class ActiveRegionWidget(QFrame):
                     system=(
                         ollama.animation_prompt_system
                         + " Modify the existing animation prompt according to the requested change. "
+                        "Carry through each requested action in its specified order, including "
+                        "transitions and the final outcome. Keep existing camera behavior unless "
+                        "the request changes it or it conflicts with the revised action. "
                         "Keep every unrelated detail and the first-frame reference unchanged. "
                         "Remove details that contradict the requested change. Return both fields "
                         "as JSON; do not include explanations."

@@ -1,4 +1,14 @@
-# 1.53.0-all-in-one.70 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.72 — krita-ai-diffusion-all-in-one
+
+MiniMax H3 video prompts describe actions and transitions in order, with
+camera movement and sound tied to the scene. The revision tool preserves
+requested action sequences and camera instructions.
+
+## 1.53.0-all-in-one.71
+
+WanGP video jobs target the workspace open in the WanGP gallery when submitted.
+
+## 1.53.0-all-in-one.70
 
 The first WanGP send and the integration settings explain how to enable MCP and
 where to find the selected model's settings file relative to the WanGP folder.

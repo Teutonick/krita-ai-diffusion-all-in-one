@@ -11,7 +11,9 @@ from ai_diffusion.backend.wangp import WanGPClient, generate_video, read_video_s
 from .conftest import qtapp
 
 
-@pytest.mark.parametrize("outcome", ["done", "cancelled", "invalid", "stale_workspace"])
+@pytest.mark.parametrize(
+    "outcome", ["done", "cancelled", "invalid", "stale_workspace", "switched_workspace"]
+)
 @qtapp
 async def test_wangp_submission(outcome):
     events = []
@@ -54,12 +56,35 @@ async def test_wangp_submission(outcome):
                             ]
                         }
                     }
+                elif action == "attach" and outcome == "switched_workspace":
+                    assert args["workspace_id"] == "viewed"
+                    assert args["agent_context"] == "test-context"
+                    result = {
+                        "structuredContent": {
+                            "agent_context": "viewed-context",
+                            "workspace_id": "viewed",
+                        }
+                    }
                 else:
                     if outcome == "stale_workspace":
                         assert action == "attach" and args["workspace_id"] == "default"
-                    result = {"structuredContent": {"agent_context": "test-context"}}
+                    result = {
+                        "structuredContent": {
+                            "agent_context": "test-context",
+                            "workspace_id": "default",
+                        }
+                    }
                 return web.json_response({"jsonrpc": "2.0", "id": message["id"], "result": result})
-            assert args.pop("agent_context") == "test-context"
+            context = args.pop("agent_context")
+            if tool == "wangp_list_gallery":
+                assert context == "test-context"
+                assert args["selected_only"] is True
+                viewed = "viewed" if outcome == "switched_workspace" else "default"
+                result = {"structuredContent": {"selection_workspace": {"workspace_id": viewed}}}
+                return web.json_response({"jsonrpc": "2.0", "id": message["id"], "result": result})
+            assert context == (
+                "viewed-context" if outcome == "switched_workspace" else "test-context"
+            )
             if tool == "wangp_session" and args["action"] == "create_file_upload":
                 filename = args["arguments"]["filename"]
                 assert filename.endswith(".png")
@@ -87,7 +112,7 @@ async def test_wangp_submission(outcome):
                 assert tool == "wangp_session" and args["action"] == "get_job"
                 assert args["arguments"]["job_id"] == "job-1"
                 events.append("finished")
-                output = {"status": "done" if outcome == "stale_workspace" else outcome}
+                output = {"status": outcome if outcome == "cancelled" else "done"}
             result = {"structuredContent": output}
         return web.json_response(
             {"jsonrpc": "2.0", "id": message["id"], "result": result},
@@ -103,7 +128,7 @@ async def test_wangp_submission(outcome):
         await web.TCPSite(runner, "127.0.0.1", 0).start()
         url = f"http://127.0.0.1:{runner.addresses[0][1]}/mcp"
         if outcome != "invalid":
-            if outcome in ("done", "stale_workspace"):
+            if outcome != "cancelled":
                 await generate_video(url, video_settings, settings["prompt"], frame, comfy, Mock())
             else:
                 with pytest.raises(RuntimeError, match="cancelled"):

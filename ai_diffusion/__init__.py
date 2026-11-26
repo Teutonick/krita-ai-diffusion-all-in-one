@@ -1,6 +1,6 @@
 """Generative AI plugin for Krita"""
 
-__version__ = "1.53.0-all-in-one.70"
+__version__ = "1.53.0-all-in-one.72"
 
 import importlib.util
 
