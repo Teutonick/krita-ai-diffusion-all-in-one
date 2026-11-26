@@ -1,33 +1,29 @@
 # krita-ai-diffusion-all-in-one
 
-**Acly's foundation. Reloaded's workflow tools. Krea 2 Edit V2 integration.**
+<img src="ai_diffusion/icons/notbad-hardware.png" alt="NotBad by Teutonick" width="360">
+
+**Generate and edit with Krea 2, MOSS Image, and MiniMax H3 Image in Krita.**
 
 [![Version](https://img.shields.io/badge/build-1.53.0--all--in--one.51-blue)](https://github.com/Teutonick/krita-ai-diffusion-all-in-one/releases)
 [![Code license](https://img.shields.io/badge/plugin_code-GPLv3-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-unofficial_fork-orange)](#credits)
 
-Maintained in [Teutonick/krita-ai-diffusion-all-in-one](https://github.com/Teutonick/krita-ai-diffusion-all-in-one).
-This is an independent community fork, not an official release of Krita AI Diffusion,
-Krita AI Reloaded or Krea. It is not affiliated with or endorsed by Acly, FatGuy84 or Krea.
+An independent community fork of Acly's Krita AI Diffusion 1.53.0 with workflow
+tools from Krita AI Reloaded. See [Credits](#credits).
 
-This build combines upstream **1.53.0**, the interface and workflow improvements from
-**Krita AI Reloaded**, and **Krea 2 Turbo / Identity Edit V2 / General Edit V2** support.
-It also adds managed component installation, protection against accidental mouse-wheel
-changes in settings, and a policy for temporary media storage.
+## Featured models
 
-## Highlights
+| Model | Generation | Editing | Pose Studio | Make POVs | LoRAs |
+| --- | --- | --- | --- | --- | --- |
+| **[Krea 2](#generate-or-edit-with-krea-2)** | Turbo | Identity Edit V2 and General Edit V2, with up to two input images | [3D pose and camera](#guide-the-pose-and-camera) | [Six landscape or five portrait views](#make-povs) with Turbo | Krea 2 LoRAs, including tagged LoRAs in Make POVs |
+| **MOSS Image** | Text-to-image with optional prompt boxes | Source image and up to three extra references, with selection and prompt-box edits | — | — | MOSS Image LoRAs, including the Edit LoRA required for editing |
+| **[MiniMax H3 Image](docs/MINIMAX-H3-IMAGE.md)** | Standard and experimental two-step pDMD | Edit a source image or a Krita selection | [3D pose and camera](#guide-the-pose-and-camera) | — | H3 Image LoRAs |
 
-- **[Make POVs](#make-povs)** — turn a Krea 2 canvas image into six horizontal
-  or five vertical views with one click. Review the series in session history.
+## Workflow tools
 
-- **Pose Editor** — pose a 3D mannequin inside Krita, save reusable poses, and use
-  them as guides for Krea 2 or MiniMax H3 Image. See [Pose Studio](#guide-the-pose-and-camera).
-
-- **Krea 2, ready to create and edit** — generate with Krea 2 Turbo or transform images
-  with Identity Edit V2 and General Edit V2, using up to two input images. See the
-  [model terms](#krea-2-edit-v2-read-the-model-terms) before use.
-- **MiniMax H3 Image** — generate, edit, or apply an edit to a Krita selection. The
-  [setup guide](docs/MINIMAX-H3-IMAGE.md) covers the Standard and experimental pDMD presets.
+- **Managed installation** — choose model variants and optional components in
+  Krita. Managed Server installs their dependencies. Review the
+  [Krea 2 Edit V2 model terms](#krea-2-edit-v2-read-the-model-terms) before use.
 - **A visual LoRA library and CivitAI downloads** — find LoRAs by preview, search and
   filter your collection, reuse recipes, and discover and download LoRAs and checkpoints
   from CivitAI without leaving Krita. Full features use the optional LoRA Manager.
@@ -38,6 +34,8 @@ changes in settings, and a policy for temporary media storage.
 - **Local voice dictation** — speak prompts and Prompt AI instructions for images or
   video on Windows x64. [Whisper runs on your CPU](#voice-dictation-windows-x64)
   without uploading the recording.
+- **Batch generation and history** — run prompt combinations with sequential
+  wildcards, find and rate results in history, and export to Eagle.
 - **Isolated temporary media and security hardening** — plugin-managed temporary media
   lives in isolated sessions and is cleaned up; explicitly saved files remain. Dependency
   security updates and additional protections are detailed in the
@@ -312,7 +310,7 @@ features inherited from that project as well as the original plugin.
 | Browse | Batch | Organise |
 | --- | --- | --- |
 | **LoRA, Recipe, Style, Checkpoint and Wildcard pickers** with live search, previews and favorites | **Sequential `[[a\|b]]` wildcards**, Cartesian batches, up to 1000 per run, Loop Generate | **History** with search, favorites, 1–5 star ratings and filters, plus Save to Eagle |
-| **CivitAI and AnimaDex browsers** — search and download without leaving Krita | **Local prompt tools** via Ollama: enhance, batch prompts, generate wildcard files | **Faster startup** through disk-cached model lists, and DLSS5 Enhance on results, canvas or selection — tiled for any size |
+| **CivitAI browser** — search and download without leaving Krita | **Local prompt tools** via Ollama: enhance, batch prompts, generate wildcard files | **Faster startup** through disk-cached model lists, and DLSS5 Enhance on results, canvas or selection — tiled for any size |
 
 <br>
 
