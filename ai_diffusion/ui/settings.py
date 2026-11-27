@@ -824,9 +824,14 @@ def _section(layout: QVBoxLayout, title: str, description: str = ""):
         layout.addWidget(hint)
 
 
-def wangp_settings_hint():
+def wangp_mcp_hint():
     mcp = _("In WanGP, enable Configuration → Agents → Enable MCP with Web UI, then restart WanGP.")
     docs = _("WanGP instructions for enabling MCP")
+    url = "https://github.com/deepbeepmeep/WanGP/blob/main/docs/API.md#mcp-server-inside-the-web-ui"
+    return f'<p>{escape(mcp)} <a href="{url}">{escape(docs)}</a></p>'
+
+
+def wangp_settings_hint():
     saved_settings = _(
         "In WanGP's Generate tab, select the video model, apply your settings, "
         "and click Set Settings as Default. From the WanGP installation folder, open "
@@ -835,8 +840,7 @@ def wangp_settings_hint():
         "If WanGP was started with --settings, look in that folder instead. "
         "Select the file for your model once. Krita reads it again on each send."
     )
-    url = "https://github.com/deepbeepmeep/WanGP/blob/main/docs/API.md#mcp-server-inside-the-web-ui"
-    return f'<p>{escape(mcp)} <a href="{url}">{escape(docs)}</a></p><p>{escape(saved_settings)}</p>'
+    return f"{wangp_mcp_hint()}<p>{escape(saved_settings)}</p>"
 
 
 class IntegrationSettings(SettingsTab):

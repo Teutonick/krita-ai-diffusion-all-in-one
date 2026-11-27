@@ -389,6 +389,8 @@ class Settings(QObject):
         "",
         _("Path to the JSON updated by Set Settings as Default in WanGP."),
     )
+    wangp_installation_path: str
+    _wangp_installation_path = Setting("WanGP installation folder", "")
 
     ollama_url: str
     _ollama_url = Setting(

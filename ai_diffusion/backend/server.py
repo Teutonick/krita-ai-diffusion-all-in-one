@@ -798,9 +798,16 @@ class Server:
 
         try:
             assert self.state is ServerState.starting
-            assert self._python_cmd
+            assert self._python_cmd and self.comfy_dir
             await self._log_python_version()
 
+            translation_cache = Path(__file__).with_name("translation_cache.py")
+            await _execute_process(
+                "managed translation cache",
+                [self._python_cmd, "-su", str(translation_cache)],
+                self.comfy_dir,
+                lambda title, line: log.info(f"{title}: {line}"),
+            )
             args = ["-su", "main.py"]
             env = media_storage.managed_server_environment(self.path)
             if self.backend is ServerBackend.cpu:

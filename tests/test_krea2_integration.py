@@ -71,7 +71,8 @@ def _edit_work(edit_kind, kind=WorkflowKind.refine, cfg=1.0):
 
 
 @pytest.mark.parametrize("use_boxes", [False, True])
-def test_moss_edit_uses_reference_and_compositing_mask(use_boxes):
+@pytest.mark.parametrize("language", ["", "ru"])
+def test_moss_edit_uses_reference_and_compositing_mask(use_boxes, language):
     kind = WorkflowKind.refine if use_boxes else WorkflowKind.refine_region
     models, work = _edit_work("identity", kind, 4)
     checkpoint = "moss_image_sft_int8_convrot.safetensors"
@@ -81,13 +82,20 @@ def test_moss_edit_uses_reference_and_compositing_mask(use_boxes):
         resource_id(ResourceKind.vae, Arch.moss, "default"): "flux2-vae.safetensors",
     }
     work.models = CheckpointInput(
-        checkpoint, Arch.moss, loras=[LoraInput(moss_layout.edit_lora, 1)]
+        checkpoint,
+        Arch.moss,
+        loras=[LoraInput(moss_layout.edit_lora, 1), LoraInput("character.safetensors", 0.75)],
+    )
+    assert work.conditioning is not None
+    work.conditioning.language = language
+    captions = (
+        ("солнцезащитные очки", "серебряная пуговица")
+        if language
+        else ("Make the eye black", "Add a silver button")
     )
     if use_boxes:
-        assert work.conditioning is not None
         work.conditioning.positive = (
-            "[Box 0,0,5000,5000] Make the eye black\n"
-            "[Box 5000,5000,10000,10000] Add a silver button"
+            f"[Box 0,0,5000,5000] {captions[0]}\n[Box 5000,5000,10000,10000] {captions[1]}"
         )
     graph = workflow.create(work, models)
     encoders = [
@@ -102,10 +110,31 @@ def test_moss_edit_uses_reference_and_compositing_mask(use_boxes):
         node for node in graph.root.values() if node["class_type"] == "ETN_SaveImageCache"
     )
     if use_boxes:
-        assert "Make the eye black" in encoders[1]["prompt"]
-        assert "Add a silver button" in encoders[2]["prompt"]
+        for encoder, caption in zip(encoders[1:], captions):
+            prompt = encoder["prompt"]
+            if language:
+                translator = graph.root[prompt[0]]
+                assert translator["class_type"] == "ETN_Translate"
+                prompt = translator["inputs"]["text"]
+                assert f"lang:ru {caption} lang:en " in prompt
+                assert prompt.startswith("Change only the area ")
+                assert prompt.endswith("Keep the rest of the image unchanged.")
+            else:
+                assert caption in prompt
         samplers = [n for n in graph.root.values() if n["class_type"] == "KSampler"]
         assert len(samplers) == 2
+        assert samplers[0]["inputs"]["model"] == samplers[1]["inputs"]["model"]
+        loras = {
+            n["inputs"]["lora_name"]: key
+            for key, n in graph.root.items()
+            if n["class_type"] == "LoraLoader"
+        }
+        character = loras["character.safetensors"]
+        assert graph.root[character]["inputs"]["model"] == [loras[moss_layout.edit_lora], 0]
+        assert graph.root[character]["inputs"]["strength_model"] == 0.75
+        assert all(encoder["clip"] == [character, 1] for encoder in encoders)
+        sampler_model = graph.root[samplers[0]["inputs"]["model"][0]]
+        assert sampler_model["inputs"]["model"] == [character, 0]
         masked_latents = [graph.root[n["inputs"]["latent_image"][0]] for n in samplers]
         assert all(n["class_type"] == "SetLatentNoiseMask" for n in masked_latents)
         first_latent, second_latent = [n["inputs"] for n in masked_latents]

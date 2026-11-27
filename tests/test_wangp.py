@@ -127,13 +127,17 @@ async def test_wangp_submission(outcome):
     try:
         await web.TCPSite(runner, "127.0.0.1", 0).start()
         url = f"http://127.0.0.1:{runner.addresses[0][1]}/mcp"
+        client = WanGPClient(url)
+        await client.connect()
         if outcome != "invalid":
             if outcome != "cancelled":
-                await generate_video(url, video_settings, settings["prompt"], frame, comfy, Mock())
+                await generate_video(
+                    client, video_settings, settings["prompt"], frame, comfy, Mock()
+                )
             else:
                 with pytest.raises(RuntimeError, match="cancelled"):
                     await generate_video(
-                        url, video_settings, settings["prompt"], frame, comfy, Mock()
+                        client, video_settings, settings["prompt"], frame, comfy, Mock()
                     )
             assert events == [
                 "uploaded",
@@ -148,7 +152,9 @@ async def test_wangp_submission(outcome):
             ]
         else:
             with pytest.raises(RuntimeError, match="could not validate"):
-                await generate_video(url, video_settings, settings["prompt"], frame, comfy, Mock())
+                await generate_video(
+                    client, video_settings, settings["prompt"], frame, comfy, Mock()
+                )
             assert events == ["uploaded", "validated", "removed frame", "removed directory"]
     finally:
         await runner.cleanup()

@@ -34,7 +34,7 @@ class WanGPClient:
         self._id = 0
         self._agent_context: str | None = None
 
-    async def connect(self):
+    async def connect(self, timeout: float = 30):
         self._headers = [("Accept", "application/json, text/event-stream")]
         result, headers = await self._rpc(
             "initialize",
@@ -43,13 +43,16 @@ class WanGPClient:
                 "capabilities": {},
                 "clientInfo": {"name": "Krita AI Diffusion", "version": "1"},
             },
+            timeout=timeout,
         )
         self._headers.append(("MCP-Protocol-Version", result["protocolVersion"]))
         if session := headers.get("mcp-session-id"):
             self._headers.append(("Mcp-Session-Id", session))
-        await self._rpc("notifications/initialized", {}, notification=True)
+        await self._rpc("notifications/initialized", {}, notification=True, timeout=timeout)
 
-    async def _rpc(self, method: str, params: dict, notification: bool = False):
+    async def _rpc(
+        self, method: str, params: dict, notification: bool = False, timeout: float = 30
+    ):
         message = {"jsonrpc": "2.0", "method": method, "params": params}
         if not notification:
             self._id += 1
@@ -58,7 +61,7 @@ class WanGPClient:
             "POST",
             self.url,
             message,
-            timeout=30,
+            timeout=timeout,
             headers=self._headers,
             response_headers=True,
             follow_redirects=False,
@@ -252,7 +255,7 @@ def read_video_settings(path: Path):
 
 
 async def generate_video(
-    url: str,
+    client: WanGPClient,
     video_settings: dict,
     prompt: str,
     png: bytes,
@@ -262,9 +265,6 @@ async def generate_video(
     if _video_lock.locked():
         raise RuntimeError(_("A WanGP video request is already in progress."))
     async with _video_lock:
-        client = WanGPClient(url)
-        status(_("Connecting to WanGP…"))
-        await client.connect()
         await client.resolve_workspace()
         image_start = await client.upload_frame(png)
         del png

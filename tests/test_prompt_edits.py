@@ -27,6 +27,25 @@ def test_append():
     )
 
 
+def test_reconciles_viewpoint_and_focus_with_separate_exact_edits():
+    source = (
+        "<lora:portrait:1> A woman in a rear-view portrait, "
+        "the back of her head sharply in focus, wearing a green coat in a foggy park. "
+        "From behind, her face is hidden. Soft overcast light."
+    )
+    response = edit_response(
+        ("rear-view portrait", "front-view portrait"),
+        ("the back of her head sharply in focus", "her face sharply in focus"),
+        ("From behind, her face is hidden. ", ""),
+    )
+    result, negative = apply_prompt_edits(source, response)
+    assert result == (
+        "<lora:portrait:1> A woman in a front-view portrait, "
+        "her face sharply in focus, wearing a green coat in a foggy park. Soft overcast light."
+    )
+    assert negative == ""
+
+
 @pytest.mark.parametrize(
     "response",
     [

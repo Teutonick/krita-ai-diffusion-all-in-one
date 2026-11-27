@@ -203,6 +203,8 @@ video model.
    file under **Settings → Integrations → WanGP Video**.
 4. In Krita’s **AI** menu, choose **Generate prompt for video (ext)**. Review
    the prompt and click **Generate Video in WanGP**. Track the result in WanGP.
+   If local MCP is unavailable on Windows, the dialog can start WanGP from the
+   selected installation folder or help you enable MCP in an open instance.
    If ComfyUI is connected, Krita waits for its server queue to drain and for
    GPU memory to be released before submitting the video. New image jobs wait
    until the WanGP job ends.

@@ -2606,7 +2606,7 @@ def moss_edit(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
     model = w.skip_layer_guidance(model)
 
     def render(prompt: str, latent: Output, denoise=1.0):
-        positive: str | Output = merge_prompt(prompt, conditioning.style, conditioning.language)
+        positive: str | Output = merge_prompt(prompt, conditioning.style)
         if conditioning.language and prompt:
             positive = w.translate(positive)
         cond = ConditioningOutput(
@@ -2627,6 +2627,7 @@ def moss_edit(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
 
     summary, boxes = moss_layout.split_prompt(conditioning.positive)
     if boxes:
+        summary = merge_prompt(summary, "", conditioning.language)
         width, height = extent.target
         source_latent = w.batch_latent(
             vae_encode(w, vae, source, checkpoint.tiled_vae), i.batch_count
@@ -2650,7 +2651,8 @@ def moss_edit(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
             prompt = (
                 f"Change only the area {left / 100:g}% to {right / 100:g}% from the left "
                 f"and {top / 100:g}% to {bottom / 100:g}% from the top. "
-                f"{caption}\nKeep the rest of the image unchanged."
+                f"{merge_prompt(caption, '', conditioning.language)}\n"
+                "Keep the rest of the image unchanged."
             )
             box_mask = w.solid_mask(bounds.extent)
             sampling_mask = w.add(
@@ -2688,7 +2690,8 @@ def moss_edit(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
         output = w.nsfw_filter(output, i.nsfw_filter)
     else:
         latent = w.empty_latent_image(extent.initial, Arch.moss, i.batch_count)
-        output = w.nsfw_filter(render(conditioning.positive, latent), i.nsfw_filter)
+        prompt = merge_prompt(conditioning.positive, "", conditioning.language)
+        output = w.nsfw_filter(render(prompt, latent), i.nsfw_filter)
         output = scale_to_target(extent, w, output, family)
     if i.kind is WorkflowKind.refine_region:
         params = ensure(i.inpaint)

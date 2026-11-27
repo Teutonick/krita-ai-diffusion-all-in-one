@@ -58,6 +58,7 @@ from .control import ControlListWidget
 from .dictation import dictation_row
 from .lora_picker import LoraPickerDialog
 from .settings import settings, wangp_settings_hint
+from .wangp import connect_wangp
 from .widget import TextPromptWidget
 
 
@@ -1094,16 +1095,7 @@ class ActiveRegionWidget(QFrame):
             try:
                 response = await job.run(
                     f"Current animation prompt:\n{original}\n\nChange requested:\n{change}",
-                    system=(
-                        ollama.animation_prompt_system
-                        + " Modify the existing animation prompt according to the requested change. "
-                        "Carry through each requested action in its specified order, including "
-                        "transitions and the final outcome. Keep existing camera behavior unless "
-                        "the request changes it or it conflicts with the revised action. "
-                        "Keep every unrelated detail and the first-frame reference unchanged. "
-                        "Remove details that contradict the requested change. Return both fields "
-                        "as JSON; do not include explanations."
-                    ),
+                    system=ollama.animation_edit_system,
                     temperature=0.2,
                     output_schema=ollama.animation_prompt_schema,
                 )
@@ -1144,6 +1136,9 @@ class ActiveRegionWidget(QFrame):
                     status.setText(message)
 
             try:
+                wan_client = await connect_wangp(dialog, show_status, lambda: closed)
+                if wan_client is None or closed:
+                    return
                 filename = settings.wangp_video_settings_path.strip()
                 if not filename:
                     hint = QMessageBox(dialog)
@@ -1156,7 +1151,12 @@ class ActiveRegionWidget(QFrame):
                     if hint.exec_() != QMessageBox.StandardButton.Ok:
                         return
                     filename, _filter = QFileDialog.getOpenFileName(
-                        dialog, _("Select WanGP video settings JSON"), "", "JSON (*.json)"
+                        dialog,
+                        _("Select WanGP video settings JSON"),
+                        str(Path(settings.wangp_installation_path) / "settings")
+                        if settings.wangp_installation_path
+                        else "",
+                        "JSON (*.json)",
                     )
                     if not filename:
                         return
@@ -1166,7 +1166,7 @@ class ActiveRegionWidget(QFrame):
                     settings.save()
                 client = root.connection.client_if_connected
                 await wangp.generate_video(
-                    settings.wangp_mcp_url,
+                    wan_client,
                     video_settings,
                     editor.toPlainText().strip(),
                     bytes(frame.to_bytes()),

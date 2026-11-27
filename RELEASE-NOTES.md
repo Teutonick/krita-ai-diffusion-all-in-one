@@ -1,4 +1,25 @@
-# 1.53.0-all-in-one.72 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.76 — krita-ai-diffusion-all-in-one
+
+MOSS image editing translates Prompt Box captions and scene context through
+the local ComfyUI translation node. Graph tests verify that each box uses the
+same configured LoRAs.
+
+## 1.53.0-all-in-one.75
+
+Prompt AI image edits reconcile the full shot while preserving compatible text.
+Animation revisions reconcile action, camera, focus, and sound across the shot.
+
+## 1.53.0-all-in-one.74
+
+When WanGP MCP is unavailable, the video dialog offers MCP setup instructions
+and can launch the selected local WanGP installation on Windows.
+
+## 1.53.0-all-in-one.73
+
+Managed Server reuses installed Argos translation packages and cached Stanza
+resources. Missing translation resources can still be downloaded when needed.
+
+## 1.53.0-all-in-one.72
 
 MiniMax H3 video prompts describe actions and transitions in order, with
 camera movement and sound tied to the scene. The revision tool preserves
