@@ -1,3 +1,4 @@
+import asyncio
 import json
 from unittest.mock import AsyncMock, Mock
 
@@ -215,16 +216,54 @@ async def test_comfy_drains_queue_and_observes_gpu_release():
         side_effect=[
             {"queue_running": [[0, "job"]], "queue_pending": []},
             {"queue_running": [], "queue_pending": []},
-            {"devices": [{"type": "cuda", "torch_vram_total": 1024}]},
-            {"devices": [{"type": "cuda", "torch_vram_total": 0}]},
+            {"devices": [{"type": "cuda", "torch_vram_total": 1024**3}]},
+            {
+                "devices": [
+                    {
+                        "type": "cuda",
+                        "torch_vram_total": 1024**3,
+                        "torch_vram_free": 1024**3,
+                    }
+                ]
+            },
         ]
     )
     client.free_memory = AsyncMock()
+    client.take_back_waiting_job = AsyncMock()
     await ComfyClient.release_gpu_for_video(client)
     assert [call[0] for call in client.mock_calls] == [
+        "take_back_waiting_job",
         "_get",
+        "take_back_waiting_job",
         "_get",
         "free_memory",
         "_get",
         "_get",
     ]
+
+
+@qtapp
+async def test_cancel_during_gpu_handoff_cleans_frame_and_releases_request_lock():
+    client = Mock(
+        resolve_workspace=AsyncMock(),
+        upload_frame=AsyncMock(return_value="@documents/uploads/frame/input.png"),
+        delete_frame=AsyncMock(),
+        call=AsyncMock(return_value={"valid": True}),
+    )
+    handoff_started = asyncio.Event()
+
+    async def release():
+        handoff_started.set()
+        await asyncio.Future()
+
+    comfy = Mock(release_gpu_for_video=AsyncMock(side_effect=release))
+    task = asyncio.create_task(generate_video(client, {}, "prompt", b"png", comfy, Mock()))
+    await asyncio.wait_for(handoff_started.wait(), timeout=2)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert [call.args for call in comfy.pause_for_video.call_args_list] == [(True,), (False,)]
+    client.delete_frame.assert_awaited_once_with("@documents/uploads/frame/input.png")
+    comfy.release_gpu_for_video.side_effect = RuntimeError("handoff unavailable")
+    with pytest.raises(RuntimeError, match="handoff unavailable"):
+        await generate_video(client, {}, "prompt", b"png", comfy, Mock())

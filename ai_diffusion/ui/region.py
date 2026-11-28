@@ -1076,12 +1076,16 @@ class ActiveRegionWidget(QFrame):
         job: ollama.Generation | None = None
         closed = False
         sending_video = False
+        video_task: asyncio.Task | None = None
+        submitted_video = False
 
         def on_finished(_result):
             nonlocal closed
             closed = True
             if job is not None:
                 job.cancel()
+            if video_task is not None and not submitted_video:
+                video_task.cancel()
 
         dialog.finished.connect(on_finished)
 
@@ -1132,10 +1136,11 @@ class ActiveRegionWidget(QFrame):
                     instruction.setFocus()
 
         async def send_video():
-            nonlocal sending_video
+            nonlocal sending_video, submitted_video
             if sending_video or job is not None:
                 return
             sending_video = True
+            submitted_video = False
             video.setEnabled(False)
             modify.setEnabled(False)
             instruction.setEnabled(False)
@@ -1143,6 +1148,10 @@ class ActiveRegionWidget(QFrame):
             def show_status(message: str):
                 if not closed:
                     status.setText(message)
+
+            def mark_submitted():
+                nonlocal submitted_video
+                submitted_video = True
 
             try:
                 wan_client = await connect_wangp(dialog, show_status, lambda: closed)
@@ -1181,7 +1190,10 @@ class ActiveRegionWidget(QFrame):
                     bytes(frame.to_bytes()),
                     client if isinstance(client, ComfyClient) else None,
                     show_status,
+                    on_submit=mark_submitted,
                 )
+            except asyncio.CancelledError:
+                pass
             except Exception as e:
                 log.warning("WanGP video request failed (%s)", type(e).__name__)
                 show_status(_("WanGP video request failed") + f": {e}")
@@ -1197,8 +1209,9 @@ class ActiveRegionWidget(QFrame):
                 eventloop.run(apply_instruction())
 
         def start_video():
+            nonlocal video_task
             if not sending_video and job is None:
-                eventloop.run(send_video())
+                video_task = eventloop.run(send_video())
 
         video.clicked.connect(start_video)
         modify.clicked.connect(start_modification)

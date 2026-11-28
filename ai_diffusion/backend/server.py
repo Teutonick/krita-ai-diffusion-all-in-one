@@ -285,7 +285,10 @@ class Server:
             if arch not in archs:
                 continue
             checkpoints = [m for m in resources.default_checkpoints if m.arch is arch]
-            if arch is Arch.moss and "lora-live_generation-moss" in packages:
+            if arch is Arch.moss and {
+                "lora-live_generation-moss",
+                "lora-pose_studio-moss",
+            }.intersection(packages):
                 checkpoints = [m for m in checkpoints if m.id.string.startswith("checkpoint-sft_")]
             if not any(m.id.string in packages or self._model_exists(m) for m in checkpoints):
                 dependencies.append(next(m for m in checkpoints if m.id.string == default))

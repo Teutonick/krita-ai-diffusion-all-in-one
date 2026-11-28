@@ -519,7 +519,9 @@ class DocumentModel(QObject, ObservableProperties):
         )
         workflow_kind = WorkflowKind.generate
         strength = self.strength
-        if arch in (Arch.qwen_l, Arch.minimax_h3_image) or (arch is Arch.krea2 and use_pose):
+        if arch in (Arch.qwen_l, Arch.minimax_h3_image) or (
+            arch in (Arch.krea2, Arch.moss) and use_pose
+        ):
             strength = 1.0
         if strength < 1.0 or self.is_editing:
             workflow_kind = WorkflowKind.refine
@@ -1928,6 +1930,9 @@ class DocumentModel(QObject, ObservableProperties):
 
     @property
     def pose_studio_available(self):
+        if self.arch is Arch.moss:
+            client = self._connection.client_if_connected
+            return bool(client and workflow.supports_moss_pose(self.active_style, client.models))
         return self.arch in (Arch.krea2, Arch.minimax_h3_image)
 
     @property
@@ -2142,6 +2147,12 @@ class LiveGeneration(QObject, ObservableProperties):
             model.has_document
             and model.workspace is Workspace.generation
             and isinstance(client, ComfyClient)
+            and not (
+                model.arch is Arch.moss
+                and model.pose_studio_enabled
+                and model.pose_studio_state
+                and model.pose_studio_available
+            )
             and workflow.supports_live_preview(model.active_style, client.models, model.is_editing)
         )
 

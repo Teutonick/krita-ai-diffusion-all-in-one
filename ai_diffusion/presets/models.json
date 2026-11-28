@@ -501,6 +501,17 @@
   ],
   "optional": [
     {
+      "id": "lora-pose_studio-moss",
+      "name": "MOSS Pose Studio (OpenPose SFT)",
+      "files": [
+        {
+          "path": "models/loras/moss_image_sft_pose_control_lora.safetensors",
+          "url": "https://huggingface.co/thedeoxen/MOSS-Image-pose-control-lora/resolve/6ba0d83c3d9414760914eaac334b9fdb0ac2ac18/moss_image_sft_pose_control_lora.safetensors",
+          "sha256": "2063c9bff0563d256cadf4bd02c185a2622aa2746ca60e1fc2daa40457d9c732"
+        }
+      ]
+    },
+    {
       "id": "lora-live_generation-minimax_h3_image",
       "name": "Live Generation (2-step pDMD)",
       "files": [

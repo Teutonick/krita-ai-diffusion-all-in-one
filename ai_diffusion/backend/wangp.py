@@ -163,22 +163,31 @@ class WanGPClient:
                 raise RuntimeError(_("WanGP did not confirm temporary frame cleanup."))
 
     async def wait_for_video(self, job_id: str, status: Callable[[str], None]):
-        disconnected = False
+        loop = asyncio.get_running_loop()
+        reconnect_deadline: float | None = None
         while True:
             try:
-                if disconnected:
-                    await self.connect()
+                if reconnect_deadline is not None:
+                    await self.connect(timeout=4)
                 result = await self.call(
                     "wangp_session", action="get_job", arguments={"job_id": job_id}
                 )
             except NetworkError as e:
                 if e.status in (400, 401, 403, 405):
                     raise
-                disconnected = True
+                if reconnect_deadline is None:
+                    reconnect_deadline = loop.time() + 45
+                if loop.time() >= reconnect_deadline:
+                    raise RuntimeError(
+                        _(
+                            "Lost contact with WanGP. Check its queue for job {job_id}.",
+                            job_id=job_id,
+                        )
+                    ) from e
                 status(_("Reconnecting to WanGP to check video status") + f" ({job_id})")
                 await asyncio.sleep(5)
                 continue
-            disconnected = False
+            reconnect_deadline = None
             state = result.get("status")
             if state in (
                 "done",
@@ -261,6 +270,8 @@ async def generate_video(
     png: bytes,
     comfy: ComfyClient | None,
     status: Callable[[str], None],
+    *,
+    on_submit: Callable[[], None] | None = None,
 ):
     if _video_lock.locked():
         raise RuntimeError(_("A WanGP video request is already in progress."))
@@ -292,6 +303,8 @@ async def generate_video(
                 await comfy.release_gpu_for_video()
             request_id = uuid4().hex
             # A request without an acknowledgment can still be queued on the server.
+            if on_submit:
+                on_submit()
             can_delete = False
             try:
                 result = await client.call(
@@ -328,7 +341,7 @@ async def generate_video(
                 comfy.pause_for_video(False)
             if can_delete:
                 try:
-                    await client.delete_frame(image_start)
+                    await asyncio.wait_for(client.delete_frame(image_start), timeout=10)
                 except Exception:
                     cleanup_failed = True
                     log.warning("WanGP temporary frame cleanup was not confirmed")

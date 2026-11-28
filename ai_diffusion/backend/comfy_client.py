@@ -591,25 +591,42 @@ class ComfyClient(Client):
             self._resumed.set()
 
     async def release_gpu_for_video(self):
-        async def drain_and_release():
+        async def drain():
             while True:
+                await self.take_back_waiting_job()
                 queue = await self._get("queue", timeout=10)
                 if not (self._posting_job or queue["queue_running"] or queue["queue_pending"]):
-                    break
-                await asyncio.sleep(0.5)
-            await self.free_memory()
-            while True:
-                devices = (await self._get("system_stats", timeout=10))["devices"]
-                if devices and all(
-                    device["type"] == "cpu"
-                    or (device["type"] != "mps" and device.get("torch_vram_total") == 0)
-                    for device in devices
-                ):
                     return
                 await asyncio.sleep(0.5)
 
+        async def release():
+            attempts = 0
+            while True:
+                if attempts % 10 == 0:
+                    await self.free_memory()
+                    await asyncio.sleep(0.5)
+                devices = (await self._get("system_stats", timeout=10))["devices"]
+                if devices and all(
+                    device["type"] == "cpu"
+                    or (
+                        device["type"] != "mps"
+                        and (reserved := device.get("torch_vram_total")) is not None
+                        and reserved - device.get("torch_vram_free", 0) <= 256 * 1024**2
+                    )
+                    for device in devices
+                ):
+                    return
+                attempts += 1
+                await asyncio.sleep(0.5)
+
         try:
-            await asyncio.wait_for(drain_and_release(), timeout=120)
+            await asyncio.wait_for(drain(), timeout=30)
+        except asyncio.TimeoutError as e:
+            raise RuntimeError(
+                _("ComfyUI still has running or queued jobs. Retry after they finish.")
+            ) from e
+        try:
+            await asyncio.wait_for(release(), timeout=20)
         except asyncio.TimeoutError as e:
             raise RuntimeError(_("Timed out waiting for ComfyUI to release GPU memory.")) from e
 

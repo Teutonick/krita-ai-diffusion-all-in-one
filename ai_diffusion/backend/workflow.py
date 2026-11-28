@@ -196,6 +196,7 @@ def load_checkpoint_with_lora(
         filename = lora.name.replace("\\", "/").rsplit("/", 1)[-1].lower()
         if (arch, filename) in (
             (Arch.moss, moss_live_lora),
+            (Arch.moss, moss_pose_lora),
             (Arch.minimax_h3_image, h3_live_lora),
         ):
             model = w.load_lora_model(model, lora.name, lora.strength)
@@ -1979,7 +1980,24 @@ def prepare_prompts(
 
 krea_live_lora = "krea2_turbo_2step_rank_64_lora_comfyui.safetensors"
 moss_live_lora = "moss_image_sft_3step_v1.0.safetensors"
+moss_pose_lora = "moss_image_sft_pose_control_lora.safetensors"
 h3_live_lora = "minimax_h3_pdmd_2nfe_comfyui.safetensors"
+
+
+def supports_moss_pose(style: Style, models: ClientModels):
+    checkpoint = style.preferred_checkpoint(models.checkpoints)
+    return (
+        checkpoint in models.checkpoints
+        and "sft" in Path(checkpoint.replace("\\", "/")).name.lower()
+        and all(
+            node in models.node_inputs for node in ("DWPreprocessor", "TextEncodeMOSSImageEdit")
+        )
+        and any(_is_moss_pose_lora(name) for name in models.loras)
+    )
+
+
+def _is_moss_pose_lora(name: str):
+    return name.replace("\\", "/").rsplit("/", 1)[-1].lower() == moss_pose_lora
 
 
 def supports_live_preview(style: Style, models: ClientModels, editing=False):
@@ -2059,8 +2077,37 @@ def prepare(
     i.models.tiled_vae = perf.tiled_vae
     arch = i.models.version = resolve_arch(style, models)
 
+    is_moss_pose = arch is Arch.moss and cond.pose_guide is not None
+    if is_moss_pose:
+        if not supports_moss_pose(style, models):
+            raise ValueError(_("Install MOSS Image SFT and its Pose Studio adapter."))
+        if (
+            fast_preview
+            or kind not in (WorkflowKind.generate, WorkflowKind.refine)
+            or mask is not None
+        ):
+            raise ValueError(_("MOSS Pose Studio requires a full-frame job."))
+        if cond.control or cond.regions or moss_layout.has_boxes(cond.positive):
+            raise ValueError(
+                _(
+                    "MOSS Pose Studio uses the pose and, in Edit mode, the source image. Clear extra controls and Prompt Boxes."
+                )
+            )
+        adapter = next(name for name in models.loras if _is_moss_pose_lora(name))
+        i.models.loras = [
+            lora
+            for lora in i.models.loras
+            if not (
+                _is_moss_pose_lora(lora.name)
+                or moss_layout.is_edit_lora(lora.name)
+                or lora.name.replace("\\", "/").rsplit("/", 1)[-1].lower() == moss_live_lora
+            )
+        ] + [LoraInput(adapter, 1.0)]
+        i.sampling = SamplingInput("euler", "simple", 4.0, 30, seed=seed)
+
     is_moss_edit = (
         arch is Arch.moss
+        and not is_moss_pose
         and cond.edit_reference
         and kind in (WorkflowKind.refine, WorkflowKind.refine_region)
     )
@@ -2107,6 +2154,7 @@ def prepare(
     has_ip_adapter = model_set.ip_adapter.find(ControlMode.reference) is not None
     if (
         not is_moss_edit
+        and not is_moss_pose
         and arch is not Arch.minimax_h3_image
         and not (arch is Arch.krea2 and cond.pose_guide is not None)
     ):
@@ -2252,7 +2300,7 @@ def prepare(
     if arch is Arch.sdxl and i.inpaint and i.inpaint.use_inpaint_model:
         i.models.dynamic_caching = False  # inpaint model incompatible with dynamic caching
 
-    if is_live or (arch is Arch.krea2 and cond.pose_guide is not None):
+    if is_live or is_moss_pose or (arch is Arch.krea2 and cond.pose_guide is not None):
         i.batch_count = 1
     i.images.layer_count = layer_count if arch is Arch.qwen_l else 1
     i.color_match = 1.0 if settings.color_match else 0.0
@@ -2693,6 +2741,62 @@ def make_pov(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
     return w
 
 
+def moss_pose_studio(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
+    checkpoint, cond, sampling = ensure(i.models), ensure(i.conditioning), ensure(i.sampling)
+    model, clip, vae = load_checkpoint_with_lora(w, checkpoint, models)
+    extent = ScaledExtent.from_input(i.extent)
+    guide = w.estimate_pose(w.load_image(ensure(cond.pose_guide)), resolution=1024)
+    guide = w.scale_image(guide, extent.initial)
+    inputs = {
+        "clip": clip.model,
+        "vae": vae,
+        "edit_format": "ai-toolkit",
+        "images.image_0": guide,
+        "image_strength": 1.0,
+    }
+    positive = merge_prompt(cond.positive, cond.style, cond.language)
+    if i.kind is WorkflowKind.refine:
+        source = ensure(ensure(i.images).initial_image)
+        inputs["images.image_1"] = w.scale_image(w.load_image(source), extent.initial)
+        instruction = (
+            "Repose the subject in Picture 2 to match the body pose in Picture 1. "
+            "Preserve the subject's identity, appearance, and outfit from Picture 2. "
+            "Use Picture 1 only as a pose guide."
+        )
+        positive = f"{instruction}\n\n{positive}".strip() if positive else instruction
+    negative = merge_prompt(cond.negative, "", cond.language)
+    conditioning = ConditioningOutput(
+        w.add(
+            "TextEncodeMOSSImageEdit",
+            1,
+            prompt=w.translate(positive) if cond.language and cond.positive else positive,
+            **inputs,
+        ),
+        w.add(
+            "TextEncodeMOSSImageEdit",
+            1,
+            prompt=w.translate(negative) if cond.language and cond.negative else negative,
+            **inputs,
+        ),
+    )
+    latent = w.empty_latent_image(extent.initial, Arch.moss, i.batch_count)
+    result = w.ksampler(
+        model,
+        conditioning,
+        latent,
+        sampling.sampler,
+        sampling.scheduler,
+        sampling.total_steps,
+        sampling.cfg_scale,
+        seed=sampling.seed,
+    )
+    result = w.nsfw_filter(w.vae_decode(vae, result), i.nsfw_filter)
+    if extent.initial != extent.target:
+        result = w.scale_image(result, extent.target)
+    w.send_image(result)
+    return w
+
+
 def moss_edit(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
     checkpoint = ensure(i.models)
     conditioning = ensure(i.conditioning)
@@ -2835,6 +2939,13 @@ def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.serve
         if i.models and i.models.version is Arch.minimax_h3_image:
             return minimax_h3_image(workflow, i, models)
         return make_pov(workflow, i, models)
+    if (
+        i.models
+        and i.models.version is Arch.moss
+        and i.conditioning
+        and i.conditioning.pose_guide is not None
+    ):
+        return moss_pose_studio(workflow, i, models)
     if (
         i.models
         and i.models.version is Arch.moss

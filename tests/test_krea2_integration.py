@@ -236,6 +236,63 @@ def test_krea2_live_preview_keeps_prompt_lora_translation_and_edit_references(
 
 
 @pytest.mark.parametrize("editing", [False, True])
+def test_moss_pose_studio_uses_openpose_reference(editing):
+    models = ClientModels()
+    arch = Arch.moss
+    checkpoint = "moss_image_sft_int8_convrot.safetensors"
+    models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, arch, FileFormat.diffusion)
+    models.resources = {
+        resource_id(ResourceKind.text_encoder, arch, "qwen_3.5_9b"): "qwen.safetensors",
+        resource_id(ResourceKind.vae, arch, "default"): "flux2-vae.safetensors",
+    }
+    models.node_inputs = ComfyObjectInfo({"DWPreprocessor": {}, "TextEncodeMOSSImageEdit": {}})
+    models.loras = [workflow.moss_pose_lora]
+    style = Style(Path("test.json"))
+    style.checkpoints = [checkpoint]
+    extent = Extent(768, 768)
+    cond = ConditioningInput(
+        "A robot.", "blur", pose_guide=Image.create(extent, fill=0), edit_reference=editing
+    )
+    args = (
+        WorkflowKind.refine if editing else WorkflowKind.generate,
+        Image.create(extent, fill=255) if editing else extent,
+        cond,
+        style,
+        42,
+        models,
+        FileLibrary.instance(),
+        PerformanceSettings(),
+    )
+
+    assert workflow.supports_moss_pose(style, models)
+    with pytest.raises(ValueError, match="full-frame"):
+        workflow.prepare(*args, fast_preview=True)
+    work = workflow.prepare(*args)
+    graph = workflow.create(work, models)
+    nodes = {node["class_type"]: node["inputs"] for node in graph.root.values()}
+    encodes = [
+        n["inputs"] for n in graph.root.values() if n["class_type"] == "TextEncodeMOSSImageEdit"
+    ]
+    assert len(encodes) == 2
+    assert encodes[1]["prompt"] == "blur"
+    assert encodes[0]["prompt"].endswith("A robot.")
+    assert all(n["edit_format"] == "ai-toolkit" for n in encodes)
+    assert all(("images.image_1" in n) is editing for n in encodes)
+    if editing:
+        assert "Repose the subject in Picture 2" in encodes[0]["prompt"]
+        assert encodes[0]["images.image_1"] == encodes[1]["images.image_1"]
+    assert encodes[0]["images.image_0"] == encodes[1]["images.image_0"]
+    assert nodes["DWPreprocessor"]["detect_body"] == "enable"
+    assert nodes["LoraLoaderModelOnly"]["lora_name"] == workflow.moss_pose_lora
+    assert (nodes["KSampler"]["steps"], nodes["KSampler"]["cfg"], nodes["KSampler"]["seed"]) == (
+        30,
+        4.0,
+        42,
+    )
+    assert "ETN_SaveImageCache" in nodes and "SaveImage" not in nodes
+
+
+@pytest.mark.parametrize("editing", [False, True])
 def test_moss_live_preview_with_prompt_boxes(editing):
     models = ClientModels()
     checkpoint = "moss_image_sft_int8_convrot.safetensors"

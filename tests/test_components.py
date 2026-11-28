@@ -228,6 +228,14 @@ def test_h3_live_installer_adds_missing_models(tmp_path: Path):
     assert base not in srv.resolve_model_dependencies([package, "checkpoint-pdmd-minimax_h3_image"])
 
 
+def test_moss_pose_installer_selects_sft(tmp_path: Path):
+    srv = Server(str(tmp_path))
+    package = "lora-pose_studio-moss"
+    assert {package, "checkpoint-sft_int8_convrot-moss"} <= set(
+        srv.resolve_model_dependencies([package])
+    )
+
+
 def test_moss_edit_dependencies_reuse_existing_checkpoint(tmp_path: Path):
     srv = Server(str(tmp_path))
     edit = "lora-image_edit-moss"

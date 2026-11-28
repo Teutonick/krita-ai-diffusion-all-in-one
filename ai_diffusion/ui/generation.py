@@ -1712,8 +1712,8 @@ class GenerationWidget(QWidget):
                 model.regions.active_changed.connect(self.update_generate_options),
                 model.region_only_changed.connect(self.update_generate_options),
                 model.style_changed.connect(self.update_generate_options),
-                model.pose_studio_state_changed.connect(self._update_pose_studio),
-                model.pose_studio_enabled_changed.connect(self._update_pose_studio),
+                model.pose_studio_state_changed.connect(self.update_generate_options),
+                model.pose_studio_enabled_changed.connect(self.update_generate_options),
                 model.pose_studio_upscale_changed.connect(self._update_pose_studio),
                 model.edit_mode_changed.connect(self.update_generate_options),
                 model.live_generation.is_active_changed.connect(self.update_generate_options),
@@ -2005,10 +2005,16 @@ class GenerationWidget(QWidget):
         if model.has_document:
             arch = model.arch
             krea_pose = arch is Arch.krea2 and model.pose_studio_enabled and model.pose_studio_state
-            self.strength_slider.setVisible(
-                arch not in (Arch.qwen_l, Arch.minimax_h3_image) and not krea_pose
+            moss_pose = (
+                arch is Arch.moss
+                and model.pose_studio_available
+                and model.pose_studio_enabled
+                and model.pose_studio_state
             )
-            self.sweep_button.setVisible(not krea_pose)
+            self.strength_slider.setVisible(
+                arch not in (Arch.qwen_l, Arch.minimax_h3_image) and not (krea_pose or moss_pose)
+            )
+            self.sweep_button.setVisible(not (krea_pose or moss_pose))
             self.pose_studio_upscale.setVisible(bool(krea_pose))
         blocked = self.pose_studio_upscale.blockSignals(True)
         self.pose_studio_upscale.setChecked(model.pose_studio_upscale)

@@ -15,7 +15,13 @@ from PyQt5.QtWidgets import (
 
 from ..backend.network import NetworkError
 from ..backend.wangp import WanGPClient
-from ..backend.wangp_launcher import can_launch, launch_and_connect, launch_command, mcp_unavailable
+from ..backend.wangp_launcher import (
+    can_launch,
+    configured_mcp_url,
+    launch_and_connect,
+    launch_command,
+    mcp_unavailable,
+)
 from ..localization import translate as _
 from ..settings import settings
 from .settings import wangp_mcp_hint
@@ -45,7 +51,10 @@ def _show_help(parent: QWidget, title: str, markup: str, actions: list[str]):
 async def connect_wangp(
     parent: QWidget, status: Callable[[str], None], is_closed: Callable[[], bool]
 ):
-    client = WanGPClient(settings.wangp_mcp_url)
+    url = settings.wangp_mcp_url
+    if settings.wangp_installation_path:
+        url = configured_mcp_url(Path(settings.wangp_installation_path), url)
+    client = WanGPClient(url)
     while not is_closed():
         try:
             status(_("Connecting to WanGP…"))
@@ -75,11 +84,12 @@ async def connect_wangp(
             actions,
         )
         if choice in (2, 3):
-            installation = choose_wangp_installation(parent, client.url, change_folder=choice == 3)
+            installation = choose_wangp_installation(parent, change_folder=choice == 3)
             if installation is None:
                 status("")
                 return None
             root, command = installation
+            client = WanGPClient(configured_mcp_url(root, settings.wangp_mcp_url))
             status(_("Starting WanGP and waiting for MCP…"))
             await launch_and_connect(root, client, command)
             return client
@@ -89,7 +99,7 @@ async def connect_wangp(
     return None
 
 
-def choose_wangp_installation(parent: QWidget, url: str, *, change_folder: bool = False):
+def choose_wangp_installation(parent: QWidget, *, change_folder: bool = False):
     previous = settings.wangp_installation_path.strip()
     folder = "" if change_folder else previous
     while True:
@@ -101,7 +111,7 @@ def choose_wangp_installation(parent: QWidget, url: str, *, change_folder: bool 
                 return None
         root = Path(folder)
         try:
-            command = launch_command(root, url)
+            command = launch_command(root)
         except (OSError, ValueError) as e:
             instruction = escape(
                 _("Choose the Wan2GP folder that contains wgp.py and its environment.")

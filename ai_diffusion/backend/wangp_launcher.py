@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 from PyQt5.QtNetwork import QNetworkReply
 
@@ -31,22 +31,32 @@ def can_launch(url: str):
 
 
 def mcp_unavailable(error: NetworkError):
-    return error.status in (404, 405, 502, 503, 504) or error.code in (
+    return error.status in (404, 405, 500, 502, 503, 504) or error.code in (
         QNetworkReply.NetworkError.ConnectionRefusedError,
+        QNetworkReply.NetworkError.RemoteHostClosedError,
         QNetworkReply.NetworkError.TimeoutError,
         QNetworkReply.NetworkError.OperationCanceledError,
     )
 
 
-def launch_command(root: Path, url: str) -> list[str]:
+def configured_mcp_url(root: Path, url: str):
+    if not can_launch(url):
+        return url
+    try:
+        data = json.loads((root / "wgp_config.json").read_text(encoding="utf-8-sig"))
+        port = data.get("mcp_port") if isinstance(data, dict) else None
+    except (OSError, ValueError):
+        return url
+    if type(port) is not int or not 0 < port < 65536:
+        return url
+    endpoint = urlsplit(url)
+    return urlunsplit(endpoint._replace(netloc=f"127.0.0.1:{port}"))
+
+
+def launch_command(root: Path) -> list[str]:
     if not (root / "wgp.py").is_file():
         raise ValueError(_("The selected folder does not contain wgp.py."))
-    endpoint = urlsplit(url)
-    port = endpoint.port or 80
-    host = "127.0.0.1" if endpoint.hostname == "localhost" else endpoint.hostname
-    if host is None:
-        raise ValueError(_("The WanGP MCP address is invalid."))
-    args = [str(root / "wgp.py"), "--mcp-webui", "--mcp-host", host, "--mcp-port", str(port)]
+    args = [str(root / "wgp.py")]
     registry = root / "envs.json"
     if registry.is_file():
         try:
@@ -102,12 +112,9 @@ async def _check_wangp_process():
             process.kill()
             await process.wait()
         raise
-    if process.returncode == 3:
-        raise RuntimeError(
-            _("WanGP is already running. Enable MCP in its web UI and restart WanGP.")
-        )
-    if process.returncode != 0:
+    if process.returncode not in (0, 3):
         raise RuntimeError(_("Could not verify whether WanGP is running. Start it manually."))
+    return process.returncode == 3
 
 
 async def launch_and_connect(root: Path, client: WanGPClient, command: list[str]):
@@ -119,26 +126,22 @@ async def launch_and_connect(root: Path, client: WanGPClient, command: list[str]
             await client.connect(timeout=3)
             return
         except NetworkError as e:
-            if e.code != QNetworkReply.NetworkError.ConnectionRefusedError:
-                raise RuntimeError(
-                    _("The MCP port is in use. Check the WanGP MCP settings.")
-                ) from e
-        if _process is None or _process.poll() is not None:
-            await _check_wangp_process()
+            if not mcp_unavailable(e):
+                raise
+        owned = _process if _process is not None and _process.poll() is None else None
+        running = owned is not None or await _check_wangp_process()
+        if not running:
             env = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
-            _process = await asyncio.to_thread(
+            _process = owned = await asyncio.to_thread(
                 subprocess.Popen,
                 command,
                 cwd=root,
                 env=env,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
             )
-        deadline = asyncio.get_running_loop().time() + 120
+        deadline = asyncio.get_running_loop().time() + (120 if owned else 20)
         while asyncio.get_running_loop().time() < deadline:
-            if (code := _process.poll()) is not None:
+            if owned is not None and (code := owned.poll()) is not None:
                 raise RuntimeError(
                     _("WanGP exited before MCP was ready (exit code {code}).", code=code)
                 )
@@ -149,4 +152,8 @@ async def launch_and_connect(root: Path, client: WanGPClient, command: list[str]
                 if not mcp_unavailable(e):
                     raise
             await asyncio.sleep(1)
-        raise TimeoutError(_("WanGP did not start MCP in time. Check WanGP and retry."))
+        raise TimeoutError(
+            _(
+                "WanGP MCP did not respond. Check Enable MCP with Web UI in the WanGP terminal or settings."
+            )
+        )

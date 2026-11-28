@@ -1,4 +1,19 @@
-# 1.53.0-all-in-one.95 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.98 — krita-ai-diffusion-all-in-one
+
+MOSS Image SFT Pose Studio also supports experimental full-frame editing
+with the source image as an appearance reference.
+
+## 1.53.0-all-in-one.97
+
+MOSS Image SFT supports experimental Pose Studio full-frame generation via
+the optional OpenPose adapter.
+
+## 1.53.0-all-in-one.96
+
+WanGP launches with its own configuration in a visible console, reconnects
+to an existing process, and recovers from interrupted ComfyUI GPU handoffs.
+
+## 1.53.0-all-in-one.95
 
 The H3 model installer offers the two-step pDMD Live adapter. The standalone
 pDMD BF16 checkpoint is hidden from the installer.
