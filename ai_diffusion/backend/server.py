@@ -285,11 +285,18 @@ class Server:
             if arch not in archs:
                 continue
             checkpoints = [m for m in resources.default_checkpoints if m.arch is arch]
+            if arch is Arch.moss and "lora-live_generation-moss" in packages:
+                checkpoints = [m for m in checkpoints if m.id.string.startswith("checkpoint-sft_")]
             if not any(m.id.string in packages or self._model_exists(m) for m in checkpoints):
                 dependencies.append(next(m for m in checkpoints if m.id.string == default))
 
         if Arch.minimax_h3_image in archs:
             h3 = [m for m in resources.optional_models if m.arch is Arch.minimax_h3_image]
+            checkpoints = [m for m in h3 if m.id.kind is resources.ResourceKind.checkpoint]
+            if "lora-live_generation-minimax_h3_image" in packages and not any(
+                m.id.string in packages or self._model_exists(m) for m in checkpoints
+            ):
+                dependencies.append(next(m for m in checkpoints if m.id.identifier == "int8"))
             encoders = [m for m in h3 if m.id.kind is resources.ResourceKind.text_encoder]
             if not any(m.id.string in packages or self._model_exists(m) for m in encoders):
                 dependencies.append(next(m for m in encoders if m.id.identifier == "h3_qwen3vl"))
@@ -815,6 +822,17 @@ class Server:
                 shutil.copyfile(Path(__file__).with_name(quickmt.name), quickmt)
             except OSError:
                 log.exception("Could not install the QuickMT translation node")
+            pov_package = next(
+                p for p in resources.selectable_custom_nodes if p.name == pov.pov_component
+            )
+            pov_node = self.comfy_dir / "custom_nodes" / pov_package.folder / "krita_pov.py"
+            if pov_node.is_file():
+                try:
+                    source = Path(__file__).with_name("pov_node.py")
+                    if source.read_bytes() != pov_node.read_bytes():
+                        shutil.copyfile(source, pov_node)
+                except OSError:
+                    log.exception("Could not update the Make POVs geometry node")
             args = ["-su", "main.py"]
             env = media_storage.managed_server_environment(self.path)
             env["KRITA_QUICKMT_MODELS"] = str(self.path / "models" / "translation")

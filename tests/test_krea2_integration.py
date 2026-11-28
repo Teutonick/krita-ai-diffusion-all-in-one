@@ -179,7 +179,10 @@ def test_krea2_edit_graph(kind, edit_kind, cfg):
 
 
 @pytest.mark.parametrize("keep_loaded", [False, True])
-def test_krea2_live_preview_keeps_prompt_lora_translation_and_edit_references(keep_loaded):
+@pytest.mark.parametrize("preview_size, render", [(512, Extent(512, 352)), (768, Extent(768, 512))])
+def test_krea2_live_preview_keeps_prompt_lora_translation_and_edit_references(
+    keep_loaded, preview_size, render
+):
     models, template = _edit_work("identity")
     assert template.models
     adapter = f"live/{workflow.krea_live_lora}"
@@ -206,14 +209,15 @@ def test_krea2_live_preview_keeps_prompt_lora_translation_and_edit_references(ke
         42,
         models,
         files,
-        PerformanceSettings(),
+        PerformanceSettings(krea2_live_resolution=preview_size),
         loras=prepared.loras,
         fast_preview=True,
     )
     assert work.models and work.models.loras == [LoraInput(character, 0.7), LoraInput(adapter, 1.0)]
     work.models.keep_live_models_loaded = keep_loaded
     assert work.sampling == SamplingInput("euler", "simple", 1.0, 2, seed=42)
-    assert work.extent.initial == work.extent.desired == Extent(512, 352)
+    assert work.extent.initial == work.extent.desired == render
+    assert work.batch_count == 1
     assert work.extent.target == target
     assert WorkflowInput.from_dict(work.to_dict()).extent.fast_preview
     graph = workflow.create(work, models)
@@ -227,6 +231,64 @@ def test_krea2_live_preview_keeps_prompt_lora_translation_and_edit_references(ke
     if keep_loaded:
         clip = nodes["Krea2EditGroundedEncode"]["clip"]
         assert graph.root[clip[0]]["class_type"] == "KritaKeepLiveModelsLoaded"
+
+
+@pytest.mark.parametrize("editing", [False, True])
+def test_moss_live_preview_with_prompt_boxes(editing):
+    models = ClientModels()
+    checkpoint = "moss_image_sft_int8_convrot.safetensors"
+    models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, Arch.moss, FileFormat.diffusion)
+    models.resources = {
+        resource_id(ResourceKind.text_encoder, Arch.moss, "qwen_3.5_9b"): "qwen.safetensors",
+        resource_id(ResourceKind.vae, Arch.moss, "default"): "flux2-vae.safetensors",
+    }
+    models.loras = [moss_layout.edit_lora] if editing else [workflow.moss_live_lora]
+    models.node_inputs = ComfyObjectInfo({"TextEncodeMOSSImageEdit": {}})
+    style = Style(Path("test.json"))
+    style.checkpoints = [checkpoint]
+    extent = Extent(1024, 768)
+    source = Image.create(extent, fill=0) if editing else extent
+    kind = WorkflowKind.refine if editing else WorkflowKind.generate
+    cond = ConditioningInput(
+        "A garden\n[Box 0,0,5000,5000] Blue flowers\n[Box 5000,5000,10000,10000] A stone bench",
+        edit_reference=editing,
+    )
+    work = workflow.prepare(
+        kind,
+        source,
+        cond,
+        style,
+        42,
+        models,
+        FileLibrary.instance(),
+        PerformanceSettings(),
+        fast_preview=True,
+    )
+    assert work.extent.initial == Extent(512, 384)
+    assert work.extent.target == extent
+    assert work.batch_count == 1
+    assert work.sampling and work.sampling.seed == 42
+    graph = workflow.create(work, models)
+    if editing:
+        assert work.sampling.total_steps == 10
+        samplers = [n["inputs"] for n in graph.root.values() if n["class_type"] == "KSampler"]
+        assert len(samplers) == 2 and all(n["steps"] == 10 for n in samplers)
+        composites = [n for n in graph.root.values() if n["class_type"] == "ImageCompositeMasked"]
+        assert len(composites) == 2
+        assert work.images and work.images.hires_image is source
+    else:
+        assert work.sampling.total_steps == 3 and work.sampling.cfg_scale == 1.0
+        assert any(
+            n["class_type"] == "LoraLoaderModelOnly"
+            and n["inputs"]["lora_name"] == workflow.moss_live_lora
+            for n in graph.root.values()
+        )
+        layout = next(
+            json.loads(n["inputs"]["text"])
+            for n in graph.root.values()
+            if n["class_type"] == "CLIPTextEncode" and n["inputs"]["text"].startswith("{")
+        )
+        assert [item["caption"] for item in layout["items"]] == ["Blue flowers", "A stone bench"]
 
 
 def test_make_povs_workflows():
@@ -357,8 +419,8 @@ def test_krea2_pose_studio_graph(reference_type, upscale, fast_preview):
     assert graph.root[encoder["image_b"][0]]["class_type"] != "ImageScale"
     assert len(samplers) == 1
     assert sampler["start_at_step"] == 0 and sampler["end_at_step"] == 10000
-    assert nodes["EmptySD3LatentImage"][1]["width"] == (320 if fast_preview else 384)
-    assert nodes["EmptySD3LatentImage"][1]["height"] == (512 if fast_preview else 640)
+    assert nodes["EmptySD3LatentImage"][1]["width"] == 384
+    assert nodes["EmptySD3LatentImage"][1]["height"] == 640
     assert ("ClownsharKSampler_Beta" in nodes) == (upscale and not fast_preview)
     if upscale and not fast_preview:
         scale_id, scale = nodes["LatentPixelScale"]

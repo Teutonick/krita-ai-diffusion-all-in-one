@@ -6,6 +6,8 @@ import pytest
 from ai_diffusion.backend import krita_quickmt
 from ai_diffusion.backend.client import ClientFeatures, TranslationPackage
 from ai_diffusion.backend.comfy_client import ComfyClient
+from ai_diffusion.backend.comfy_workflow import ComfyWorkflow
+from ai_diffusion.backend.lora_manager import LoraInfo, save_lora_cache
 
 from .conftest import qtapp
 
@@ -27,6 +29,29 @@ def test_english_and_prompt_tokens_do_not_load_the_engine(monkeypatch):
     with pytest.raises(ValueError, match="does not support"):
         krita_quickmt.translate("lang:xx Hallo")
     engine.assert_not_called()
+
+
+def test_english_and_ids_in_mixed_russian_prompt(monkeypatch):
+    run = Mock(return_value=["blue light", "snow"])
+    monkeypatch.setattr(krita_quickmt, "engine", lambda _: SimpleNamespace(translate=run))
+    assert (
+        krita_quickmt.translate("синий свет cinematic photography ABC123 v2. снег", "ru")
+        == "blue light cinematic photography ABC123 v2. snow"
+    )
+    run.assert_called_once_with(["синий свет", "снег"])
+
+
+def test_language_identifier_preserves_english_with_french_selected(monkeypatch):
+    identifier = SimpleNamespace(
+        classify={"studio lighting": ("en", 0.99), "rose bleue": ("fr", 0.95)}.__getitem__
+    )
+    monkeypatch.setattr(krita_quickmt, "_language_identifier", lambda: identifier)
+    run = Mock(return_value=["blue rose"])
+    monkeypatch.setattr(krita_quickmt, "engine", lambda _: SimpleNamespace(translate=run))
+    assert krita_quickmt.translate("studio lighting. rose bleue XJ23A", "fr") == (
+        "studio lighting. blue rose XJ23A"
+    )
+    run.assert_called_once_with(["rose bleue"])
 
 
 @pytest.mark.parametrize(
@@ -76,6 +101,19 @@ def test_translation_routes_each_language_to_its_model(monkeypatch):
     japanese.assert_called_once_with(["冷たい光", "暖かい光"])
 
 
+def test_workflow_translation_preserves_lora_trigger_words(monkeypatch):
+    run = Mock(return_value=["very cold", "with snow"])
+    monkeypatch.setattr(krita_quickmt, "engine", lambda _: SimpleNamespace(translate=run))
+    workflow = ComfyWorkflow()
+    workflow.protected_lora_triggers = ["Blue", "Blue.Rose", "синий огонь"]
+    workflow.translate("lang:ru очень холодный Blue.Rose синий огонь со снегом.")
+    inputs = next(iter(workflow.root.values()))["inputs"]
+    assert krita_quickmt.KritaQuickMTTranslate().translate(**inputs) == (
+        "very cold Blue.Rose синий огонь with snow.",
+    )
+    run.assert_called_once_with(["очень холодный", "со снегом"])
+
+
 @qtapp
 async def test_manual_translation_sends_json_to_quickmt(monkeypatch):
     client = ComfyClient("http://localhost:8188")
@@ -90,3 +128,30 @@ async def test_manual_translation_sends_json_to_quickmt(monkeypatch):
     )
     assert await client.translate("текст", "ru") == "текст"
     assert post.await_count == 1
+
+
+@qtapp
+async def test_manual_translation_protects_selected_lora_triggers(monkeypatch):
+    client = ComfyClient("http://localhost:18188")
+    client._features = ClientFeatures(
+        translation=True, languages=[TranslationPackage("fr", "French")]
+    )
+    save_lora_cache(
+        client.url,
+        [
+            LoraInfo("look", trigger_words=["Blue.Rose, RedGlow"]),
+            LoraInfo("other", trigger_words=["irrelevant"]),
+        ],
+    )
+    post = AsyncMock(return_value="<lora:look:0.8> Blue.Rose cold light")
+    monkeypatch.setattr(client, "_post", post)
+    prompt = "<lora:look:0.8> Blue.Rose lumière froide"
+    await client.translate(prompt, "fr")
+    post.assert_awaited_once_with(
+        "api/krita/quickmt/translate",
+        {
+            "text": prompt,
+            "language": "fr",
+            "protected": ["Blue.Rose", "Blue.Rose, RedGlow", "RedGlow"],
+        },
+    )

@@ -328,6 +328,10 @@ class CustomPackageTab(QWidget):
                     + _("Model card")
                     + "</a>"
                 )
+            if family == (Arch.minimax_h3_image,):
+                description = _(
+                    "Select Live Generation to install the 2-step pDMD LoRA and missing H3 models."
+                )
             self._packages.append(
                 PackageGroupWidget(
                     name,

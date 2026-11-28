@@ -66,6 +66,7 @@ class ComfyWorkflow:
         self.node_count = 0
         self.sample_count = 0
         self.node_defs = node_defs or ComfyObjectInfo({})
+        self.protected_lora_triggers: list[str] = []
         self._cache: dict[str, Output | Output2 | Output3 | Output4] = {}
         self._run_mode: ComfyRunMode = run_mode
 
@@ -1212,7 +1213,11 @@ class ComfyWorkflow:
         return self.add("ETN_ApplyMaskToImage", 1, image=image, mask=mask)
 
     def translate(self, text: str | Output):
-        return self.add("KritaQuickMTTranslate", 1, text=text)
+        node = "KritaQuickMTTranslate"
+        optional = self.node_defs.inputs(node, "optional") or {}
+        if self.protected_lora_triggers and (node not in self.node_defs or "protected" in optional):
+            return self.add(node, 1, text=text, protected=json.dumps(self.protected_lora_triggers))
+        return self.add(node, 1, text=text)
 
     def nsfw_filter(self, image: Output, sensitivity: float):
         if sensitivity > 0:

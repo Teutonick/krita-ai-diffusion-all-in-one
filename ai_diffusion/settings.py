@@ -137,6 +137,8 @@ class PerformanceSettings:
     max_pixel_count: int = 6
     dynamic_caching: bool = False
     tiled_vae: bool = False
+    krea2_live_resolution: int = 768
+    h3_live_resolution: int = 1024
 
 
 class Setting:
@@ -352,7 +354,9 @@ class Settings(QObject):
     _prompt_translation = Setting(
         _("Prompt Translation"),
         "",
-        _("Translate prompts from a supported language to English on the ComfyUI CPU with QuickMT."),
+        _(
+            "Translate prompts from a supported language to English on the ComfyUI CPU with QuickMT."
+        ),
     )
 
     dictation_enabled: bool
@@ -524,6 +528,14 @@ class Settings(QObject):
     )
 
     show_generation_preview: bool
+    krea2_live_resolution: int
+    _krea2_live_resolution = Setting(
+        _("Live Resolution"), 768, _("Maximum length of the long side of the Live preview.")
+    )
+    h3_live_resolution: int
+    _h3_live_resolution = Setting(
+        _("Live Resolution"), 1024, _("Maximum length of the long side of the Live preview.")
+    )
     keep_live_models_loaded: bool
     _keep_live_models_loaded = Setting(
         _("Keep Krea 2 and Qwen3-VL in VRAM (experimental)"),

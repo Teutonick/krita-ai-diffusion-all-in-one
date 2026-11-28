@@ -47,6 +47,7 @@ from PyQt5.QtWidgets import (
 )
 
 from ..backend.client import resolve_arch
+from ..backend.resources import Arch
 from ..backend.workflow import apply_strength, snap_to_percent
 from ..localization import translate as _
 from ..model.jobs import JobKind, JobState
@@ -217,16 +218,30 @@ class QueuePopup(QMenu):
         self._layout.addWidget(resolution_multiplier_label, 3, 0)
         self._layout.addLayout(resolution_multiplier_layout, 3, 1)
 
+        self._live_resolution_label = QLabel(_("Live Resolution"), self)
+        self._live_resolution_slider = QSlider(Qt.Orientation.Horizontal, self)
+        self._live_resolution_slider.setRange(4, 8)
+        self._live_resolution_slider.setToolTip(Settings._krea2_live_resolution.desc)
+        self._live_resolution_slider.valueChanged.connect(self._set_live_resolution)
+        self._live_resolution_display = QLabel(self)
+        self._live_resolution_display.setAlignment(Qt.AlignmentFlag.AlignRight)
+        live_resolution_layout = QHBoxLayout()
+        live_resolution_layout.addWidget(self._live_resolution_slider)
+        live_resolution_layout.addWidget(self._live_resolution_display)
+        self._layout.addWidget(self._live_resolution_label, 4, 0)
+        self._layout.addLayout(live_resolution_layout, 4, 1)
+        self.aboutToShow.connect(self._update_live_resolution)
+
         enqueue_label = QLabel(_("Enqueue"), self)
         self._queue_mode_combo = QComboBox(self)
         self._queue_mode_combo.addItem(_("at the Back"), QueueMode.back)
         self._queue_mode_combo.addItem(_("in Front (new jobs first)"), QueueMode.front)
         self._queue_mode_combo.addItem(_("Replace Queue"), QueueMode.replace)
-        self._layout.addWidget(enqueue_label, 4, 0)
-        self._layout.addWidget(self._queue_mode_combo, 4, 1)
+        self._layout.addWidget(enqueue_label, 5, 0)
+        self._layout.addWidget(self._queue_mode_combo, 5, 1)
 
         cancel_label = QLabel(_("Cancel"), self)
-        self._layout.addWidget(cancel_label, 5, 0)
+        self._layout.addWidget(cancel_label, 6, 0)
         self._cancel_active = self._create_cancel_button(_("Active"), actions.cancel_active)
         self._cancel_queued = self._create_cancel_button(_("Queued"), actions.cancel_queued)
         self._cancel_all = self._create_cancel_button(_("All"), actions.cancel_all)
@@ -234,7 +249,7 @@ class QueuePopup(QMenu):
         cancel_layout.addWidget(self._cancel_active)
         cancel_layout.addWidget(self._cancel_queued)
         cancel_layout.addWidget(self._cancel_all)
-        self._layout.addLayout(cancel_layout, 5, 1)
+        self._layout.addLayout(cancel_layout, 6, 1)
 
         memory_label = QLabel(_("Memory"), self)
         self._unload_models = QToolButton(self)
@@ -260,8 +275,8 @@ class QueuePopup(QMenu):
         unload_layout = QHBoxLayout()
         unload_layout.addWidget(self._vram_bar, 1)
         unload_layout.addWidget(self._unload_models)
-        self._layout.addWidget(memory_label, 6, 0)
-        self._layout.addLayout(unload_layout, 6, 1)
+        self._layout.addWidget(memory_label, 7, 0)
+        self._layout.addLayout(unload_layout, 7, 1)
 
         self._model = root.active_model
 
@@ -354,6 +369,34 @@ class QueuePopup(QMenu):
 
     def _set_resolution_multiplier(self, value: int):
         self.model.resolution_multiplier = value / 10
+
+    def _live_resolution_setting(self):
+        if self.model:
+            return {
+                Arch.krea2: "krea2_live_resolution",
+                Arch.minimax_h3_image: "h3_live_resolution",
+            }.get(self.model.arch)
+
+    def _update_live_resolution(self):
+        key = self._live_resolution_setting()
+        for widget in (
+            self._live_resolution_label,
+            self._live_resolution_slider,
+            self._live_resolution_display,
+        ):
+            widget.setVisible(key is not None)
+        if key:
+            size = getattr(settings, key)
+            with SignalBlocker(self._live_resolution_slider):
+                self._live_resolution_slider.setValue(size // 128)
+            self._live_resolution_display.setText(f"{size} px")
+
+    def _set_live_resolution(self, value: int):
+        if key := self._live_resolution_setting():
+            size = value * 128
+            setattr(settings, key, size)
+            settings.save()
+            self._live_resolution_display.setText(f"{size} px")
 
     def _set_batch_from_combinations(self):
         if count := wildcard_combination_count(self._model):

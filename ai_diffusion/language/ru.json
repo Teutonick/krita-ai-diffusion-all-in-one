@@ -2,6 +2,10 @@
   "id": "ru",
   "name": "Русский",
   "translations": {
+    "Unknown architecture": "Архитектура неизвестна",
+    "Live Resolution": "Разрешение Live",
+    "Maximum length of the long side of the Live preview.": "Максимальная длина длинной стороны превью Live.",
+    "Select Live Generation to install the 2-step pDMD LoRA and missing H3 models.": "Отметьте Live Generation для установки двухшаговой LoRA pDMD и недостающих моделей H3.",
     "Live VRAM experiment disabled: not enough GPU memory. Live continues normally.": "Эксперимент с VRAM отключён: не хватает видеопамяти. Live продолжает работать в обычном режиме.",
     "Select Live Generation to install the 2-step preview adapter and any missing Krea 2 Turbo models.": "Отметьте Live Generation для установки двухшаговой LoRA и недостающих моделей Krea 2 Turbo.",
     "Model card": "Карточка модели",

@@ -193,7 +193,14 @@ def load_checkpoint_with_lora(
         model = w.easy_cache(model, arch)
 
     for lora in checkpoint.loras:
-        model, clip = w.load_lora(model, clip, lora.name, lora.strength, lora.strength)
+        filename = lora.name.replace("\\", "/").rsplit("/", 1)[-1].lower()
+        if (arch, filename) in (
+            (Arch.moss, moss_live_lora),
+            (Arch.minimax_h3_image, h3_live_lora),
+        ):
+            model = w.load_lora_model(model, lora.name, lora.strength)
+        else:
+            model, clip = w.load_lora(model, clip, lora.name, lora.strength, lora.strength)
 
     if checkpoint.keep_live_models_loaded and arch is Arch.krea2:
         model, clip = w.add_cached("KritaKeepLiveModelsLoaded", 2, model=model, clip=clip)
@@ -958,7 +965,8 @@ def generate(
     model, regions = apply_attention_mask(w, model, cond, clip, extent.initial)
     model = apply_regional_ip_adapter(w, model, cond.regions, extent.initial, models)
     if models.arch is Arch.moss:
-        model = w.skip_layer_guidance(model)
+        if not extent.fast_preview:
+            model = w.skip_layer_guidance(model)
         if layout := moss_layout.compile_layout(
             cond.positive.text, extent.initial, cond.style_prompt
         ):
@@ -1970,32 +1978,48 @@ def prepare_prompts(
 
 
 krea_live_lora = "krea2_turbo_2step_rank_64_lora_comfyui.safetensors"
+moss_live_lora = "moss_image_sft_3step_v1.0.safetensors"
+h3_live_lora = "minimax_h3_pdmd_2nfe_comfyui.safetensors"
 
 
-def supports_live_preview(style: Style, models: ClientModels):
+def supports_live_preview(style: Style, models: ClientModels, editing=False):
     checkpoint = style.preferred_checkpoint(models.checkpoints)
     filename = Path(checkpoint.replace("\\", "/")).name.lower()
-    return (
-        checkpoint in models.checkpoints
-        and resolve_arch(style, models) is Arch.krea2
-        and "turbo" in filename
-    )
+    if checkpoint not in models.checkpoints:
+        return False
+    arch = resolve_arch(style, models)
+    if arch is Arch.minimax_h3_image:
+        return all(
+            node in models.node_inputs
+            for node in ("MiniMaxH3ImageConditioning", "MiniMaxH3SigmaShift")
+        ) and (_h3_steps(checkpoint) == 2 or find_live_lora(models, arch) is not None)
+    if arch is Arch.moss and editing:
+        return "TextEncodeMOSSImageEdit" in models.node_inputs and any(
+            moss_layout.is_edit_lora(name) for name in models.loras
+        )
+    if arch is Arch.moss:
+        return "sft" in filename and find_live_lora(models, arch) is not None
+    return arch is Arch.krea2 and "turbo" in filename and find_live_lora(models) is not None
 
 
-def find_live_lora(models: ClientModels):
+def find_live_lora(models: ClientModels, arch: Arch = Arch.krea2):
+    filename = {
+        Arch.moss: moss_live_lora,
+        Arch.minimax_h3_image: h3_live_lora,
+    }.get(arch, krea_live_lora)
     return next(
         (
             name
             for name in models.loras
-            if name.replace("\\", "/").split("/")[-1].lower() == krea_live_lora
+            if name.replace("\\", "/").split("/")[-1].lower() == filename
         ),
         None,
     )
 
 
-def _preview_extent(extent: Extent):
-    if extent.longest_side > 512:
-        extent = extent.scale_keep_aspect(Extent(512, 512))
+def _preview_extent(extent: Extent, longest_side: int):
+    if extent.longest_side > longest_side:
+        extent = extent.scale_keep_aspect(Extent(longest_side, longest_side))
     return extent.at_least(32).multiple_of(32)
 
 
@@ -2048,9 +2072,10 @@ def prepare(
             raise ValueError(_("Install the MOSS Image Edit LoRA to edit an image."))
         if not any(moss_layout.is_edit_lora(lora.name) for lora in i.models.loras):
             i.models.loras.append(LoraInput(adapter, 1.0))
-        i.sampling = SamplingInput("euler", "normal", 4.0, 30, seed=seed)
+        steps = 10 if fast_preview else 30
+        i.sampling = SamplingInput("euler", "normal", 4.0, steps, seed=seed)
         if moss_layout.has_boxes(cond.positive):
-            i.sampling.start_step = min(29, max(0, round(30 * (1 - strength))))
+            i.sampling.start_step = min(steps - 1, max(0, round(steps * (1 - strength))))
 
     if arch is Arch.krea2 and cond.pose_guide is not None:
         i.models.dynamic_caching = i.models.tiled_vae = False
@@ -2064,13 +2089,16 @@ def prepare(
             i.sampling = SamplingInput("euler_ancestral", "beta", 1.0, 8, seed=seed)
 
     if fast_preview:
-        adapter = find_live_lora(models)
-        if not supports_live_preview(style, models) or adapter is None:
-            raise ValueError(
-                _("Live Generation requires Krea 2 Turbo and its ComfyUI 2-step LoRA.")
-            )
-        i.models.loras = [lora for lora in i.models.loras if lora.name != adapter]
-        i.models.loras.append(LoraInput(adapter, 1.0))
+        if not supports_live_preview(style, models, editing=is_moss_edit):
+            raise ValueError(_("The selected model or adapter does not support Live Generation."))
+        if not is_moss_edit and not (
+            arch is Arch.minimax_h3_image and _h3_steps(i.models.checkpoint) == 2
+        ):
+            adapter = ensure(find_live_lora(models, arch))
+            i.models.loras = [lora for lora in i.models.loras if lora.name != adapter]
+            i.models.loras.append(LoraInput(adapter, 1.0))
+            if arch is Arch.moss:
+                i.sampling = SamplingInput("euler", "simple", 1.0, 3, seed=seed)
 
     _check_server_has_models(i.models, i.conditioning.regions, models, files, style.name)
     _check_inpaint_model(inpaint, arch, models)
@@ -2091,11 +2119,18 @@ def prepare(
 
     if fast_preview:
         target = canvas if isinstance(canvas, Extent) else canvas.extent
-        render = _preview_extent(target)
+        preview_limit = {
+            Arch.krea2: perf.krea2_live_resolution,
+            Arch.minimax_h3_image: perf.h3_live_resolution,
+        }.get(arch, 512)
+        render = _preview_extent(target, preview_limit)
         source = Image.scale(canvas, render) if isinstance(canvas, Image) else None
         i.images = ImageInput(
             ExtentInput(render, render, render, target, fast_preview=True),
             initial_image=source,
+            hires_image=canvas
+            if is_moss_edit and moss_layout.has_boxes(cond.positive) and isinstance(canvas, Image)
+            else None,
             hires_mask=mask.to_image(target) if mask else None,
         )
         if inpaint is not None:
@@ -2103,7 +2138,7 @@ def prepare(
             i.inpaint.use_inpaint_model = i.inpaint.use_reference = False
             i.crop_upscale_extent = render
         if cond.pose_guide is not None:
-            render = _preview_extent(cond.pose_guide.extent)
+            render = _preview_extent(cond.pose_guide.extent, preview_limit)
             cond.pose_guide = Image.scale(cond.pose_guide, render)
             i.images.extent = ExtentInput(render, render, render, target, fast_preview=True)
             cond.pose_upscale = False
@@ -2112,9 +2147,11 @@ def prepare(
             if (
                 control.mode.is_ip_adapter
                 and control.image
-                and control.image.extent.longest_side > 512
+                and control.image.extent.longest_side > preview_limit
             ):
-                control.image = Image.scale(control.image, _preview_extent(control.image.extent))
+                control.image = Image.scale(
+                    control.image, _preview_extent(control.image.extent, preview_limit)
+                )
         i.batch_count = 1
     elif arch is Arch.krea2 and cond.pose_guide is not None:
         target = canvas if isinstance(canvas, Extent) else canvas.extent
@@ -2343,7 +2380,7 @@ def minimax_h3_image(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
     model, clip, vae = load_checkpoint_with_lora(
         w, checkpoint, models, h3_pose=pose_guide is not None
     )
-    steps = _h3_steps(checkpoint.checkpoint)
+    steps = 2 if images.extent.fast_preview else _h3_steps(checkpoint.checkpoint)
     if steps == 2:
         if models.node_inputs and "MiniMaxH3SigmaShift" not in models.node_inputs:
             raise ValueError(_("MiniMax H3 Image pDMD requires MiniMaxH3SigmaShift in ComfyUI."))
@@ -2380,7 +2417,10 @@ def minimax_h3_image(w: ComfyWorkflow, i: WorkflowInput, models: ClientModels):
     mask = w.load_mask(images.hires_mask) if images.hires_mask is not None else None
     if mask is not None:
         assert source is not None
-        references.append(w.mask_to_image(mask))
+        mask_reference = w.mask_to_image(mask)
+        if images.extent.fast_preview and images.extent.target != images.extent.initial:
+            mask_reference = w.scale_image(mask_reference, images.extent.initial, "nearest-exact")
+        references.append(mask_reference)
         prompt = (
             f"Edit <Picture 1> only where the corresponding pixels in "
             f"<Picture {len(references)}> are white. Keep the rest of <Picture 1> unchanged. "
@@ -2789,6 +2829,8 @@ def create(i: WorkflowInput, models: ClientModels, comfy_mode=ComfyRunMode.serve
     This should be a pure function, the workflow is entirely defined by the input.
     """
     workflow = ComfyWorkflow(models.node_inputs, comfy_mode)
+    if i.conditioning:
+        workflow.protected_lora_triggers = i.conditioning.protected_lora_triggers
     if i.kind is WorkflowKind.pov:
         if i.models and i.models.version is Arch.minimax_h3_image:
             return minimax_h3_image(workflow, i, models)

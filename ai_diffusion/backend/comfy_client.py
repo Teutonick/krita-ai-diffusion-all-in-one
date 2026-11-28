@@ -5,18 +5,20 @@ import json
 import struct
 import uuid
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from itertools import product
+from pathlib import PurePosixPath
 from time import time
 from typing import Any
 
 from .. import platform_tools, util
-from ..files import FileFormat
+from ..files import FileFormat, FileLibrary
 from ..image import Image, ImageCollection, Point
 from ..localization import translate as _
 from ..settings import PerformanceSettings, settings
 from ..style import Styles
+from ..text import pattern_lora
 from ..util import client_logger as log
 from ..util import parse_enum
 from ..websockets.src import websockets
@@ -42,6 +44,7 @@ from .client import (
     loras_to_upload,
 )
 from .comfy_workflow import ComfyObjectInfo
+from .lora_manager import load_cached_loras
 from .network import NetworkError, RequestManager
 from .resources import (
     Arch,
@@ -396,7 +399,17 @@ class ComfyClient(Client):
             pass
 
     async def _run_job(self, job: JobInfo):
-        workflow = create_workflow(job.work, self.models)
+        work = job.work
+        if (conditioning := work.conditioning) and conditioning.language:
+            names = {lora.name for region in conditioning.regions for lora in region.loras}
+            if work.models:
+                names.update(lora.name for lora in work.models.loras)
+            names.update(match[1] for match in pattern_lora.finditer(conditioning.negative))
+            if triggers := self._lora_triggers(names):
+                work = replace(
+                    work, conditioning=replace(conditioning, protected_lora_triggers=triggers)
+                )
+        workflow = create_workflow(work, self.models)
         if settings.debug_dump_workflow:
             log.info("Automatic workflow/image dumps disabled by media retention policy")
 
@@ -813,11 +826,40 @@ class ComfyClient(Client):
             log.warning("Could not load QuickMT languages: %s", error)
             return []
 
+    def _lora_triggers(self, names: set[str]):
+        if not names:
+            return []
+
+        def path(name: str):
+            return PurePosixPath(name.replace("\\", "/").casefold())
+
+        names = {path(name).as_posix() for name in names}
+        cache_names = set(names)
+        phrases: set[str] = set()
+        for file in FileLibrary.instance().loras:
+            file_path = path(file.id)
+            aliases = {file_path.as_posix(), file_path.stem, file.name.casefold()}
+            if names & aliases:
+                cache_names.update(aliases)
+                if trigger := file.meta("lora_triggers", ""):
+                    phrases.add(trigger.strip())
+        for lora in load_cached_loras(self.url) or []:
+            lora_path = path(lora.name)
+            if {lora_path.as_posix(), lora_path.name} & cache_names:
+                phrases.update(word.strip() for word in lora.trigger_words)
+
+        return sorted(
+            {tag.strip() for phrase in phrases for tag in [phrase, *phrase.split(",")]} - {""}
+        )
+
     async def translate(self, text: str, lang: str):
         if not any(language.code == lang for language in self.features.languages):
             return text
         try:
-            return await self._post("api/krita/quickmt/translate", {"text": text, "language": lang})
+            data: dict[str, Any] = {"text": text, "language": lang}
+            if triggers := self._lora_triggers({match[1] for match in pattern_lora.finditer(text)}):
+                data["protected"] = triggers
+            return await self._post("api/krita/quickmt/translate", data)
         except NetworkError as e:
             log.error(f"Could not translate text: {e!s}")
             return text
@@ -850,6 +892,8 @@ class ComfyClient(Client):
             max_pixel_count=settings.max_pixel_count,
             tiled_vae=settings.tiled_vae,
             dynamic_caching=settings.dynamic_caching,
+            krea2_live_resolution=settings.krea2_live_resolution,
+            h3_live_resolution=settings.h3_live_resolution,
         )
 
     async def upload_loras(self, work: WorkflowInput, local_job_id: str):

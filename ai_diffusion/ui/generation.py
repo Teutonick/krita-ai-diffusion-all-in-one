@@ -1537,10 +1537,18 @@ class GenerationWidget(QWidget):
         self.preview_button.toggled.connect(self._toggle_preview)
 
         self.live_generation_button = QToolButton(self)
-        self.live_generation_button.setIcon(theme.icon("workspace-live"))
+        live_icon = theme.icon("workspace-live")
+        live_icon_active = _tint_icon("workspace-live", QColor(theme.strong_highlight))
+        self.live_generation_button.setIcon(live_icon)
         self.live_generation_button.setCheckable(True)
+        self.live_generation_button.setStyleSheet(self.preview_button.styleSheet())
         self.live_generation_button.setFixedHeight(self.generate_button.height() - 2)
         self.live_generation_button.setToolTip(_("Live Generation"))
+        self.live_generation_button.toggled.connect(
+            lambda checked: self.live_generation_button.setIcon(
+                live_icon_active if checked else live_icon
+            )
+        )
         self.live_generation_button.clicked.connect(self._toggle_live_generation)
 
         self.live_seed_button = QToolButton(self)

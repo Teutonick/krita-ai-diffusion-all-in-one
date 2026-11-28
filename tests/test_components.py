@@ -218,6 +218,16 @@ async def test_krea_live_generation_is_a_standalone_install_option(tmp_path: Pat
     assert "Krea 2 Edit" not in [node.name for node in srv.selected_custom_nodes]
 
 
+def test_h3_live_installer_adds_missing_models(tmp_path: Path):
+    srv = Server(str(tmp_path))
+    package = "lora-live_generation-minimax_h3_image"
+    base = "checkpoint-int8-minimax_h3_image"
+    selected = srv.resolve_model_dependencies([package])
+    assert {package, base, "text_encoder-h3_qwen3vl-minimax_h3_image"} <= set(selected)
+    assert any(item.startswith("vae-") and item.endswith("-minimax_h3_image") for item in selected)
+    assert base not in srv.resolve_model_dependencies([package, "checkpoint-pdmd-minimax_h3_image"])
+
+
 def test_moss_edit_dependencies_reuse_existing_checkpoint(tmp_path: Path):
     srv = Server(str(tmp_path))
     edit = "lora-image_edit-moss"

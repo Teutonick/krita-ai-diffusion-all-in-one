@@ -501,6 +501,17 @@
   ],
   "optional": [
     {
+      "id": "lora-live_generation-minimax_h3_image",
+      "name": "Live Generation (2-step pDMD)",
+      "files": [
+        {
+          "path": "models/loras/minimax_h3_pdmd_2nfe_comfyui.safetensors",
+          "url": "https://huggingface.co/akhaliq/minimax-h3-image-pdmd-2step/resolve/3784e2cfb88997bf57c337398fe2ebf9761ccbbf/minimax_h3_pdmd_2nfe_comfyui.safetensors",
+          "sha256": "5feaeef13df31f98f36364a95e7ce9e8ff0afd71570d1c53d7c3be599e3a0f22"
+        }
+      ]
+    },
+    {
       "id": "checkpoint-int8-minimax_h3_image",
       "name": "MiniMax H3 Image (INT8)",
       "files": [
@@ -935,6 +946,17 @@
           "path": "models/loras/krea2_identity_edit_v2.safetensors",
           "url": "https://huggingface.co/conradlocke/krea2-identity-edit/resolve/f33b26291c640e8ec50b0da420bfee3c9a660daa/krea2_identity_edit_v2.safetensors",
           "sha256": "c53843f9451963a6cb3c22dc4975205056b93a6575fb9347dd2bc6e055ef9877"
+        }
+      ]
+    },
+    {
+      "id": "lora-live_generation-moss",
+      "name": "MOSS Live Generation (3-step SFT)",
+      "files": [
+        {
+          "path": "models/loras/moss_image_sft_3step_v1.0.safetensors",
+          "url": "https://huggingface.co/akhaliq/MOSS-Image-SFT-4-steps/resolve/2ded95c37a029360245926fe72e475e30039bbfb/moss_image_sft_3step_v1.0.safetensors",
+          "sha256": "cde8e7e8cadab93c7081cca1892bc73aaced8bdb583c7dfb9903d2f4e66aa4b2"
         }
       ]
     },

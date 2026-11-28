@@ -127,6 +127,7 @@ class ConditioningInput:
     edit_reference: bool = False  # use input image as conditioning reference
     pose_guide: Image | None = None
     pose_upscale: bool = False
+    protected_lora_triggers: list[str] = field(default_factory=list)
 
 
 class InpaintMode(Enum):

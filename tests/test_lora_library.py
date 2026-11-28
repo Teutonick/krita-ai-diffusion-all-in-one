@@ -163,7 +163,7 @@ def test_add_lora_uses_active_prompt(monkeypatch):
     assert generate.positive == "generate\n<lora:model:1.00> trigger"
 
 
-def test_all_rating_includes_unclassified_local_loras_but_excludes_known_other_architectures():
+def test_architecture_filter_is_independent_of_content_rating():
     from types import SimpleNamespace as NS
 
     __import__("ai_diffusion.model.model")
@@ -172,6 +172,7 @@ def test_all_rating_includes_unclassified_local_loras_but_excludes_known_other_a
     loras = [
         LoraInfo("krea", base_model="Krea 2", nsfw_level=2),
         LoraInfo("rated", base_model="Krea 2", nsfw_level=16),
+        LoraInfo("unrated", base_model="Krea 2"),
         LoraInfo("flux", base_model="Flux.1 D"),
         LoraInfo("unknown", base_model="Unknown"),
         LoraInfo("missing"),
@@ -187,14 +188,17 @@ def test_all_rating_includes_unclassified_local_loras_but_excludes_known_other_a
         _populate_grid=lambda: None,
     )
     lora_picker.LoraBrowser._apply_filter(cast(lora_picker.LoraBrowser, browser))
-    assert [l.name for l in browser._filtered] == ["krea", "missing", "rated", "unknown"]
+    assert [l.name for l in browser._filtered] == ["krea", "rated", "unrated"]
     browser._nsfw_combo.currentData = lambda: SFW
     lora_picker.LoraBrowser._apply_filter(cast(lora_picker.LoraBrowser, browser))
     assert [l.name for l in browser._filtered] == ["krea"]
     browser._nsfw_combo.currentData = lambda: ALL
+    browser._arch_combo.currentData = lambda: lora_picker._ARCH_UNKNOWN
+    lora_picker.LoraBrowser._apply_filter(cast(lora_picker.LoraBrowser, browser))
+    assert [l.name for l in browser._filtered] == ["missing", "unknown"]
     browser._arch_combo.currentData = lambda: lora_picker._ARCH_ANY
     lora_picker.LoraBrowser._apply_filter(cast(lora_picker.LoraBrowser, browser))
-    assert len(browser._filtered) == 5
+    assert len(browser._filtered) == 6
 
 
 def test_server_inventory_adds_loras_without_metadata():

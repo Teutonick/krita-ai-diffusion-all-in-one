@@ -45,7 +45,7 @@ from ..text import format_option_group
 from ..util import ensure
 from ..wildcards import WildcardLibrary
 from . import theme
-from .content_rating import ALL, SFW, content_rating_combo, matches_content_rating
+from .content_rating import SFW, content_rating_combo, matches_content_rating
 
 _PREVIEW_SIZE_DEFAULT = 96
 _PREVIEW_SIZE_MIN = 48
@@ -60,6 +60,7 @@ _MULTI_TRIGGERS_NONE = "none"
 _MULTI_TRIGGERS_FIRST = "first"
 _MULTI_TRIGGERS_ALL = "all"
 _ARCH_ANY = "__any__"
+_ARCH_UNKNOWN = "__unknown__"
 _SORT_NAME = "name"
 _SORT_DATE = "date"
 _POS_END = "end"
@@ -250,6 +251,7 @@ class LoraBrowser(QWidget):
         self._arch_combo.addItem(_("Any"), _ARCH_ANY)
         for arch in sorted(_KNOWN_ARCHES, key=lambda a: _ARCH_LABELS.get(a, a)):
             self._arch_combo.addItem(_ARCH_LABELS.get(arch, arch), arch)
+        self._arch_combo.addItem(_("Unknown architecture"), _ARCH_UNKNOWN)
         self.set_arch(current_arch)
         self._arch_combo.currentIndexChanged.connect(self._apply_filter)
 
@@ -559,8 +561,7 @@ class LoraBrowser(QWidget):
 
     def _apply_filter(self):
         search = self._search.text().lower()
-        arch = self._arch_combo.currentData()
-        arch = "" if arch == _ARCH_ANY else (arch or "")
+        arch = self._arch_combo.currentData() or _ARCH_ANY
         active_tag = self._tag_combo.currentData()
         favorites_only = self._favorites_only.isChecked()
         nsfw_mode = self._nsfw_combo.currentData()
@@ -570,9 +571,9 @@ class LoraBrowser(QWidget):
                 return False
             if not matches_content_rating(nsfw_mode, lora.nsfw_level):
                 return False
-            if arch:
-                model_arch = arch_for_base_model(lora.base_model)
-                if model_arch != arch and (model_arch or nsfw_mode != ALL):
+            if arch != _ARCH_ANY:
+                model_arch = arch_for_base_model(lora.base_model) or _ARCH_UNKNOWN
+                if model_arch != arch:
                     return False
             if active_tag and active_tag != _TAG_ALL:
                 if active_tag not in lora.tags:
@@ -612,8 +613,13 @@ class LoraBrowser(QWidget):
             # seems to "work" on multi-line items.
             item.setSizeHint(cell_size)
             fav = "★ " if lora.favorite else ""
+            base = (
+                lora.base_model
+                if arch_for_base_model(lora.base_model)
+                else _("Unknown architecture")
+            )
             item.setToolTip(
-                f"{fav}{lora.display_name}\nFile: {lora.name}\nBase: {lora.base_model or '?'}\n"
+                f"{fav}{lora.display_name}\nFile: {lora.name}\nBase: {base}\n"
                 + (f"Triggers: {' | '.join(lora.trigger_words)}" if lora.trigger_words else "")
             )
             self._set_tile_icon(item, lora)

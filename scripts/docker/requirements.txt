@@ -131,6 +131,7 @@ cssselect2==0.9.0
 ctranslate2==4.8.1
     # via
     #   -r scripts/docker/requirements.txt
+langid==1.1.6
 cuda-bindings==13.4.4
     # via
     #   -r scripts/docker/requirements.txt

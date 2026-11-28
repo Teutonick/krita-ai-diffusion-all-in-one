@@ -79,6 +79,7 @@ cssselect2==0.9.0
 ctranslate2==4.8.1
     # via
     #   -r ai_diffusion/backend/requirements/linux-cuda126.txt
+langid==1.1.6
 cuda-bindings==12.9.7
     # via
     #   -r ai_diffusion/backend/requirements/linux-cuda126.txt

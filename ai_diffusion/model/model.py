@@ -659,11 +659,18 @@ class DocumentModel(QObject, ObservableProperties):
             fast_preview=fast_preview,
         )
         if self.lora_filter is not None and input.models:
-            adapter = workflow.find_live_lora(client.models) if fast_preview else None
+            adapter = workflow.find_live_lora(client.models, arch) if fast_preview else None
             input.models.loras = [
                 lora
                 for lora in input.models.loras
-                if lora.name == adapter or self.lora_filter(lora.name)
+                if lora.name == adapter
+                or (
+                    fast_preview
+                    and arch is Arch.moss
+                    and self.is_editing
+                    and moss_layout.is_edit_lora(lora.name)
+                )
+                or self.lora_filter(lora.name)
             ]
         loras = input.models.loras if input.models else []
         job_name = prompt_meta.get("prompt_eval", prompt_meta["prompt"])
@@ -2122,8 +2129,7 @@ class LiveGeneration(QObject, ObservableProperties):
             model.has_document
             and model.workspace is Workspace.generation
             and isinstance(client, ComfyClient)
-            and workflow.supports_live_preview(model.active_style, client.models)
-            and workflow.find_live_lora(client.models) is not None
+            and workflow.supports_live_preview(model.active_style, client.models, model.is_editing)
         )
 
     def toggle(self, active: bool):
@@ -2255,6 +2261,7 @@ class LiveGeneration(QObject, ObservableProperties):
                     params.workflow_kind = new_input.kind
                     if (
                         settings.keep_live_models_loaded
+                        and model.arch is Arch.krea2
                         and not keep_live_models_failed
                         and "KritaKeepLiveModelsLoaded" in client.models.node_inputs
                     ):

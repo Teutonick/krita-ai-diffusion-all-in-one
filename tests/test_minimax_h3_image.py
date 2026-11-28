@@ -22,7 +22,59 @@ from ai_diffusion.backend.resources import Arch, ControlMode, ResourceKind, reso
 from ai_diffusion.files import File, FileCollection, FileFormat, FileLibrary
 from ai_diffusion.image import Bounds, Extent, Image, Mask
 from ai_diffusion.pose_studio import PoseScene
+from ai_diffusion.settings import PerformanceSettings
 from ai_diffusion.style import Style
+
+
+@pytest.mark.parametrize("editing", [False, True])
+def test_h3_live_uses_pdmd_on_selected_checkpoint(editing):
+    arch = Arch.minimax_h3_image
+    checkpoint = "minimax_h3_image_pruned_int8_convrot.safetensors"
+    models = ClientModels()
+    models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, arch, FileFormat.diffusion)
+    models.resources = {
+        resource_id(ResourceKind.text_encoder, Arch.all, "h3_qwen3vl"): "official.safetensors",
+        resource_id(ResourceKind.vae, arch, "default"): "h3_image_vae.safetensors",
+    }
+    models.node_inputs = ComfyObjectInfo({
+        "MiniMaxH3ImageConditioning": {},
+        "MiniMaxH3SigmaShift": {},
+    })
+    style = Style(Path("test-h3.json"))
+    style.checkpoints = [checkpoint]
+    assert not workflow.supports_live_preview(style, models, editing)
+    models.loras = [workflow.h3_live_lora]
+    assert workflow.supports_live_preview(style, models, editing)
+    extent = Extent(1280, 960)
+    canvas = Image.create(extent, 255) if editing else extent
+    kind = WorkflowKind.refine if editing else WorkflowKind.generate
+    for live in (True, False):
+        cond = ConditioningInput(
+            "A robot in <Picture 1>.",
+            edit_reference=editing,
+            control=[ControlInput(ControlMode.reference, Image.create(extent, 255))],
+        )
+        work = workflow.prepare(
+            kind,
+            canvas,
+            cond,
+            style,
+            42,
+            models,
+            FileLibrary(FileCollection(), FileCollection()),
+            PerformanceSettings(h3_live_resolution=768),
+            fast_preview=live,
+        )
+        nodes = {n["class_type"]: n["inputs"] for n in workflow.create(work, models).root.values()}
+        assert work.models and work.models.checkpoint == checkpoint
+        assert nodes["KSampler"]["steps"] == (2 if live else 6)
+        assert nodes["MiniMaxH3ImageConditioning"]["width"] == (768 if live else 1280)
+        assert ("images.image_1" in nodes["MiniMaxH3ImageConditioning"]) is editing
+        assert ("MiniMaxH3SigmaShift" in nodes) is live
+        if live:
+            assert nodes["LoraLoaderModelOnly"]["lora_name"] == workflow.h3_live_lora
+        else:
+            assert "LoraLoaderModelOnly" not in nodes
 
 
 @pytest.mark.parametrize("with_loras", [False, True])

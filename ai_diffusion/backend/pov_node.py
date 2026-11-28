@@ -76,6 +76,25 @@ def person_boxes(predictions):
             a, b = max(pairs, key=lambda pair: float(scores[pair[0]] + scores[pair[1]]))
             selected[index] = False
             selected[a] = selected[b] = True
+
+    keep = []
+    for index in torch.argsort(scores, descending=True).tolist():
+        if not selected[index]:
+            continue
+        for other in keep:
+            intersection = (
+                overlap[index, other] * (areas[index] + areas[other]) / (1 + overlap[index, other])
+            )
+            # A second box over the same body can survive the detector's own NMS.
+            if overlap[index, other] >= 0.55 or (
+                intersection >= 0.8 * torch.minimum(areas[index], areas[other])
+                and abs(centers[index] - centers[other])
+                < 0.2 * min(boxes[index, 2] - boxes[index, 0], boxes[other, 2] - boxes[other, 0])
+            ):
+                selected[index] = False
+                break
+        if selected[index]:
+            keep.append(index)
     return boxes[selected]
 
 

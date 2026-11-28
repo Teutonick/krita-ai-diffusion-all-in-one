@@ -78,6 +78,7 @@ cssselect2==0.9.0
 ctranslate2==4.8.1
     # via
     #   -r ai_diffusion/backend/requirements/macos-mps.txt
+langid==1.1.6
 cycler==0.12.1
     # via
     #   -r ai_diffusion/backend/requirements/macos-mps.txt

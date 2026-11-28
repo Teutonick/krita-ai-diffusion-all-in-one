@@ -1,4 +1,39 @@
-# 1.53.0-all-in-one.86 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.93 — krita-ai-diffusion-all-in-one
+
+The local LoRA library filters content rating independently of architecture.
+LoRAs without architecture metadata have their own architecture filter.
+
+## 1.53.0-all-in-one.92
+
+Removed temporary Krea 2 Live prompt tracing from the workflow and server node.
+
+## 1.53.0-all-in-one.91
+
+The generation options popup has a Live Resolution slider. Krea 2 defaults to
+768 px. MiniMax H3 Image supports experimental two-step pDMD Live previews for
+generation and editing, with an optional installer entry for the pDMD LoRA.
+
+## 1.53.0-all-in-one.90
+
+Krea 2 Live Generation has a dedicated preview resolution setting under Interface.
+
+## 1.53.0-all-in-one.89
+
+Diagnostic build: log the final Krea 2 Live prompt for the android reproduction.
+Make POVs filters overlapping detector boxes before counting subjects.
+
+## 1.53.0-all-in-one.88
+
+The Live Generation button uses the same active highlight as the preview button.
+QuickMT preserves known trigger words from selected LoRAs in manual and automatic translation.
+QuickMT also preserves mixed letter-and-digit identifiers and skips detected English text.
+
+## 1.53.0-all-in-one.87
+
+Live Generation supports MOSS Image generation with its optional 3-step SFT
+adapter and MOSS Image Edit with a 10-step preview. Both support Prompt Boxes.
+
+## 1.53.0-all-in-one.86
 
 Live Generation displays and locks its seed in generation settings, with a
 toolbar button to try a new seed. Turning Live off restores the previous seed

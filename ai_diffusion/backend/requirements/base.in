@@ -63,6 +63,7 @@ gguf
 
 # QuickMT CPU prompt translation
 ctranslate2==4.8.1
+langid==1.1.6
 # Fixed version of the SentencePiece native parser
 sentencepiece>=0.2.1
 pip
