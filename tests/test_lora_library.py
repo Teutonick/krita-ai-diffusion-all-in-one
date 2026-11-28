@@ -2,7 +2,7 @@ from typing import cast
 from unittest.mock import AsyncMock
 from urllib.parse import parse_qs, urlsplit
 
-from ai_diffusion.backend.lora_manager import LoraInfo, fetch_loras_pages
+from ai_diffusion.backend.lora_manager import LoraInfo, fetch_loras_pages, merge_lora_inventory
 from ai_diffusion.ui.content_rating import ALL, NSFW, SFW, matches_content_rating
 
 from .conftest import qtapp
@@ -163,14 +163,15 @@ def test_add_lora_uses_active_prompt(monkeypatch):
     assert generate.positive == "generate\n<lora:model:1.00> trigger"
 
 
-def test_base_model_filter_excludes_unknown_and_other_architectures():
+def test_all_rating_includes_unclassified_local_loras_but_excludes_known_other_architectures():
     from types import SimpleNamespace as NS
 
     __import__("ai_diffusion.model.model")
     from ai_diffusion.ui import lora_picker
 
     loras = [
-        LoraInfo("krea", base_model="Krea 2"),
+        LoraInfo("krea", base_model="Krea 2", nsfw_level=2),
+        LoraInfo("rated", base_model="Krea 2", nsfw_level=16),
         LoraInfo("flux", base_model="Flux.1 D"),
         LoraInfo("unknown", base_model="Unknown"),
         LoraInfo("missing"),
@@ -186,10 +187,20 @@ def test_base_model_filter_excludes_unknown_and_other_architectures():
         _populate_grid=lambda: None,
     )
     lora_picker.LoraBrowser._apply_filter(cast(lora_picker.LoraBrowser, browser))
+    assert [l.name for l in browser._filtered] == ["krea", "missing", "rated", "unknown"]
+    browser._nsfw_combo.currentData = lambda: SFW
+    lora_picker.LoraBrowser._apply_filter(cast(lora_picker.LoraBrowser, browser))
     assert [l.name for l in browser._filtered] == ["krea"]
+    browser._nsfw_combo.currentData = lambda: ALL
     browser._arch_combo.currentData = lambda: lora_picker._ARCH_ANY
     lora_picker.LoraBrowser._apply_filter(cast(lora_picker.LoraBrowser, browser))
-    assert len(browser._filtered) == 4
+    assert len(browser._filtered) == 5
+
+
+def test_server_inventory_adds_loras_without_metadata():
+    known = LoraInfo("Krea2/known", base_model="Krea 2", nsfw_level=16)
+    result = merge_lora_inventory([known], ["krea2\\known.safetensors", "offline.safetensors"])
+    assert result == [known, LoraInfo("offline", display_name="offline")]
 
 
 @qtapp

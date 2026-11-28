@@ -47,7 +47,7 @@ from ..backend.resources import Arch
 from ..document import LayerType
 from ..image import Bounds, Extent, Image
 from ..localization import translate as _
-from ..model.properties import Binding, bind
+from ..model.properties import Binding
 from ..model.region import Region, RegionLink, RootRegion, translate_prompt
 from ..model.root import root
 from ..text import char16_index_to_str_index, format_option_group, str_index_to_char16_index
@@ -147,7 +147,7 @@ class ActiveRegionWidget(QFrame):
         super().__init__(parent)
         self._root = root
         self._region: RootRegion | Region | None = root
-        self._bindings: list[QMetaObject.Connection] = []
+        self._bindings: list[Binding | QMetaObject.Connection] = []
         self._header_style = header
         self._translation_enabled = True
         self._is_slim = False
@@ -371,14 +371,23 @@ class ActiveRegionWidget(QFrame):
             if self._revert_action is not None:
                 self._revert_action.setEnabled(False)
 
+    def _bind_prompt(self, region: RootRegion | Region, name: str, editor: TextPromptWidget):
+        editor.text = getattr(region, name)
+        return Binding(
+            getattr(region, f"{name}_changed").connect(editor.replace_text),
+            editor.text_changed.connect(lambda text: setattr(region, name, text)),
+        )
+
     def _setup_bindings(self, region: RootRegion | Region | None):
         Binding.disconnect_all(self._bindings)
+        ensure(self.positive.document()).clearUndoRedoStacks()
+        ensure(self.negative.document()).clearUndoRedoStacks()
         is_root_region = isinstance(region, RootRegion)
         if is_root_region:
             self._root = region
             self._bindings = [
-                bind(region, "positive", self.positive, "text"),
-                bind(region, "negative", self.negative, "text"),
+                self._bind_prompt(region, "positive", self.positive),
+                self._bind_prompt(region, "negative", self.negative),
             ]
             if self.is_slim:
                 evt = region.negative_enabled_live_changed
@@ -389,7 +398,7 @@ class ActiveRegionWidget(QFrame):
         elif isinstance(region, Region):
             self._root = region.root
             self._bindings = [
-                bind(region, "positive", self.positive, "text"),
+                self._bind_prompt(region, "positive", self.positive),
                 region.layer_ids_changed.connect(self._update_links),
                 self._link_button.clicked.connect(region.toggle_active_link),
                 self._remove_button.clicked.connect(region.remove),

@@ -1543,6 +1543,11 @@ class GenerationWidget(QWidget):
         self.live_generation_button.setToolTip(_("Live Generation"))
         self.live_generation_button.clicked.connect(self._toggle_live_generation)
 
+        self.live_seed_button = QToolButton(self)
+        self.live_seed_button.setIcon(theme.icon("random"))
+        self.live_seed_button.setFixedHeight(self.generate_button.height() - 2)
+        self.live_seed_button.setToolTip(_("Generate a new fixed seed for Live Generation"))
+
         self.combinations_button = QToolButton(self)
         self.combinations_button.setIcon(theme.icon("combinations"))
         self.combinations_button.setFixedHeight(self.generate_button.height() - 2)
@@ -1570,6 +1575,7 @@ class GenerationWidget(QWidget):
         actions_layout.addSpacing(6)
         actions_layout.addWidget(self.preview_button)
         actions_layout.addWidget(self.live_generation_button)
+        actions_layout.addWidget(self.live_seed_button)
         actions_layout.addSpacing(6)
         actions_layout.addWidget(self.pause_button)
         actions_layout.addWidget(self.skip_button)
@@ -1583,6 +1589,8 @@ class GenerationWidget(QWidget):
 
         self.error_box = ErrorBox(self)
         layout.addWidget(self.error_box)
+        self.live_vram_warning = ErrorBox(self, dismissible=True)
+        layout.addWidget(self.live_vram_warning)
 
         self.history_search = QLineEdit(self)
         self.history_search.setPlaceholderText(_("Search prompts…"))
@@ -1674,6 +1682,17 @@ class GenerationWidget(QWidget):
                 bind(model, "strength", self.strength_slider, "value"),
                 bind(model, "layer_count", self.layer_count_widget, "value"),
                 bind(model, "error", self.error_box, "error", Bind.one_way),
+                bind(
+                    model.live_generation,
+                    "vram_warning",
+                    self.live_vram_warning,
+                    "error",
+                    Bind.one_way,
+                ),
+                self.live_vram_warning.dismissed.connect(
+                    model.live_generation.dismiss_vram_warning
+                ),
+                self.live_seed_button.clicked.connect(model.live_generation.randomize_seed),
                 bind_toggle(model, "region_only", self.region_mask_button),
                 model.inpaint.mode_changed.connect(self.update_generate_options),
                 model.strength_changed.connect(self.update_generate_options),
@@ -2014,6 +2033,7 @@ class GenerationWidget(QWidget):
         live = self.model.live_generation
         self.live_generation_button.setVisible(live.available)
         self.live_generation_button.setChecked(live.is_active)
+        self.live_seed_button.setVisible(live.available and live.is_active)
         self.loop_button.setEnabled(not live.is_active)
         if not self.model.has_document:
             return

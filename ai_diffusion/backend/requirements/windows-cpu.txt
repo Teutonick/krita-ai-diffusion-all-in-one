@@ -41,34 +41,17 @@ antlr4-python3-runtime==4.9.3
 anyio==4.14.2
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   httpx
     #   httpx2
-argostranslate @ https://github.com/argosopentech/argos-translate/archive/17ed1a9b055c5ba1b51d76b683bbb0c64e2a4a88.zip
-    # via
-    #   -c ai_diffusion/backend/requirements/security.in
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
 attrs==26.1.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   aiohttp
 av==18.1.0
     # via -r ai_diffusion/backend/requirements/windows-cpu.txt
-blis==1.3.3
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   thinc
-catalogue==2.0.10
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   spacy
-    #   srsly
-    #   thinc
 certifi==2026.10.18
     # via
     #   -c ai_diffusion/backend/requirements/security.in
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   httpcore
-    #   httpx
     #   mediapipe
     #   requests
 cffi==2.1.1
@@ -85,26 +68,12 @@ click==8.4.2
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   huggingface-hub
-    #   sacremoses
-    #   spacy
-cloudpathlib==0.24.0
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   weasel
 colorama==0.4.6
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   click
     #   tqdm
     #   typer
-    #   udapi
-    #   wasabi
-confection==1.3.3
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   spacy
-    #   thinc
-    #   weasel
 contourpy==1.3.3
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
@@ -116,31 +85,19 @@ cssselect2==0.9.0
 ctranslate2==4.8.1
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   argostranslate
 cycler==0.12.1
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   matplotlib
-cymem==2.0.13
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   preshed
-    #   spacy
-    #   thinc
 einops==0.8.2
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   spandrel
-emoji==2.15.0
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   stanza
 filelock==4.2.1
     # via
     #   -c ai_diffusion/backend/requirements/security.in
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   huggingface-hub
-    #   minisbd
     #   torch
 flatbuffers==25.12.19
     # via
@@ -170,22 +127,13 @@ gguf==0.19.0
 h11==0.16.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   httpcore
     #   httpcore2
 hf-xet==1.6.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   huggingface-hub
-httpcore==1.0.9
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   httpx
 httpcore2==2.16.0
     # via httpx2
-httpx==0.28.1
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   weasel
 httpx2==2.16.0
     # via huggingface-hub
 huggingface-hub==1.33.0
@@ -197,7 +145,6 @@ idna==3.19
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   anyio
-    #   httpx
     #   httpx2
     #   requests
     #   yarl
@@ -214,12 +161,10 @@ iopath==0.1.10
 jinja2==3.1.6
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   spacy
     #   torch
 joblib==1.5.3
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   sacremoses
     #   scikit-learn
 kiwisolver==1.5.0
     # via
@@ -257,10 +202,6 @@ mdurl==0.1.2
     #   markdown-it-py
 mediapipe==1.0.1
     # via -r ai_diffusion/backend/requirements/windows-cpu.txt
-minisbd==0.9.5
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   argostranslate
 mpmath==1.3.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
@@ -271,12 +212,6 @@ multidict==6.9.1
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   aiohttp
     #   yarl
-murmurhash==1.0.15
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   preshed
-    #   spacy
-    #   thinc
 narwhals==2.25.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
@@ -285,14 +220,12 @@ networkx==3.6.1
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   scikit-image
-    #   stanza
     #   torch
 numpy==2.5.2
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   albucore
     #   albumentations
-    #   blis
     #   contourpy
     #   ctranslate2
     #   fvcore
@@ -300,7 +233,6 @@ numpy==2.5.2
     #   imageio
     #   matplotlib
     #   mediapipe
-    #   minisbd
     #   onnxruntime
     #   opencv-contrib-python
     #   opencv-python
@@ -309,10 +241,7 @@ numpy==2.5.2
     #   scikit-learn
     #   scipy
     #   soundfile
-    #   spacy
     #   spandrel
-    #   stanza
-    #   thinc
     #   tifffile
     #   torchsde
     #   torchvision
@@ -322,7 +251,6 @@ omegaconf==2.3.1
 onnxruntime==1.29.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   minisbd
 opencv-contrib-python==5.0.0.93
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
@@ -337,17 +265,13 @@ opencv-python-headless==5.0.0.93
 packaging==26.3
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   argostranslate
     #   huggingface-hub
     #   kornia
     #   lazy-loader
     #   matplotlib
     #   onnxruntime
     #   scikit-image
-    #   spacy
-    #   thinc
     #   transformers
-    #   weasel
 pillow==13.0.0
     # via
     #   -c ai_diffusion/backend/requirements/security.in
@@ -365,17 +289,11 @@ pip==26.2
 platformdirs==4.11.3
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   stanza
     #   yapf
 portalocker==4.1.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   iopath
-preshed==3.0.13
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   spacy
-    #   thinc
 propcache==0.5.2
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
@@ -386,7 +304,6 @@ protobuf==5.29.6
     #   -c ai_diffusion/backend/requirements/security.in
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   onnxruntime
-    #   stanza
 psutil==7.2.2
     # via -r ai_diffusion/backend/requirements/windows-cpu.txt
 pycparser==3.0
@@ -397,9 +314,6 @@ pydantic==2.13.4
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   albumentations
-    #   spacy
-    #   thinc
-    #   weasel
 pydantic-core==2.46.4
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
@@ -430,9 +344,7 @@ pyyaml==6.0.3
 regex==2026.7.19
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   sacremoses
     #   transformers
-    #   udtools
 reportlab==5.0.1
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
@@ -441,16 +353,10 @@ requests==2.34.2
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   gguf
-    #   spacy
-    #   stanza
 rich==15.0.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   typer
-sacremoses==0.1.1
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   argostranslate
 safetensors==0.8.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
@@ -471,14 +377,11 @@ sentencepiece==0.2.1
     # via
     #   -c ai_diffusion/backend/requirements/security.in
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   argostranslate
 setuptools==84.1.0
     # via
     #   -c ai_diffusion/backend/requirements/security.in
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   ctranslate2
-    #   spacy
-    #   thinc
     #   torch
 shellingham==1.5.4
     # via
@@ -492,40 +395,14 @@ six==1.17.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   python-dateutil
-smart-open==8.0.1
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   weasel
 sounddevice==0.5.6
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   mediapipe
 soundfile==0.14.0
     # via -r ai_diffusion/backend/requirements/windows-cpu.txt
-spacy==3.8.15
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   argostranslate
-spacy-legacy==3.0.12
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   spacy
-spacy-loggers==1.0.5
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   spacy
 spandrel==0.4.2
     # via -r ai_diffusion/backend/requirements/windows-cpu.txt
-srsly==2.5.3
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   spacy
-    #   thinc
-    #   weasel
-stanza==1.12.2
-    # via
-    #   -c ai_diffusion/backend/requirements/security.in
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
 stringzilla==5.1.2
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
@@ -544,11 +421,6 @@ termcolor==3.3.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   fvcore
-    #   udapi
-thinc==8.3.13
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   spacy
 threadpoolctl==3.6.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
@@ -571,7 +443,6 @@ torch==2.13.0+cpu
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   kornia
     #   spandrel
-    #   stanza
     #   torchsde
     #   torchvision
 torchaudio==2.11.0+cpu
@@ -589,9 +460,6 @@ tqdm==4.70.0
     #   gguf
     #   huggingface-hub
     #   iopath
-    #   sacremoses
-    #   spacy
-    #   stanza
     #   transformers
 trampoline==0.1.2
     # via
@@ -608,9 +476,7 @@ truststore==0.10.5
 typer==0.27.1
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   spacy
     #   transformers
-    #   weasel
 typing-extensions==4.16.0
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
@@ -630,38 +496,20 @@ typing-inspection==0.4.4
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   pydantic
-udapi==0.5.2
-    # via udtools
-udtools==0.2.9
-    # via stanza
 urllib3==2.8.0
     # via
     #   -c ai_diffusion/backend/requirements/security.in
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   requests
-wasabi==1.1.3
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   spacy
-    #   thinc
-    #   weasel
 wcwidth==0.8.2
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   ftfy
-weasel==1.0.0
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   spacy
 webencodings==0.6.1
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt
     #   cssselect2
     #   tinycss2
-wrapt==2.3.0
-    # via
-    #   -r ai_diffusion/backend/requirements/windows-cpu.txt
-    #   smart-open
 yacs==0.1.8
     # via
     #   -r ai_diffusion/backend/requirements/windows-cpu.txt

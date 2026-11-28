@@ -15,12 +15,9 @@ pip>=26.2.0
 protobuf>=5.29.6
 sentencepiece>=0.2.1
 setuptools>=84.1.0
-stanza>=1.12.2
 transformers>=5.22.1
 urllib3>=2.8.0
 
-# Official Argos commit makes vulnerable Stanza optional; MiniSBD remains the default.
-argostranslate @ https://github.com/argosopentech/argos-translate/archive/17ed1a9b055c5ba1b51d76b683bbb0c64e2a4a88.zip
 
 # Compatibility with Diffusers and optional model-manager dependencies.
 huggingface-hub>=1.33.0,<2

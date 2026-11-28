@@ -159,6 +159,14 @@ def arch_for_base_model(base_model: str) -> str:
     return ""
 
 
+def merge_lora_inventory(loras: list[LoraInfo], filenames: list[str]):
+    entries = {lora.name.replace("\\", "/").casefold(): lora for lora in loras}
+    for filename in filenames:
+        name = _clean_name(filename)
+        entries.setdefault(name.replace("\\", "/").casefold(), LoraInfo(name, display_name=name))
+    return list(entries.values())
+
+
 def _cache_path(base_url: str) -> Path:
     url_hash = hashlib.md5(base_url.encode()).hexdigest()[:8]
     return util.user_data_dir / f"lora_manager_cache_{url_hash}.json"

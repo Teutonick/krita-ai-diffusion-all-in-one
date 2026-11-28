@@ -1,0 +1,872 @@
+{
+  "ar": {
+    "name": "Arabic",
+    "revision": "a1542c88d817d641a2acf2b8952bc892144882c0",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        407101843,
+        "2c4e6f5d86de0d9d6c23c54768d7ab6bd20fb7a36099c987368d6a9f45c32da1"
+      ],
+      "source_vocabulary.json": [
+        1205230,
+        null
+      ],
+      "target_vocabulary.json": [
+        546670,
+        null
+      ],
+      "src.spm.model": [
+        901383,
+        "1a510ccfeb5cf06584327b9c2482ed0a4111d06348a56e28d165165b6dabe520"
+      ],
+      "tgt.spm.model": [
+        806180,
+        "8c793ee4a6d01a8b3fcd24d246a1580febf053747e44eefe99606974957cfdaa"
+      ]
+    }
+  },
+  "bn": {
+    "name": "Bengali",
+    "revision": "2f48d4c2e57022c798701b889e2fbb83e0facc70",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "96587c29434faa11721b976c53c703221c8711c9e867e44250236b37820ca1d6"
+      ],
+      "source_vocabulary.json": [
+        810921,
+        null
+      ],
+      "target_vocabulary.json": [
+        336911,
+        null
+      ],
+      "src.spm.model": [
+        768694,
+        "c369113cd9a4199de2326aa56b83cdc4d39b2f23b5181b6a180af405f36357fd"
+      ],
+      "tgt.spm.model": [
+        587529,
+        "43a755c834037d2ae49fbf18450da93ebd81f60be9b9b27f26480098c372e235"
+      ]
+    }
+  },
+  "cs": {
+    "name": "Czech",
+    "revision": "0a32124c267ce58d28ff7b640445674c857ac16e",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        409915789,
+        "5a649c489593a3a8b5e4bdc27af3c1626707a49b33c3f7df0d2bc1a849decc2b"
+      ],
+      "source_vocabulary.json": [
+        672184,
+        null
+      ],
+      "target_vocabulary.json": [
+        541629,
+        null
+      ],
+      "src.spm.model": [
+        828185,
+        "85c6d43b1b3c3f658776e489e998671c2ad653f99fef942e9c9b3e69fa2da69b"
+      ],
+      "tgt.spm.model": [
+        800183,
+        "ffcee02997db92cbb52f1dfbc1e8a2b16e0b9d1f1b069da41ebf2401e22328fa"
+      ]
+    }
+  },
+  "da": {
+    "name": "Danish",
+    "revision": "bcbe711e666f7b6c87c6f829eef577e7e30e33dc",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        409915789,
+        "b8e3d7ae48cd5fc340ae381477206a6fcefc1f2329364d1b22d108373b903e6d"
+      ],
+      "source_vocabulary.json": [
+        569481,
+        null
+      ],
+      "target_vocabulary.json": [
+        541341,
+        null
+      ],
+      "src.spm.model": [
+        814697,
+        "688ecf3cf51d2cf7497720ba36e5f3c6bdfea75630c2c2c8afcf8a0de3580d06"
+      ],
+      "tgt.spm.model": [
+        800426,
+        "8eda8069d07624408f632a155bbfb6db9794b8bb7bdbc9040c8ec16d499b6ef2"
+      ]
+    }
+  },
+  "de": {
+    "name": "German",
+    "revision": "6ace72ec968c57d0a2d0545b1f18a8f5801ae705",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        360843109,
+        "50b1a9c0d09d49b71242750ccb8b68d312d976302b7989157b07f7df1ef8dcf3"
+      ],
+      "source_vocabulary.json": [
+        349437,
+        null
+      ],
+      "target_vocabulary.json": [
+        336680,
+        null
+      ],
+      "src.spm.model": [
+        595491,
+        "4a4a9e3dd26d6562764eb2678f95766afbab48354ddb5b7d63cb7cf7a02cf56a"
+      ],
+      "tgt.spm.model": [
+        586141,
+        "eaf7051931aaca182561ba5a63c5674424971d0d6001ab57facb194fe6c941bf"
+      ]
+    }
+  },
+  "el": {
+    "name": "Greek",
+    "revision": "56021fbc910ff21c0a7c26dd616e047f78fc821a",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "f36d96759aa1c73a9717a55bd4ee92285767ae338c06e80cfea406f55addb548"
+      ],
+      "source_vocabulary.json": [
+        907336,
+        null
+      ],
+      "target_vocabulary.json": [
+        336207,
+        null
+      ],
+      "src.spm.model": [
+        704100,
+        "ba83bbe4b5aec0bebb3cb9651f0a5ea609bec129ff834c1934c2eeb6be7bfcdc"
+      ],
+      "tgt.spm.model": [
+        587829,
+        "327b717adc21439f5e70ee9bf1a7a6d6668f21045f05d94175e61f5554860563"
+      ]
+    }
+  },
+  "es": {
+    "name": "Spanish",
+    "revision": "56dc7a38e1929685ce12302f75cbeb153fe32709",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "309bbb55ecb269d151a6cf72db8df85d8f28a5e79e0510f3b9cdcf2fdcac8cb8"
+      ],
+      "source_vocabulary.json": [
+        362373,
+        null
+      ],
+      "target_vocabulary.json": [
+        341401,
+        null
+      ],
+      "src.spm.model": [
+        603700,
+        "515603821dd149cb66b99febbe4bbb05b9c7819943621d1f66c28ca2270a47e9"
+      ],
+      "tgt.spm.model": [
+        593820,
+        "c26488c6db0bdca05f0e9e8edf43e8bdb4f78fc5c41c51749f88aefa6a1d030b"
+      ]
+    }
+  },
+  "fa": {
+    "name": "Persian",
+    "revision": "8faff595e128f8377c1de9371caef546c48fe4c2",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        407101843,
+        "091265c533b556b8c9d111519dd8142ff49e901256e35613876ce92679c91487"
+      ],
+      "source_vocabulary.json": [
+        1159068,
+        null
+      ],
+      "target_vocabulary.json": [
+        548114,
+        null
+      ],
+      "src.spm.model": [
+        889048,
+        "a0b876dcd23cce26a8b2dd35f3de1bea3dada039d27753498f5388960a97aa3f"
+      ],
+      "tgt.spm.model": [
+        805200,
+        "53931998683cf961ec8a9d3327deb4021d5bc12be2f2650758bb9a35dd828599"
+      ]
+    }
+  },
+  "fr": {
+    "name": "French",
+    "revision": "ba92e016536cea8568e9e37d34e1d4f74836ee84",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        407101843,
+        "c0657044846861a905f959bb4950a155e0a41c2bf6187a2c47fa86e2a79d3582"
+      ],
+      "source_vocabulary.json": [
+        583802,
+        null
+      ],
+      "target_vocabulary.json": [
+        538710,
+        null
+      ],
+      "src.spm.model": [
+        816271,
+        "1e41eb3cab1f4e5caf55370cd23362ace5839cec791411da61d159365b6a6451"
+      ],
+      "tgt.spm.model": [
+        799063,
+        "ce51817f4aabdac074cccee54167581e681e9cbade82b563d70d64f7be958e4d"
+      ]
+    }
+  },
+  "he": {
+    "name": "Hebrew",
+    "revision": "417b646ecfb987e0865208ec6de05c552d6f3e29",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        409915789,
+        "893be4bf2f2dd3193df48ed1ed945577abc9cc7daa39b2a08e7de09ab0a79b65"
+      ],
+      "source_vocabulary.json": [
+        1157365,
+        null
+      ],
+      "target_vocabulary.json": [
+        545941,
+        null
+      ],
+      "src.spm.model": [
+        882724,
+        "006e2e0f144ae9425cf7ff6b81eb25de0165da5bfa8d220dfb75203ad9ca4ee4"
+      ],
+      "tgt.spm.model": [
+        802664,
+        "38aadfae3dd591032d6e46ddcc38a7ec706e1f1429236ce9266882dba6c3ce83"
+      ]
+    }
+  },
+  "hi": {
+    "name": "Hindi",
+    "revision": "cba561da04c37da2ea01d613f0dfdc39e697a2be",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "161616ff429b3c614b7c073cb396d3bfe2fc9eaaa78e98a3a68f180d797ee645"
+      ],
+      "source_vocabulary.json": [
+        717733,
+        null
+      ],
+      "target_vocabulary.json": [
+        335045,
+        null
+      ],
+      "src.spm.model": [
+        725360,
+        "5bf816522cc2183f2b179621f1c791ac610aa01a348f286ba7fe1945f26a3171"
+      ],
+      "tgt.spm.model": [
+        586288,
+        "134b26724a53a8f16871e33194f99d31a8729550f6dcfba80ef947516c8f0c04"
+      ]
+    }
+  },
+  "hu": {
+    "name": "Hungarian",
+    "revision": "70bbedf92375ea0716b5f823c21c81f6b2a89b47",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "5f57004b925cfe4fbe8a4ac0038829079651e761fe91c3c84f108a055dcfb0ea"
+      ],
+      "source_vocabulary.json": [
+        414891,
+        null
+      ],
+      "target_vocabulary.json": [
+        335014,
+        null
+      ],
+      "src.spm.model": [
+        608138,
+        "5de46fff4655159f9f71ea76eaf619b5f612b7bbcb3b384556902a743d6533b6"
+      ],
+      "tgt.spm.model": [
+        586378,
+        "4cdc8c15c04872bc53f0f4d9590fcddf49b9959dc63cfb998541c9ba6b18646e"
+      ]
+    }
+  },
+  "id": {
+    "name": "Indonesian",
+    "revision": "21ef2fb7102739507fea9d5a41542353a33736fc",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "0bc630f2e7835a1d8c5915c33a20811d3e3029869094c98ed53eda06ee895972"
+      ],
+      "source_vocabulary.json": [
+        335426,
+        null
+      ],
+      "target_vocabulary.json": [
+        337170,
+        null
+      ],
+      "src.spm.model": [
+        587418,
+        "4e366992fe4c1aeeb771b3adf8fd79de82545828441545780bf5dd55b3708b61"
+      ],
+      "tgt.spm.model": [
+        588071,
+        "eededcf122b0fa0e5447be31d4e1c5ef02084b15bf8a8b2962acb1088230481b"
+      ]
+    }
+  },
+  "is": {
+    "name": "Icelandic",
+    "revision": "2a798e5bce17f2d22aec8abc650e47f52b4ea3e6",
+    "files": {
+      "config.json": [
+        221,
+        null
+      ],
+      "model.bin": [
+        399605364,
+        "f43106bbeb49ef0437a5c0bd61761b28d3c7750723401b72090fa8d0758f7482"
+      ],
+      "source_vocabulary.json": [
+        628853,
+        null
+      ],
+      "target_vocabulary.json": [
+        543124,
+        null
+      ],
+      "src.spm.model": [
+        817694,
+        "df4e8c5fdac389435c77641254f27811bb6709fe6e2a5bdb8fa5ea56900d4d85"
+      ],
+      "tgt.spm.model": [
+        801740,
+        "a5fcc4576244508befdbe68bd7cc13d3d45140dc1e94665a34ecbde300e59141"
+      ]
+    }
+  },
+  "it": {
+    "name": "Italian",
+    "revision": "f21714952095425f37d644d66266ff57711a6108",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "21873987a0bbc65658e63823a4637b9e15b2a98030b84e9fb42a5c2566bfcd5c"
+      ],
+      "source_vocabulary.json": [
+        347173,
+        null
+      ],
+      "target_vocabulary.json": [
+        334527,
+        null
+      ],
+      "src.spm.model": [
+        598389,
+        "47b20d73c2224922ffef2d6f4bbe72810d7f75c80281dcea17515fc25a7a7bb9"
+      ],
+      "tgt.spm.model": [
+        586485,
+        "352edbef8a5896ac750aa1318696d770c15c85d79116c94b4872086a1de94b2d"
+      ]
+    }
+  },
+  "ja": {
+    "name": "Japanese",
+    "revision": "e9ae594ff322d95254d730867c6166b25fd2c704",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        407101843,
+        "d11276f68986d951edc1e5b4b634e00f1f9c493eb14519598be975630965eb47"
+      ],
+      "source_vocabulary.json": [
+        749282,
+        null
+      ],
+      "target_vocabulary.json": [
+        538306,
+        null
+      ],
+      "src.spm.model": [
+        816774,
+        "438e5f7fd498d76b057ca8b6759470b82eb3855b81a67718face917407b31ff5"
+      ],
+      "tgt.spm.model": [
+        797948,
+        "d2e58f48c0d030d6b4e6b183ebca7068704ef9cce640f090abfea4ac9ea11da0"
+      ]
+    }
+  },
+  "ko": {
+    "name": "Korean",
+    "revision": "5d6841fc859fb40acbf9b90837b72b9becd3b577",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        360796810,
+        "55376acbd84170d15cba374cb42db4d318f3795ea1b20cfb808fd88bb5bdc2b0"
+      ],
+      "source_vocabulary.json": [
+        410879,
+        null
+      ],
+      "target_vocabulary.json": [
+        332886,
+        null
+      ],
+      "src.spm.model": [
+        570981,
+        "70eb68076fe5c8ae7d8b7370aee0a8e713d3dd280d0359a4cfae3890313502dd"
+      ],
+      "tgt.spm.model": [
+        583195,
+        "ec0fe572b92a529c3fcd8d411f39667ae3cb83ad1a4e41c75f4ad48ea99f5925"
+      ]
+    }
+  },
+  "lv": {
+    "name": "Latvian",
+    "revision": "19e3faec7c864e8f88218b69ca6c7fd17d166a8d",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        409915789,
+        "1656961ddc693f72484626e4721137c4a6ec333122d2f9c1e9e547ecd379f2ad"
+      ],
+      "source_vocabulary.json": [
+        678612,
+        null
+      ],
+      "target_vocabulary.json": [
+        541986,
+        null
+      ],
+      "src.spm.model": [
+        845062,
+        "ae6b5e8281042f96b731bed56a9eea36a37c72f274877d92e80ddc91477541cd"
+      ],
+      "tgt.spm.model": [
+        802099,
+        "c593549fdec899677e1dff303ef1312d4b0ad31d09c83adb9e63ca2ec75cccfd"
+      ]
+    }
+  },
+  "pl": {
+    "name": "Polish",
+    "revision": "f005b2eadaa97f15c52fdb3a5b661558b78157f3",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "2e939c36e6aa38dfa320166a55b3adbfa17bcfd918a560bfb8b3ba6991ac16c2"
+      ],
+      "source_vocabulary.json": [
+        381704,
+        null
+      ],
+      "target_vocabulary.json": [
+        332684,
+        null
+      ],
+      "src.spm.model": [
+        605240,
+        "b6ad874c44613df56fb48be31fb64b6b5fc96a14a7888e802b0f91dbf98a8836"
+      ],
+      "tgt.spm.model": [
+        585058,
+        "83fa4a21ff8359b8827f033977c0e563fd0786ba84bbc93d4a1e22a0dd81ee7f"
+      ]
+    }
+  },
+  "pt": {
+    "name": "Portuguese",
+    "revision": "8a0cbbfe1a071a975193aad506a038b363440450",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "280031a6870098ef8b80d7ffa7cd1c4ea77e6eb05fdb8a90fa46b60e11ba11fc"
+      ],
+      "source_vocabulary.json": [
+        367379,
+        null
+      ],
+      "target_vocabulary.json": [
+        335280,
+        null
+      ],
+      "src.spm.model": [
+        600641,
+        "582204569977759a46b4636cf0ead18bb981cd2ca7d9d42a15962072835b6d25"
+      ],
+      "tgt.spm.model": [
+        587171,
+        "78491a281ebde4ebda824d711469fdaf02970c4d5d3a0ff55e4cbb73c6f6f888"
+      ]
+    }
+  },
+  "ro": {
+    "name": "Romanian",
+    "revision": "e79b37f3ee3bee794a72277711e55569dc5a56a9",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        409915789,
+        "c23895ec8933238b14c883bb1a2488c9fef09b951abb23b9a36b171f9616013f"
+      ],
+      "source_vocabulary.json": [
+        617135,
+        null
+      ],
+      "target_vocabulary.json": [
+        546757,
+        null
+      ],
+      "src.spm.model": [
+        829294,
+        "8cbacefea2837d7161439e3476c8ad05ad11826be8f3563db1bcb6748f373cb7"
+      ],
+      "tgt.spm.model": [
+        804879,
+        "db0b667cb624705e59a1af53a05118ead90fd9ddb695880b7a9000601b445276"
+      ]
+    }
+  },
+  "ru": {
+    "name": "Russian",
+    "revision": "00eb1d00e3157e554c3e0571f0ebf8203befa04e",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        409915789,
+        "b5763ea697321bcf849602ce30734f3970f9848501b87d139e34558101e16be4"
+      ],
+      "source_vocabulary.json": [
+        1627059,
+        null
+      ],
+      "target_vocabulary.json": [
+        545846,
+        null
+      ],
+      "src.spm.model": [
+        1037835,
+        "48ee9d46612f7b3f98038c2adb193693bff996a2fa7ed38d3f37502148a2592a"
+      ],
+      "tgt.spm.model": [
+        805620,
+        "d97bf2a98454f5f5ea8231376fba1c5172d56e5454e4d310f299f10410d21629"
+      ]
+    }
+  },
+  "sv": {
+    "name": "Swedish",
+    "revision": "0515b28e0fbfcd60586e2eace6ec49dc737e8a41",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        409915789,
+        "2b6a7400b4c0ece91190c8ae780f31f208b8d33bf469dfd9dcb06b5323220c10"
+      ],
+      "source_vocabulary.json": [
+        582646,
+        null
+      ],
+      "target_vocabulary.json": [
+        542164,
+        null
+      ],
+      "src.spm.model": [
+        814642,
+        "de8b005b6a57ec60d00845c007527d6e6d2bcedaabcc842f15e579b294e5250c"
+      ],
+      "tgt.spm.model": [
+        800835,
+        "0eeaccede2c05786b37d496470fbfc1e0509bf61be3e16913981d3a195873bdf"
+      ]
+    }
+  },
+  "th": {
+    "name": "Thai",
+    "revision": "d9a104ed5bcd21f9df89b8d1cfd40a54bd3917b8",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "1538b0cc84ef3c3b8195fb44b12c2ae845bbcd1d6dbdad3c56713fc76641af53"
+      ],
+      "source_vocabulary.json": [
+        861552,
+        null
+      ],
+      "target_vocabulary.json": [
+        333429,
+        null
+      ],
+      "src.spm.model": [
+        797411,
+        "8f701b1084de69de262f2f8e1d9c17d6e020b7d68089595f05c406fd0d51137e"
+      ],
+      "tgt.spm.model": [
+        584368,
+        "ac6f53a2306e1279f472715b1086aea108cb9d577b3c96c3da2469b27f0a74c2"
+      ]
+    }
+  },
+  "tr": {
+    "name": "Turkish",
+    "revision": "b6635b1f14ca99098802711078e2f0966ee741d2",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "7151fa84b90fe90dc99dae1f7bba3c0b416d3d70cc3ce0ae80f60c543c625745"
+      ],
+      "source_vocabulary.json": [
+        407444,
+        null
+      ],
+      "target_vocabulary.json": [
+        335254,
+        null
+      ],
+      "src.spm.model": [
+        604393,
+        "453f064230753d99aecab739b8de017e91836692acd2566812de6f96ffa83f26"
+      ],
+      "tgt.spm.model": [
+        586127,
+        "5c4b6f8bf657c61b0219015022eba70ae06f19c7ae4ac9bd7dbacdb9bafa2ea4"
+      ]
+    }
+  },
+  "uk": {
+    "name": "Ukrainian",
+    "revision": "bdaf7852b51d6287440c9f24a5a27d514e97ae6e",
+    "files": {
+      "config.json": [
+        221,
+        null
+      ],
+      "model.bin": [
+        202004997,
+        "d63c061e3a0eed8b61527ded6a9e5f8a74364983c454ee4652cc995a1eb612be"
+      ],
+      "source_vocabulary.json": [
+        1548875,
+        null
+      ],
+      "target_vocabulary.json": [
+        544492,
+        null
+      ],
+      "src.spm.model": [
+        1014232,
+        "f4ae41ace20c5b2b4287ac9d402cf93f6f857901b10ae1b20f22544073ce1c85"
+      ],
+      "tgt.spm.model": [
+        804561,
+        "832da24581d0516be8980cba35eab07fb575e703da700a919aac92d9c5c31311"
+      ]
+    }
+  },
+  "ur": {
+    "name": "Urdu",
+    "revision": "332958f51e6bb048e5fea1009dc8ab291720af81",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "3276d2649bc9f5443751ecdf4dcfd9620c5490bae6904e2a318a539cdf14327b"
+      ],
+      "source_vocabulary.json": [
+        664428,
+        null
+      ],
+      "target_vocabulary.json": [
+        336461,
+        null
+      ],
+      "src.spm.model": [
+        624096,
+        "5a9592d23b51ae0fafbdd8b1ee171039731ebaa1689b31164384d17bc7d3af2d"
+      ],
+      "tgt.spm.model": [
+        587475,
+        "27f59c3dc803ba0fc30ac42666969bbf9ea2316c4e3bfc2ac9456127a0c745ee"
+      ]
+    }
+  },
+  "vi": {
+    "name": "Vietnamese",
+    "revision": "d97a5c289720b7d68116dd2accff9560f932e1a6",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        401699775,
+        "cf9297acc4339155f44430bdaf622700a3db2709de9d7ce4da6755ae5cacfb79"
+      ],
+      "source_vocabulary.json": [
+        322073,
+        null
+      ],
+      "target_vocabulary.json": [
+        335066,
+        null
+      ],
+      "src.spm.model": [
+        553521,
+        "03be7f771990d2bee00d7ff09219baad95b53fef1dcd387b3048c156d665e046"
+      ],
+      "tgt.spm.model": [
+        586058,
+        "82efd76a945ec4574b2ab3d2476b0043a9737c8dbe693cd20a7fa036d273c0eb"
+      ]
+    }
+  },
+  "zh": {
+    "name": "Chinese",
+    "revision": "c27cc8024e01a047733a1e34796e2ab19d74b237",
+    "files": {
+      "config.json": [
+        223,
+        null
+      ],
+      "model.bin": [
+        407101843,
+        "e7cac9c2bc585e476d8fe47af11ed76723d4b5cf69ccef8f5ff821fb3ec05000"
+      ],
+      "source_vocabulary.json": [
+        554957,
+        null
+      ],
+      "target_vocabulary.json": [
+        532214,
+        null
+      ],
+      "src.spm.model": [
+        720056,
+        "56159dc3a8607805f0e3f2cf4c91f37ee221e91fb824ebb362622d22185872cb"
+      ],
+      "tgt.spm.model": [
+        792100,
+        "c23dc1aa66b7b98263da867137a7eb41d5e4573984fb100c0b295f3010381823"
+      ]
+    }
+  }
+}

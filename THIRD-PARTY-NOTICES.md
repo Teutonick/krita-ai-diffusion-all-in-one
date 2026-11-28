@@ -75,12 +75,12 @@ that release. `SOURCE-MANIFEST.json` is identical in the source and plugin archi
 and records the hashes of the included source files. Build scripts and dependency
 notices are included. The GPLv3 license and its warranty disclaimer accompany both.
 
-### Argos Translate source pin (.8)
+### QuickMT translation into English
 
-Translation uses the official MIT-licensed Argos Translate source at
-[17ed1a9b055c5ba1b51d76b683bbb0c64e2a4a88](https://github.com/argosopentech/argos-translate/tree/17ed1a9b055c5ba1b51d76b683bbb0c64e2a4a88),
-where Stanza is optional. The installer downloads this exact upstream snapshot; no
-translation model weights are bundled. Credit belongs to Argos Open Technologies and contributors.
+Prompt translation uses [the English-target models by QuickMT contributors](https://huggingface.co/quickmt/models)
+under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The exact model
+revision is downloaded to the ComfyUI model cache when first used. The original
+weights are kept on disk and CTranslate2 runs inference with CPU INT8.
 
 ### Accelerate installation hardening (.8)
 

@@ -352,7 +352,7 @@ class Settings(QObject):
     _prompt_translation = Setting(
         _("Prompt Translation"),
         "",
-        _("Translate text prompts from the selected language to English"),
+        _("Translate prompts from a supported language to English on the ComfyUI CPU with QuickMT."),
     )
 
     dictation_enabled: bool
@@ -524,6 +524,12 @@ class Settings(QObject):
     )
 
     show_generation_preview: bool
+    keep_live_models_loaded: bool
+    _keep_live_models_loaded = Setting(
+        _("Keep Krea 2 and Qwen3-VL in VRAM (experimental)"),
+        False,
+        _("Applies to Live Generation. Restart Managed Server after enabling this option."),
+    )
     _show_generation_preview = Setting(
         _("Preview While Generating"),
         True,

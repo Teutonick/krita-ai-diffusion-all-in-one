@@ -34,6 +34,7 @@ from ..backend.lora_manager import (
     fetch_model_preview_bytes,
     load_cached_loras,
     lora_preload_task,
+    merge_lora_inventory,
     save_lora_cache,
     set_favorite,
 )
@@ -44,7 +45,7 @@ from ..text import format_option_group
 from ..util import ensure
 from ..wildcards import WildcardLibrary
 from . import theme
-from .content_rating import SFW, content_rating_combo, matches_content_rating
+from .content_rating import ALL, SFW, content_rating_combo, matches_content_rating
 
 _PREVIEW_SIZE_DEFAULT = 96
 _PREVIEW_SIZE_MIN = 48
@@ -426,21 +427,27 @@ class LoraBrowser(QWidget):
 
         if not force_refresh:
             if (preload := lora_preload_task(client.url)) is not None:
+                self._all_loras = merge_lora_inventory(self._all_loras, client.models.loras)
+                self._rebuild_filters()
+                self._apply_filter()
                 self._status.setText(_("Loading…"))
                 self._loading = True
                 eventloop.run(self._await_preload(preload))
                 return
             cached = load_cached_loras(client.url)
             if cached:
-                self._all_loras = cached
+                self._all_loras = merge_lora_inventory(cached, client.models.loras)
                 self._rebuild_filters()
                 self._apply_filter()
-                self._status.setText(f"{len(self._filtered)} / {len(cached)} {_('LoRAs (cached)')}")
+                self._status.setText(
+                    f"{len(self._filtered)} / {len(self._all_loras)} {_('LoRAs (cached)')}"
+                )
                 return
 
         self._status.setText(_("Loading…"))
-        self._grid.clear()
-        self._all_loras = []
+        self._all_loras = merge_lora_inventory([], client.models.loras)
+        self._rebuild_filters()
+        self._apply_filter()
         self._loading = True
         eventloop.run(self._fetch_progressive(client))
 
@@ -482,9 +489,12 @@ class LoraBrowser(QWidget):
             loras = []
             async for batch in fetch_loras_pages(client._requests, client.url):
                 loras.extend(batch)
+            loras = merge_lora_inventory(loras, client.models.loras)
+            self._all_loras = loras
+            self._rebuild_filters()
+            self._apply_filter()
             self._status.setText(_("Loading online LoRA triggers and previews…"))
             await enrich_lora_metadata(loras)
-            self._all_loras = loras
             save_lora_cache(client.url, loras)
             self._rebuild_filters()
             self._apply_filter()
@@ -510,9 +520,11 @@ class LoraBrowser(QWidget):
             pass
 
     async def _fetch_progressive(self, client):
+        loras: list[LoraInfo] = []
         try:
             async for batch in fetch_loras_pages(client._requests, client.url):
-                self._all_loras.extend(batch)
+                loras.extend(batch)
+                self._all_loras = merge_lora_inventory(loras, client.models.loras)
                 self._rebuild_filters()
                 self._apply_filter()
                 self._status.setText(f"{_('Loading…')} ({len(self._all_loras)})")
@@ -560,7 +572,7 @@ class LoraBrowser(QWidget):
                 return False
             if arch:
                 model_arch = arch_for_base_model(lora.base_model)
-                if model_arch != arch:
+                if model_arch != arch and (model_arch or nsfw_mode != ALL):
                     return False
             if active_tag and active_tag != _TAG_ALL:
                 if active_tag not in lora.tags:

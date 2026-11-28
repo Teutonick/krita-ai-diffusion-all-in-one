@@ -114,7 +114,7 @@ def test_moss_edit_uses_reference_and_compositing_mask(use_boxes, language):
             prompt = encoder["prompt"]
             if language:
                 translator = graph.root[prompt[0]]
-                assert translator["class_type"] == "ETN_Translate"
+                assert translator["class_type"] == "KritaQuickMTTranslate"
                 prompt = translator["inputs"]["text"]
                 assert f"lang:ru {caption} lang:en " in prompt
                 assert prompt.startswith("Change only the area ")
@@ -178,7 +178,8 @@ def test_krea2_edit_graph(kind, edit_kind, cfg):
     assert positive == [work.conditioning.positive]
 
 
-def test_krea2_live_preview_keeps_prompt_lora_translation_and_edit_references():
+@pytest.mark.parametrize("keep_loaded", [False, True])
+def test_krea2_live_preview_keeps_prompt_lora_translation_and_edit_references(keep_loaded):
     models, template = _edit_work("identity")
     assert template.models
     adapter = f"live/{workflow.krea_live_lora}"
@@ -210,6 +211,7 @@ def test_krea2_live_preview_keeps_prompt_lora_translation_and_edit_references():
         fast_preview=True,
     )
     assert work.models and work.models.loras == [LoraInput(character, 0.7), LoraInput(adapter, 1.0)]
+    work.models.keep_live_models_loaded = keep_loaded
     assert work.sampling == SamplingInput("euler", "simple", 1.0, 2, seed=42)
     assert work.extent.initial == work.extent.desired == Extent(512, 352)
     assert work.extent.target == target
@@ -217,10 +219,14 @@ def test_krea2_live_preview_keeps_prompt_lora_translation_and_edit_references():
     graph = workflow.create(work, models)
     nodes = {node["class_type"]: node["inputs"] for node in graph.root.values()}
     assert "ImageUpscaleWithModel" not in nodes
-    assert "image 2" in nodes["ETN_Translate"]["text"]
+    assert "image 2" in nodes["KritaQuickMTTranslate"]["text"]
     assert "image_b" in nodes["Krea2EditGroundedEncode"]
     assert "source_latent_b" in nodes["Krea2EditModelPatch"]
     assert nodes["BasicScheduler"]["steps"] == 2
+    assert ("KritaKeepLiveModelsLoaded" in nodes) is keep_loaded
+    if keep_loaded:
+        clip = nodes["Krea2EditGroundedEncode"]["clip"]
+        assert graph.root[clip[0]]["class_type"] == "KritaKeepLiveModelsLoaded"
 
 
 def test_make_povs_workflows():

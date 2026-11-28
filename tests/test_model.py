@@ -175,6 +175,7 @@ async def test_live_generation_discards_stale_result_and_renders_full_quality(
         style.sampler_steps = 8
         model.style = style
         model.regions.positive = "A cat"
+        model.seed = 777
         assert not model.live_generation.available
         client.models.loras = [workflow.krea_live_lora]
         assert model.live_generation.available
@@ -197,6 +198,11 @@ async def test_live_generation_discards_stale_result_and_renders_full_quality(
 
         model.live_generation.is_active = True
         try:
+            assert model.fixed_seed and model.seed == 123
+            assert model.live_generation.seed_settings_before_live == (777, False, False)
+            model.fixed_seed = False
+            model.seed_increment = True
+            assert model.fixed_seed and not model.seed_increment
             await wait_until(lambda: len(client.enqueued) == 1)
             model.regions.positive = "A cat in"
             await wait_until(lambda: cancelled)
@@ -217,13 +223,77 @@ async def test_live_generation_discards_stale_result_and_renders_full_quality(
             await wait_until(lambda: previews)
             assert len(previews) == 1
 
-            model.generate()
+            model.live_generation.randomize_seed()
+            assert model.seed == 124
             await wait_until(lambda: len(client.enqueued) == 3)
-            full = client.enqueued[2]
-            assert full.sampling and (full.sampling.seed, full.sampling.total_steps) == (123, 8)
+            rerolled = client.enqueued[2]
+            assert rerolled.sampling and rerolled.sampling.seed == 124
+            client.push(ClientMessage(ClientEvent.finished, "mock-job-2", images=images))
+            await wait_until(lambda: len(previews) == 2)
+
+            model.generate()
+            await wait_until(lambda: len(client.enqueued) == 4)
+            full = client.enqueued[3]
+            assert full.sampling and (full.sampling.seed, full.sampling.total_steps) == (124, 8)
             assert full.models and not full.models.loras
             assert not full.extent.fast_preview
-            assert not model.fixed_seed
+            assert model.fixed_seed
+        finally:
+            model.live_generation.is_active = False
+            if model.live_generation._task is not None:
+                await model.live_generation._task
+        assert model.seed == 777
+        assert not model.fixed_seed and not model.seed_increment
+
+
+@pytest.mark.parametrize(
+    "error, disable",
+    [
+        ("Krita Live VRAM has insufficient capacity for both models", True),
+        ("CUDA out of memory", True),
+        ("Experimental node failed", False),
+    ],
+)
+@qtapp
+async def test_live_vram_retries_with_the_same_input(
+    workflows_dir: Path, monkeypatch, error, disable
+):
+    monkeypatch.setattr("ai_diffusion.model.model.ComfyClient", MockClient)
+    monkeypatch.setattr(settings, "keep_live_models_loaded", True)
+    saved = []
+    monkeypatch.setattr(settings, "save", lambda: saved.append(settings.keep_live_models_loaded))
+    doc = Krita.instance().openDocument("test")
+    async with _model_env(doc, workflows_dir) as (model, client):
+        checkpoint = "krea2_turbo_fp8_scaled.safetensors"
+        client.models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, Arch.krea2)
+        client.models.loras = [workflow.krea_live_lora]
+        client.models.node_inputs = ComfyObjectInfo({"KritaKeepLiveModelsLoaded": {}})
+        model.style = _make_style(checkpoint)
+        model.regions.positive = "A cat"
+        model.live_generation.is_active = True
+        try:
+            async with asyncio.timeout(3):
+                while len(client.enqueued) < 1:
+                    await asyncio.sleep(0.02)
+                experiment = client.enqueued[0]
+                assert experiment.models and experiment.models.keep_live_models_loaded
+                client.push(ClientMessage(ClientEvent.error, "mock-job-0", error=error))
+                while len(client.enqueued) < 2:
+                    await asyncio.sleep(0.02)
+                retry = client.enqueued[1]
+                assert retry.models and not retry.models.keep_live_models_loaded
+                assert retry.sampling == experiment.sampling
+                assert retry.conditioning == experiment.conditioning
+                assert model.error == no_error
+                assert settings.keep_live_models_loaded is not disable
+                assert (model.live_generation.vram_warning.kind is ErrorKind.warning) is disable
+                assert (False in saved) is disable
+                model.live_generation.dismiss_vram_warning()
+                assert model.live_generation.vram_warning == no_error
+                client.push(ClientMessage(ClientEvent.error, "mock-job-1", error="standard error"))
+                while model.error == no_error:
+                    await asyncio.sleep(0.02)
+                assert len(client.enqueued) == 2
         finally:
             model.live_generation.is_active = False
             if model.live_generation._task is not None:

@@ -435,9 +435,7 @@ class DocumentModel(QObject, ObservableProperties):
             return
 
         try:
-            input, job_params, cond_orig, prompt_loras_0 = self._prepare_workflow(
-                seed=self.live_generation.seed if self.live_generation.is_active else None
-            )
+            input, job_params, cond_orig, prompt_loras_0 = self._prepare_workflow()
         except Exception as e:
             self.report_error(util.log_error(e))
             self.loop_generate = False
@@ -1235,6 +1233,19 @@ class DocumentModel(QObject, ObservableProperties):
         elif message.event is ClientEvent.interrupted:
             self._finish_job(job, message.event)
         elif message.event is ClientEvent.error:
+            if job.kind is JobKind.live_generation and job.params.metadata.get("keep_live_models"):
+                job.params.metadata["keep_live_models_failed"] = True
+                reason = (message.error or "").casefold()
+                if (
+                    "krita live vram has insufficient capacity" in reason
+                    or "cuda out of memory" in reason
+                ):
+                    self.live_generation.disable_vram_experiment()
+                self._finish_job(job, ClientEvent.error)
+                log.warning(
+                    "Live VRAM experiment failed, using the standard graph: %s", message.error
+                )
+                return
             self._finish_job(job, message.event)
             self.report_error(_("Server error") + f": {message.error}")
         elif message.event is ClientEvent.payment_required:
@@ -1527,6 +1538,8 @@ class DocumentModel(QObject, ObservableProperties):
         self.seed = workflow.generate_seed()
 
     def set_fixed_seed(self, value: bool):
+        if not value and self.live_generation.is_active:
+            return
         if self._fixed_seed == value:
             return
         self._fixed_seed = value
@@ -1536,6 +1549,8 @@ class DocumentModel(QObject, ObservableProperties):
         self.modified.emit(self, "fixed_seed")
 
     def set_seed_increment(self, value: bool):
+        if value and self.live_generation.is_active:
+            return
         if self._seed_increment == value:
             return
         self._seed_increment = value
@@ -1852,7 +1867,13 @@ class DocumentModel(QObject, ObservableProperties):
 
     @property
     def prompt_translation_language(self):
-        return settings.prompt_translation if self.translation_enabled else ""
+        client = self._connection.client_if_connected
+        language = settings.prompt_translation
+        if isinstance(client, ComfyClient) and not any(
+            entry.code == language for entry in client.features.languages
+        ):
+            return ""
+        return language if self.translation_enabled else ""
 
     @property
     def arch(self):
@@ -2050,9 +2071,17 @@ class UpscaleWorkspace(QObject, ObservableProperties):
         )
 
 
+class SeedSettings(NamedTuple):
+    seed: int
+    fixed_seed: bool
+    seed_increment: bool
+
+
 class LiveGeneration(QObject, ObservableProperties):
     is_active = Property(False, setter="toggle")
+    vram_warning = Property(no_error)
     is_active_changed = pyqtSignal(bool)
+    vram_warning_changed = pyqtSignal(Error)
     debounce = 0.4
     poll_interval = 0.1
 
@@ -2063,7 +2092,27 @@ class LiveGeneration(QObject, ObservableProperties):
         self._revision = 0
         self._session = 0
         self._preview_visible = False
-        self.seed = 0
+        self.seed_settings_before_live: SeedSettings | None = None
+
+    def dismiss_vram_warning(self):
+        self.vram_warning = no_error
+
+    def randomize_seed(self):
+        if self.is_active:
+            model = ensure(self._model())
+            seed = workflow.generate_seed()
+            model.seed = seed if seed != model.seed else (seed + 1) % (2**32)
+
+    def disable_vram_experiment(self):
+        settings.keep_live_models_loaded = False
+        try:
+            settings.save()
+        except OSError:
+            log.exception("Could not save the disabled Live VRAM setting")
+        self.vram_warning = Error(
+            ErrorKind.warning,
+            _("Live VRAM experiment disabled: not enough GPU memory. Live continues normally."),
+        )
 
     @property
     def available(self):
@@ -2086,14 +2135,24 @@ class LiveGeneration(QObject, ObservableProperties):
             if not ok and message:
                 model.report_error(message)
                 return
-            self.seed = (
+            self.seed_settings_before_live = SeedSettings(
+                model.seed, model.fixed_seed, model.seed_increment
+            )
+            model.seed = (
                 model.seed
                 if (model.fixed_seed or model.seed_increment)
                 else workflow.generate_seed()
             )
+            model.fixed_seed = True
             self._session += 1
             model.loop_generate = False
         else:
+            self._is_active = False
+            if previous := self.seed_settings_before_live:
+                model.seed = previous.seed
+                model.fixed_seed = previous.fixed_seed
+                model.seed_increment = previous.seed_increment
+                self.seed_settings_before_live = None
             self.suspend()
         self._is_active = active
         self.is_active_changed.emit(active)
@@ -2122,11 +2181,13 @@ class LiveGeneration(QObject, ObservableProperties):
         prepared_prompt: tuple[str, ...] | None = None
         prompt_changed_at = 0.0
         cancel_requested = False
+        keep_live_models_failed = False
         try:
             while (self.is_active or job) and model._connection.client_if_connected is client:
                 if session != self._session:
                     current = submitted = None
                     session = self._session
+                    keep_live_models_failed = False
                 if self.is_active and not self.available:
                     self.is_active = False
                 ready = (
@@ -2151,16 +2212,23 @@ class LiveGeneration(QObject, ObservableProperties):
                         prompt = new_prompt
                     if now - prompt_changed_at >= self.debounce:
                         new_input, params, _, _ = model._prepare_workflow(
-                            seed=self.seed, fast_preview=True
+                            seed=model.seed, fast_preview=True
                         )
                         prepared = (new_input, params)
                         if current != new_input:
-                            changed_at = prompt_changed_at if prompt != prepared_prompt else now
+                            if current and ensure(current.sampling).seed != model.seed:
+                                changed_at = 0.0
+                            else:
+                                changed_at = prompt_changed_at if prompt != prepared_prompt else now
                             current = new_input
                         prepared_prompt = prompt
                 if job is not None:
                     stale = prepared is None or current != submitted or revision != self._revision
                     if job.state in (JobState.finished, JobState.cancelled):
+                        if job.params.metadata.get("keep_live_models_failed"):
+                            keep_live_models_failed = True
+                            if revision == self._revision:
+                                submitted = None
                         if not stale and not cancel_requested and job.results:
                             image = job.results[0]
                             bounds = Bounds(*job.params.bounds.offset, *image.extent)
@@ -2183,8 +2251,19 @@ class LiveGeneration(QObject, ObservableProperties):
                 ):
                     new_input, params = prepared
                     model.clear_error()
-                    params.seed = self.seed
+                    params.seed = ensure(new_input.sampling).seed
                     params.workflow_kind = new_input.kind
+                    if (
+                        settings.keep_live_models_loaded
+                        and not keep_live_models_failed
+                        and "KritaKeepLiveModelsLoaded" in client.models.node_inputs
+                    ):
+                        self.vram_warning = no_error
+                        new_input = replace(
+                            new_input,
+                            models=replace(ensure(new_input.models), keep_live_models_loaded=True),
+                        )
+                        params.metadata["keep_live_models"] = True
                     job = model.jobs.add(JobKind.live_generation, params)
                     submitted, revision = current, self._revision
                     cancel_requested = False

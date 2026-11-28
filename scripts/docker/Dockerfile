@@ -46,6 +46,9 @@ COPY ./extra_model_paths.yaml /ComfyUI/
 
 # Prepare scripts and folders for models (download is eventually done at container startup via pre_start.sh)
 COPY ./krita-ai-diffusion/ /krita-ai-diffusion/
+COPY ./krita-ai-diffusion/ai_diffusion/backend/krita_quickmt.py /ComfyUI/custom_nodes/krita_quickmt.py
+COPY ./krita-ai-diffusion/ai_diffusion/backend/krita_quickmt_models.json /ComfyUI/custom_nodes/krita_quickmt_models.json
+ENV KRITA_QUICKMT_MODELS=/workspace/models/translation
 RUN python3 /krita-ai-diffusion/scripts/download_models.py --dry-run /workspace
 RUN ln -s /workspace/models /models
 

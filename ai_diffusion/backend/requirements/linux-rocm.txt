@@ -43,26 +43,12 @@ anyio==4.14.2
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   httpx
     #   httpx2
-argostranslate @ https://github.com/argosopentech/argos-translate/archive/17ed1a9b055c5ba1b51d76b683bbb0c64e2a4a88.zip
-    # via
-    #   -c ai_diffusion/backend/requirements/security.in
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
 attrs==26.1.0
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   aiohttp
 av==18.1.0
     # via -r ai_diffusion/backend/requirements/linux-rocm.txt
-blis==1.3.3
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   thinc
-catalogue==2.0.10
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   spacy
-    #   srsly
-    #   thinc
 certifi==2026.10.18
     # via
     #   -c ai_diffusion/backend/requirements/security.in
@@ -85,22 +71,6 @@ click==8.4.2
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   huggingface-hub
-    #   sacremoses
-    #   spacy
-cloudpathlib==0.24.0
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   weasel
-colorama==0.4.6
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   udapi
-confection==1.3.3
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   spacy
-    #   thinc
-    #   weasel
 contourpy==1.3.3
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
@@ -112,31 +82,19 @@ cssselect2==0.9.0
 ctranslate2==4.8.1
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   argostranslate
 cycler==0.12.1
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   matplotlib
-cymem==2.0.13
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   preshed
-    #   spacy
-    #   thinc
 einops==0.8.2
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   spandrel
-emoji==2.15.0
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   stanza
 filelock==4.2.1
     # via
     #   -c ai_diffusion/backend/requirements/security.in
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   huggingface-hub
-    #   minisbd
     #   torch
 flatbuffers==25.12.19
     # via
@@ -184,7 +142,6 @@ httpx==0.28.1
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   huggingface-hub
-    #   weasel
 httpx2==2.16.0
     # via -r ai_diffusion/backend/requirements/linux-rocm.txt
 huggingface-hub==1.33.0
@@ -214,12 +171,10 @@ iopath==0.1.10
 jinja2==3.1.6
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   spacy
     #   torch
 joblib==1.5.3
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   sacremoses
     #   scikit-learn
 kiwisolver==1.5.0
     # via
@@ -257,10 +212,6 @@ mdurl==0.1.2
     #   markdown-it-py
 mediapipe==1.0.1
     # via -r ai_diffusion/backend/requirements/linux-rocm.txt
-minisbd==0.9.5
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   argostranslate
 mpmath==1.3.0
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
@@ -271,12 +222,6 @@ multidict==6.9.1
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   aiohttp
     #   yarl
-murmurhash==1.0.15
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   preshed
-    #   spacy
-    #   thinc
 narwhals==2.25.0
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
@@ -285,14 +230,12 @@ networkx==3.6.1
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   scikit-image
-    #   stanza
     #   torch
 numpy==2.5.2
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   albucore
     #   albumentations
-    #   blis
     #   contourpy
     #   ctranslate2
     #   fvcore
@@ -300,7 +243,6 @@ numpy==2.5.2
     #   imageio
     #   matplotlib
     #   mediapipe
-    #   minisbd
     #   onnxruntime
     #   opencv-contrib-python
     #   opencv-python
@@ -309,10 +251,7 @@ numpy==2.5.2
     #   scikit-learn
     #   scipy
     #   soundfile
-    #   spacy
     #   spandrel
-    #   stanza
-    #   thinc
     #   tifffile
     #   torchsde
     #   torchvision
@@ -322,7 +261,6 @@ omegaconf==2.3.1
 onnxruntime==1.29.0
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   minisbd
 opencv-contrib-python==5.0.0.93
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
@@ -337,17 +275,13 @@ opencv-python-headless==5.0.0.93
 packaging==26.3
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   argostranslate
     #   huggingface-hub
     #   kornia
     #   lazy-loader
     #   matplotlib
     #   onnxruntime
     #   scikit-image
-    #   spacy
-    #   thinc
     #   transformers
-    #   weasel
 pillow==13.0.0
     # via
     #   -c ai_diffusion/backend/requirements/security.in
@@ -365,17 +299,11 @@ pip==26.2
 platformdirs==4.11.3
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   stanza
     #   yapf
 portalocker==4.1.0
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   iopath
-preshed==3.0.13
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   spacy
-    #   thinc
 propcache==0.5.2
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
@@ -386,7 +314,6 @@ protobuf==5.29.6
     #   -c ai_diffusion/backend/requirements/security.in
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   onnxruntime
-    #   stanza
 psutil==7.2.2
     # via -r ai_diffusion/backend/requirements/linux-rocm.txt
 pycparser==3.0
@@ -397,9 +324,6 @@ pydantic==2.13.4
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   albumentations
-    #   spacy
-    #   thinc
-    #   weasel
 pydantic-core==2.46.4
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
@@ -430,9 +354,7 @@ pyyaml==6.0.3
 regex==2026.7.19
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   sacremoses
     #   transformers
-    #   udtools
 reportlab==5.0.1
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
@@ -441,16 +363,10 @@ requests==2.34.2
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   gguf
-    #   spacy
-    #   stanza
 rich==15.0.0
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   typer
-sacremoses==0.1.1
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   argostranslate
 safetensors==0.8.0
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
@@ -471,14 +387,11 @@ sentencepiece==0.2.1
     # via
     #   -c ai_diffusion/backend/requirements/security.in
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   argostranslate
 setuptools==84.1.0
     # via
     #   -c ai_diffusion/backend/requirements/security.in
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   ctranslate2
-    #   spacy
-    #   thinc
     #   torch
 shellingham==1.5.4
     # via
@@ -492,40 +405,14 @@ six==1.17.0
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   python-dateutil
-smart-open==8.0.1
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   weasel
 sounddevice==0.5.6
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   mediapipe
 soundfile==0.14.0
     # via -r ai_diffusion/backend/requirements/linux-rocm.txt
-spacy==3.8.15
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   argostranslate
-spacy-legacy==3.0.12
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   spacy
-spacy-loggers==1.0.5
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   spacy
 spandrel==0.4.2
     # via -r ai_diffusion/backend/requirements/linux-rocm.txt
-srsly==2.5.3
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   spacy
-    #   thinc
-    #   weasel
-stanza==1.12.2
-    # via
-    #   -c ai_diffusion/backend/requirements/security.in
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
 stringzilla==5.1.2
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
@@ -544,11 +431,6 @@ termcolor==3.3.0
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   fvcore
-    #   udapi
-thinc==8.3.13
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   spacy
 threadpoolctl==3.6.0
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
@@ -571,7 +453,6 @@ torch==2.13.0+rocm7.2
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   kornia
     #   spandrel
-    #   stanza
     #   torchsde
     #   torchvision
 torchaudio==2.11.0+rocm7.2
@@ -589,9 +470,6 @@ tqdm==4.70.0
     #   gguf
     #   huggingface-hub
     #   iopath
-    #   sacremoses
-    #   spacy
-    #   stanza
     #   transformers
 trampoline==0.1.2
     # via
@@ -613,9 +491,7 @@ truststore==0.10.5
 typer==0.27.1
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   spacy
     #   transformers
-    #   weasel
 typing-extensions==4.16.0
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
@@ -635,42 +511,20 @@ typing-inspection==0.4.4
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   pydantic
-udapi==0.5.2
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   udtools
-udtools==0.2.9
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   stanza
 urllib3==2.8.0
     # via
     #   -c ai_diffusion/backend/requirements/security.in
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   requests
-wasabi==1.1.3
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   spacy
-    #   thinc
-    #   weasel
 wcwidth==0.8.2
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   ftfy
-weasel==1.0.0
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   spacy
 webencodings==0.6.1
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt
     #   cssselect2
     #   tinycss2
-wrapt==2.3.0
-    # via
-    #   -r ai_diffusion/backend/requirements/linux-rocm.txt
-    #   smart-open
 yacs==0.1.8
     # via
     #   -r ai_diffusion/backend/requirements/linux-rocm.txt

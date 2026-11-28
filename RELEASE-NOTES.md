@@ -1,4 +1,53 @@
-# 1.53.0-all-in-one.77 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.86 — krita-ai-diffusion-all-in-one
+
+Live Generation displays and locks its seed in generation settings, with a
+toolbar button to try a new seed. Turning Live off restores the previous seed
+settings. The VRAM warning can be dismissed from the generation panel.
+
+## 1.53.0-all-in-one.85
+
+QuickMT uses beam size 2 with the default zero coverage penalty.
+The LoRA library includes unclassified server files when the content filter is
+set to All. Prompt edits made by AI or manual translation can be undone and redone.
+
+## 1.53.0-all-in-one.84
+
+QuickMT retries segments that collapse into a single repeated word using greedy
+decoding and preserves the source if the retry still fails.
+
+## 1.53.0-all-in-one.83
+
+Live Generation disables the VRAM experiment when GPU memory is insufficient
+and shows a warning in the generation panel while retrying on the standard graph.
+
+## 1.53.0-all-in-one.82
+
+Prompt Translation lists 29 official QuickMT source languages. Each translates
+into English with its own model, downloaded on first use.
+
+## 1.53.0-all-in-one.81
+
+QuickMT translates prompt phrases separately and preserves their sentence separators.
+
+## 1.53.0-all-in-one.80
+
+QuickMT prompt translation uses beam size 3 and a coverage penalty of 0.1.
+
+## 1.53.0-all-in-one.79
+
+ComfyUI prompt translation uses QuickMT V2 200M for Russian to English on CPU.
+The existing Prompt Translation setting and manual translation button use the
+same model. Managed Server installs the node at startup. The first translation
+downloads the pinned model to the server cache.
+
+## 1.53.0-all-in-one.78
+
+Adds an opt-in VRAM experiment for Krea 2 Live Generation. Managed Server installs
+the bundled node on restart. On compatible CUDA setups it attempts to load Krea 2
+and Qwen3-VL together. If the experiment fails, Live retries with its standard
+graph and uses that graph for the rest of the Live session.
+
+## 1.53.0-all-in-one.77
 
 Live Generation for Krea 2 Turbo is available in Managed Server under Models → Krea 2.
 Setup downloads the 2-step LoRA, its license and notice, and any missing Krea 2 Turbo

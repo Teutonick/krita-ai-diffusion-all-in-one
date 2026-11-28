@@ -195,6 +195,9 @@ def load_checkpoint_with_lora(
     for lora in checkpoint.loras:
         model, clip = w.load_lora(model, clip, lora.name, lora.strength, lora.strength)
 
+    if checkpoint.keep_live_models_loaded and arch is Arch.krea2:
+        model, clip = w.add_cached("KritaKeepLiveModelsLoaded", 2, model=model, clip=clip)
+
     if arch is Arch.sd3:
         model = w.model_sampling_sd3(model)
 

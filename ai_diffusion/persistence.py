@@ -150,6 +150,8 @@ class ModelSync:
     def _save(self):
         model = self._model
         state = _serialize(model)
+        if previous := model.live_generation.seed_settings_before_live:
+            state.update(previous._asdict())
         state["version"] = version
         state["preview_layer"] = model.preview_layer_id
         state["inpaint"] = _serialize(model.inpaint)

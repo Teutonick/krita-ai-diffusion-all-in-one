@@ -77,6 +77,7 @@ class CheckpointInput:
     self_attention_guidance: bool = False
     dynamic_caching: bool = False
     tiled_vae: bool = False
+    keep_live_models_loaded: bool = False
 
 
 @dataclass

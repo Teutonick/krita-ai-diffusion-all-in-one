@@ -799,15 +799,25 @@ class Server:
             assert self._python_cmd and self.comfy_dir
             await self._log_python_version()
 
-            translation_cache = Path(__file__).with_name("translation_cache.py")
-            await _execute_process(
-                "managed translation cache",
-                [self._python_cmd, "-su", str(translation_cache)],
-                self.comfy_dir,
-                lambda title, line: log.info(f"{title}: {line}"),
-            )
+            if settings.keep_live_models_loaded:
+                node = self.comfy_dir / "custom_nodes" / "krita_keep_live_models.py"
+                try:
+                    node.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(Path(__file__).with_name("krita_keep_live_models.py"), node)
+                except OSError:
+                    log.exception("Could not install the experimental Live VRAM node")
+
+            quickmt = self.comfy_dir / "custom_nodes" / "krita_quickmt.py"
+            try:
+                quickmt.parent.mkdir(parents=True, exist_ok=True)
+                catalog = quickmt.with_name("krita_quickmt_models.json")
+                shutil.copyfile(Path(__file__).with_name(catalog.name), catalog)
+                shutil.copyfile(Path(__file__).with_name(quickmt.name), quickmt)
+            except OSError:
+                log.exception("Could not install the QuickMT translation node")
             args = ["-su", "main.py"]
             env = media_storage.managed_server_environment(self.path)
+            env["KRITA_QUICKMT_MODELS"] = str(self.path / "models" / "translation")
             if self.backend is ServerBackend.cpu:
                 args.append("--cpu")
             elif self.backend is ServerBackend.directml:

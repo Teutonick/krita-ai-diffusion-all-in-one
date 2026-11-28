@@ -44,7 +44,7 @@ required_custom_nodes = [
         "comfyui-tooling-nodes",
         "https://github.com/Acly/comfyui-tooling-nodes",
         "ca01116495cad1f2d8440641f26ced8fbdbbe8de",
-        ["ETN_LoadImageCache", "ETN_SaveImageCache", "ETN_Translate"],
+        ["ETN_LoadImageCache", "ETN_SaveImageCache"],
     ),
     CustomNode(
         "Inpaint Nodes",

@@ -2,6 +2,7 @@
   "id": "ru",
   "name": "Русский",
   "translations": {
+    "Live VRAM experiment disabled: not enough GPU memory. Live continues normally.": "Эксперимент с VRAM отключён: не хватает видеопамяти. Live продолжает работать в обычном режиме.",
     "Select Live Generation to install the 2-step preview adapter and any missing Krea 2 Turbo models.": "Отметьте Live Generation для установки двухшаговой LoRA и недостающих моделей Krea 2 Turbo.",
     "Model card": "Карточка модели",
     "(Custom)": "(Пользовательский)",

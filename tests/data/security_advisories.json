@@ -645,26 +645,6 @@
     ]
   },
   {
-    "id": "GHSA-v5jw-96jm-7h2c",
-    "package": "stanza",
-    "affected": "<= 1.12.1",
-    "manifests": [
-      "ai_diffusion/backend/requirements/linux-cpu.txt",
-      "ai_diffusion/backend/requirements/linux-cuda.txt",
-      "ai_diffusion/backend/requirements/linux-cuda126.txt",
-      "ai_diffusion/backend/requirements/linux-rocm.txt",
-      "ai_diffusion/backend/requirements/linux-xpu.txt",
-      "ai_diffusion/backend/requirements/macos-cpu.txt",
-      "ai_diffusion/backend/requirements/macos-mps.txt",
-      "ai_diffusion/backend/requirements/windows-cpu.txt",
-      "ai_diffusion/backend/requirements/windows-cuda.txt",
-      "ai_diffusion/backend/requirements/windows-cuda126.txt",
-      "ai_diffusion/backend/requirements/windows-rocm.txt",
-      "ai_diffusion/backend/requirements/windows-xpu.txt",
-      "scripts/docker/requirements.txt"
-    ]
-  },
-  {
     "id": "GHSA-7gcm-g887-7qv7",
     "package": "protobuf",
     "affected": "< 5.29.6",

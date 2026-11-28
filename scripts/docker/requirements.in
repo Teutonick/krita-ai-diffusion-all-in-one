@@ -64,11 +64,10 @@ matplotlib
 # ComfyUI-GGUF
 gguf
 
-# comfyui-tooling-nodes
-argostranslate @ https://github.com/argosopentech/argos-translate/archive/17ed1a9b055c5ba1b51d76b683bbb0c64e2a4a88.zip
+# QuickMT CPU prompt translation
+ctranslate2==4.8.1
 # Fixed version of the SentencePiece native parser
 sentencepiece>=0.2.1
-# argostranslate uses pip to install stuff on demand but doesn't depend on it
 pip
 
 # Security constraints shared with the managed installer

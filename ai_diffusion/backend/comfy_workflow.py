@@ -1212,7 +1212,7 @@ class ComfyWorkflow:
         return self.add("ETN_ApplyMaskToImage", 1, image=image, mask=mask)
 
     def translate(self, text: str | Output):
-        return self.add("ETN_Translate", 1, text=text)
+        return self.add("KritaQuickMTTranslate", 1, text=text)
 
     def nsfw_filter(self, image: Output, sensitivity: float):
         if sensitivity > 0:

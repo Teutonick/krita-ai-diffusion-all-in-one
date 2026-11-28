@@ -269,6 +269,9 @@ class QueuePopup(QMenu):
         enabled = self._model.fixed_seed or self._model.seed_increment
         self._seed_input.setEnabled(enabled)
         self._randomize_seed.setEnabled(enabled)
+        live = self._model.live_generation.is_active
+        self._seed_check.setEnabled(not live)
+        self._seed_increment_check.setEnabled(not live)
 
     @property
     def model(self):
@@ -296,6 +299,7 @@ class QueuePopup(QMenu):
             ),
             model.fixed_seed_changed.connect(self._update_seed_input_enabled),
             model.seed_increment_changed.connect(self._update_seed_input_enabled),
+            model.live_generation.is_active_changed.connect(self._update_seed_input_enabled),
             self._randomize_seed.clicked.connect(model.generate_seed),
             model.resolution_multiplier_changed.connect(self._update_resolution_multiplier),
             bind_combo(model, "queue_mode", self._queue_mode_combo),
@@ -740,6 +744,17 @@ class TextPromptWidget(QPlainTextEdit):
         with SignalBlocker(self):  # avoid auto-completion on non-user input
             self.setPlainText(value)
 
+    def replace_text(self, value: str):
+        if value == self.text:
+            return
+        with SignalBlocker(self):
+            cursor = self.textCursor()
+            cursor.beginEditBlock()
+            cursor.select(QTextCursor.SelectionType.Document)
+            cursor.insertText(value)
+            cursor.endEditBlock()
+            self.setTextCursor(cursor)
+
     @property
     def is_resizable(self):
         return self._resize_handle is not None
@@ -1180,7 +1195,9 @@ class GenerateButton(QPushButton):
 
 
 class ErrorBox(QFrame):
-    def __init__(self, parent=None):
+    dismissed = pyqtSignal()
+
+    def __init__(self, parent=None, *, dismissible=False):
         super().__init__(parent)
         self._error = no_error
         self._original_error = ""
@@ -1211,6 +1228,13 @@ class ErrorBox(QFrame):
         layout.addWidget(self._label)
         layout.addWidget(self._copy_button)
         layout.addWidget(self._recharge_button)
+        if dismissible:
+            close = QToolButton(self)
+            close.setIcon(theme.icon("remove"))
+            close.setToolTip(_("Dismiss warning"))
+            close.setAutoRaise(True)
+            close.clicked.connect(self.dismissed.emit)
+            layout.addWidget(close)
 
         self.reset()
 

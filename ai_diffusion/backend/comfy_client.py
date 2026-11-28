@@ -222,10 +222,11 @@ class ComfyClient(Client):
         if len(missing) > 0 and settings.check_server_resources:
             raise MissingResources(missing)
 
+        languages = await self._quickmt_languages() if "KritaQuickMTTranslate" in nodes else []
         self._features = ClientFeatures(
             ip_adapter=True,
-            translation=True,
-            languages=await _list_languages(self),
+            translation=bool(languages),
+            languages=languages,
             gguf="UnetLoaderGGUF" in nodes,
         )
 
@@ -803,9 +804,20 @@ class ComfyClient(Client):
             return await asyncio.gather(*transfers)
         return []
 
-    async def translate(self, text: str, lang: str):
+    async def _quickmt_languages(self):
         try:
-            return await self._get(f"api/etn/translate/{lang}/{text}")
+            return TranslationPackage.from_list(await self._get("api/krita/quickmt/languages"))
+        except NetworkError as error:
+            if error.status == 404:
+                return [TranslationPackage("ru", "Russian")]
+            log.warning("Could not load QuickMT languages: %s", error)
+            return []
+
+    async def translate(self, text: str, lang: str):
+        if not any(language.code == lang for language in self.features.languages):
+            return text
+        try:
+            return await self._post("api/krita/quickmt/translate", {"text": text, "language": lang})
         except NetworkError as e:
             log.error(f"Could not translate text: {e!s}")
             return text
@@ -1115,15 +1127,6 @@ def _ensure_supported_style(client: Client):
             default.save()
         else:
             Styles.list().create("default", checkpoint)
-
-
-async def _list_languages(client: ComfyClient) -> list[TranslationPackage]:
-    try:
-        result = await client._get("api/etn/languages")
-        return TranslationPackage.from_list(result)
-    except NetworkError as e:
-        log.error(f"Could not list available languages for translation: {e!s}")
-        return []
 
 
 def _extract_message_png_image(data: memoryview):

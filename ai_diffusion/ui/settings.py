@@ -749,6 +749,8 @@ class InterfaceSettings(SettingsTab):
             ComboBoxSetting(S._generation_finished_action, parent=self),
         )
         self.add("show_generation_preview", SwitchSetting(S._show_generation_preview, parent=self))
+        self.add("keep_live_models_loaded", SwitchSetting(S._keep_live_models_loaded, parent=self))
+        settings.changed.connect(self._update_live_vram_setting)
         self.add(
             "generation_preview_interval",
             SliderSetting(S._generation_preview_interval, self, 0.1, 5.0, "{} s"),
@@ -781,6 +783,11 @@ class InterfaceSettings(SettingsTab):
         super().read()
         self._update_image_format_widgets()
 
+    def _update_live_vram_setting(self, name, value):
+        if name == "keep_live_models_loaded":
+            with self._write_guard:
+                self._widgets[name].value = value
+
     def _tag_files(self) -> list[str]:
         plugin_tags_path = util.plugin_dir / "tags"
         user_tags_path = util.user_data_dir / "tags"
@@ -803,7 +810,7 @@ class InterfaceSettings(SettingsTab):
         languages = [("Disabled", "")]
         if client:
             languages += [(lang.name, lang.code) for lang in client.features.languages]
-        translation.enabled = client is not None
+        translation.enabled = client is not None and client.features.translation
         translation.set_items(languages)
         self.read()
 
