@@ -294,6 +294,7 @@ class CustomPackageTab(QWidget):
             m
             for m in resources.default_checkpoints + resources.optional_models
             if m.id.kind not in (resources.ResourceKind.text_encoder, resources.ResourceKind.vae)
+            and m.id.string != "checkpoint-pdmd-minimax_h3_image"
         ]
         families = [
             (_("Stable Diffusion 1.5"), (Arch.sd15,)),

@@ -1424,6 +1424,9 @@ class Extension(QObject):
     @endcode"""
 
 class Document(QObject):
+    def autosave(self) -> bool: ...
+    def setAutosave(self, active: bool) -> None: ...
+
     """* The Document class encapsulates a Krita Document/Image. A Krita document is an Image with a filename. Libkis does not differentiate between a document and an image, like Krita does internally."""
 
     def __init__(self) -> None:

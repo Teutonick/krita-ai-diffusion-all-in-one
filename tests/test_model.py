@@ -183,7 +183,13 @@ async def test_live_generation_discards_stale_result_and_renders_full_quality(
         cancelled = []
         previews = []
         images = ImageCollection([Image.create(Extent(64, 64), fill=Qt.GlobalColor.blue)])
-        monkeypatch.setattr(model, "_write_preview_layer", lambda *args: previews.append(args))
+        write_preview = model._write_preview_layer
+
+        def record_preview(*args, **kwargs):
+            previews.append(args)
+            write_preview(*args, **kwargs)
+
+        monkeypatch.setattr(model, "_write_preview_layer", record_preview)
 
         async def finish_stale_preview(job_id):
             cancelled.append(job_id)
@@ -222,6 +228,9 @@ async def test_live_generation_discards_stale_result_and_renders_full_quality(
             client.push(ClientMessage(ClientEvent.finished, "mock-job-1", images=images))
             await wait_until(lambda: previews)
             assert len(previews) == 1
+            assert previews[0][0] == "[Live] Preview"
+            assert model._layer and not model.preview_layer_id and not krita_doc.autosave()
+            live_layer_id = model._layer.id
 
             model.live_generation.randomize_seed()
             assert model.seed == 124
@@ -232,6 +241,8 @@ async def test_live_generation_discards_stale_result_and_renders_full_quality(
             await wait_until(lambda: len(previews) == 2)
 
             model.generate()
+            assert model.layers.updated().find(live_layer_id) is None
+            assert krita_doc.autosave()
             await wait_until(lambda: len(client.enqueued) == 4)
             full = client.enqueued[3]
             assert full.sampling and (full.sampling.seed, full.sampling.total_steps) == (124, 8)

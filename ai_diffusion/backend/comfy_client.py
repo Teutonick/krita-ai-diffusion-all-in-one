@@ -861,7 +861,7 @@ class ComfyClient(Client):
                 data["protected"] = triggers
             return await self._post("api/krita/quickmt/translate", data)
         except NetworkError as e:
-            log.error(f"Could not translate text: {e!s}")
+            log.error("QuickMT request failed (network code %s, HTTP status %s)", e.code, e.status)
             return text
 
     async def _subscribe_workflows(self):

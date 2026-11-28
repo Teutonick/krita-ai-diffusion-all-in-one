@@ -42,6 +42,9 @@ class Document(QObject):
         super().__init__()
         self._layers = LayerManager(None)
 
+    def set_autosave(self, enabled: bool) -> bool | None:
+        return None
+
     @property
     def extent(self):
         return Extent(0, 0)
@@ -122,6 +125,13 @@ class KritaDocument(Document):
     """
 
     _instances: ClassVar[WeakValueDictionary[str, KritaDocument]] = WeakValueDictionary()
+
+    def set_autosave(self, enabled: bool) -> bool | None:
+        if self.is_valid and hasattr(self._doc, "autosave") and hasattr(self._doc, "setAutosave"):
+            previous = self._doc.autosave()
+            self._doc.setAutosave(enabled)
+            return previous
+        return None
 
     def __init__(self, krita_document: krita.Document, id: str | None):
         super().__init__()

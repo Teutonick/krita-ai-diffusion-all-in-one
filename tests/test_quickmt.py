@@ -8,6 +8,7 @@ from ai_diffusion.backend.client import ClientFeatures, TranslationPackage
 from ai_diffusion.backend.comfy_client import ComfyClient
 from ai_diffusion.backend.comfy_workflow import ComfyWorkflow
 from ai_diffusion.backend.lora_manager import LoraInfo, save_lora_cache
+from ai_diffusion.backend.network import NetworkError
 
 from .conftest import qtapp
 
@@ -112,6 +113,21 @@ def test_workflow_translation_preserves_lora_trigger_words(monkeypatch):
         "very cold Blue.Rose синий огонь with snow.",
     )
     run.assert_called_once_with(["очень холодный", "со снегом"])
+
+
+@qtapp
+async def test_translation_failure_does_not_log_response_text(monkeypatch, caplog):
+    client = ComfyClient("http://localhost:8188")
+    client._features = ClientFeatures(
+        translation=True, languages=[TranslationPackage("fr", "French")]
+    )
+    prompt = "private prompt echoed by the server"
+    monkeypatch.setattr(
+        client, "_post", AsyncMock(side_effect=NetworkError(1, prompt, client.url, 400))
+    )
+    assert await client.translate(prompt, "fr") == prompt
+    assert "HTTP status 400" in caplog.text
+    assert prompt not in caplog.text
 
 
 @qtapp

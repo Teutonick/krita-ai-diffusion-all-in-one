@@ -73,6 +73,8 @@ def test_h3_live_uses_pdmd_on_selected_checkpoint(editing):
         assert ("MiniMaxH3SigmaShift" in nodes) is live
         if live:
             assert nodes["LoraLoaderModelOnly"]["lora_name"] == workflow.h3_live_lora
+            assert "ETN_SaveImageCache" in nodes
+            assert {"LoadImage", "SaveImage", "PreviewImage"}.isdisjoint(nodes)
         else:
             assert "LoraLoaderModelOnly" not in nodes
 

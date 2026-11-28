@@ -223,6 +223,8 @@ def test_krea2_live_preview_keeps_prompt_lora_translation_and_edit_references(
     graph = workflow.create(work, models)
     nodes = {node["class_type"]: node["inputs"] for node in graph.root.values()}
     assert "ImageUpscaleWithModel" not in nodes
+    assert "ETN_SaveImageCache" in nodes
+    assert {"LoadImage", "SaveImage", "PreviewImage"}.isdisjoint(nodes)
     assert "image 2" in nodes["KritaQuickMTTranslate"]["text"]
     assert "image_b" in nodes["Krea2EditGroundedEncode"]
     assert "source_latent_b" in nodes["Krea2EditModelPatch"]
@@ -269,6 +271,9 @@ def test_moss_live_preview_with_prompt_boxes(editing):
     assert work.batch_count == 1
     assert work.sampling and work.sampling.seed == 42
     graph = workflow.create(work, models)
+    node_types = {node["class_type"] for node in graph.root.values()}
+    assert "ETN_SaveImageCache" in node_types
+    assert {"LoadImage", "SaveImage", "PreviewImage"}.isdisjoint(node_types)
     if editing:
         assert work.sampling.total_steps == 10
         samplers = [n["inputs"] for n in graph.root.values() if n["class_type"] == "KSampler"]

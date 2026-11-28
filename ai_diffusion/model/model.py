@@ -209,6 +209,8 @@ class DocumentModel(QObject, ObservableProperties):
         self._doc = document
         self._connection = connection
         self._layer: Layer | None = None
+        self._layer_is_live_preview = False
+        self._live_preview_autosave: bool | None = None
         self._preview_job_id: str | None = None  # job whose sampler preview is on the canvas
         self._auto_select = False  # selection is being changed by the model, not the user
         self._browsing = False  # user picked a result, don't take over the canvas
@@ -1118,9 +1120,7 @@ class DocumentModel(QObject, ObservableProperties):
             image,
             bounds,
         )
-        if self._layer:
-            self._layer.remove()
-            self._layer = None
+        self.hide_preview(delete_layer=True)
         self.jobs.selection = []
         self.jobs.notify_used(job_id, index)
         if reference:
@@ -1337,7 +1337,11 @@ class DocumentModel(QObject, ObservableProperties):
         bounds = Bounds(*job.params.bounds.offset, *image.extent)
         self._write_preview_layer(name, image, bounds)
 
-    def _write_preview_layer(self, name: str, image: Image, bounds: Bounds):
+    def _write_preview_layer(self, name: str, image: Image, bounds: Bounds, *, live=False):
+        if live and not self._layer_is_live_preview:
+            self._live_preview_autosave = self._doc.set_autosave(False)
+        was_live = self._layer_is_live_preview
+        self._layer_is_live_preview = live or was_live
         if self._layer and self._layer.was_removed:
             self._layer = None  # layer was removed by user
         if self._layer is not None:
@@ -1347,14 +1351,27 @@ class DocumentModel(QObject, ObservableProperties):
         else:
             self._layer = self.layers.create(name, image, bounds, make_active=False)
             self._layer.is_locked = True
+        self._layer_is_live_preview = live
+        if was_live and not live:
+            self._restore_preview_autosave()
 
     def hide_preview(self, delete_layer=False):
+        delete_layer = delete_layer or self._layer_is_live_preview
         if self._layer is not None:
             if delete_layer:
-                self._layer.remove()
+                if self._doc.is_valid and not self._layer.was_removed:
+                    self._layer.remove()
                 self._layer = None
             else:
                 self._layer.hide()
+        if delete_layer:
+            self._layer_is_live_preview = False
+            self._restore_preview_autosave()
+
+    def _restore_preview_autosave(self):
+        if self._live_preview_autosave is not None:
+            self._doc.set_autosave(self._live_preview_autosave)
+            self._live_preview_autosave = None
 
     def apply_result(
         self,
@@ -1468,9 +1485,7 @@ class DocumentModel(QObject, ObservableProperties):
                 settings.apply_region_behavior,
                 "[Generated] ",
             )
-        if self._layer:
-            self._layer.remove()
-            self._layer = None
+        self.hide_preview(delete_layer=True)
         self.jobs.selection = []
         self.jobs.notify_used(job_id, index)
 
@@ -1502,9 +1517,7 @@ class DocumentModel(QObject, ObservableProperties):
     def add_upscale_layer(self, job: Job):
         assert job.kind is JobKind.upscaling
         assert len(job.results) > 0, "Upscaling job did not produce an image"
-        if self._layer:
-            self._layer.remove()
-            self._layer = None
+        self.hide_preview(delete_layer=True)
         self.apply_result(
             job.results[0],
             job.params,
@@ -1870,7 +1883,7 @@ class DocumentModel(QObject, ObservableProperties):
 
     @property
     def preview_layer_id(self):
-        return self._layer.id_string if self._layer else ""
+        return self._layer.id_string if self._layer and not self._layer_is_live_preview else ""
 
     @property
     def prompt_translation_language(self):
@@ -2167,9 +2180,12 @@ class LiveGeneration(QObject, ObservableProperties):
 
     def suspend(self):
         self._revision += 1
-        if self._preview_visible:
+        model = self._model()
+        if model and (self._preview_visible or model._layer_is_live_preview):
             self._preview_visible = False
-            ensure(self._model()).update_preview()
+            if model._layer_is_live_preview:
+                model.hide_preview(delete_layer=True)
+            model.update_preview()
 
     async def _run(self):
         model = ensure(self._model())
@@ -2189,13 +2205,19 @@ class LiveGeneration(QObject, ObservableProperties):
         cancel_requested = False
         keep_live_models_failed = False
         try:
-            while (self.is_active or job) and model._connection.client_if_connected is client:
+            while (
+                (self.is_active or job)
+                and model.document.is_valid
+                and model._connection.client_if_connected is client
+            ):
                 if session != self._session:
                     current = submitted = None
                     session = self._session
                     keep_live_models_failed = False
                 if self.is_active and not self.available:
                     self.is_active = False
+                if self._preview_visible and not model.document.is_active:
+                    self.suspend()
                 ready = (
                     self.is_active
                     and model.document.is_active
@@ -2217,7 +2239,7 @@ class LiveGeneration(QObject, ObservableProperties):
                         prompt_changed_at = now if prompt is not None else 0.0
                         prompt = new_prompt
                     if now - prompt_changed_at >= self.debounce:
-                        new_input, params, _, _ = model._prepare_workflow(
+                        new_input, params, _conditioning, _loras = model._prepare_workflow(
                             seed=model.seed, fast_preview=True
                         )
                         prepared = (new_input, params)
@@ -2239,7 +2261,7 @@ class LiveGeneration(QObject, ObservableProperties):
                             image = job.results[0]
                             bounds = Bounds(*job.params.bounds.offset, *image.extent)
                             model._write_preview_layer(
-                                f"[Live] {trim_text(job.params.name, 77)}", image, bounds
+                                _("[Live] Preview"), image, bounds, live=True
                             )
                             self._preview_visible = True
                         if job in model.jobs:

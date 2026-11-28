@@ -1,4 +1,15 @@
-# 1.53.0-all-in-one.93 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.95 — krita-ai-diffusion-all-in-one
+
+The H3 model installer offers the two-step pDMD Live adapter. The standalone
+pDMD BF16 checkpoint is hidden from the installer.
+
+## 1.53.0-all-in-one.94
+
+Live Generation removes its canvas preview on suspension and skips autosave
+while that layer is present in Krita versions that expose document autosave.
+QuickMT logs network status without logging server response text.
+
+## 1.53.0-all-in-one.93
 
 The local LoRA library filters content rating independently of architecture.
 LoRAs without architecture metadata have their own architecture filter.

@@ -475,6 +475,14 @@ class Selection(QObject):
 
 
 class Document(QObject):
+    _autosave = True
+
+    def autosave(self):
+        return self._autosave
+
+    def setAutosave(self, active):
+        self._autosave = active
+
     """Mock of krita.Document (an open image/canvas in Krita)."""
 
     pixelDataChanged = pyqtSignal()
