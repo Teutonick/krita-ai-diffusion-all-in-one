@@ -188,6 +188,36 @@ def test_krea_selection_installs_base_and_encoders(tmp_path: Path):
     )
 
 
+@qtapp
+async def test_krea_live_generation_is_a_standalone_install_option(tmp_path: Path, monkeypatch):
+    srv = Server(str(tmp_path))
+    package = "lora-live_generation-krea2"
+    selected = srv.resolve_model_dependencies([package])
+    assert {
+        package,
+        "checkpoint-turbo_fp8-krea2",
+        "text_encoder-qwen_3vl_4b-krea2",
+        "vae-default-krea2",
+    } <= set(selected)
+    monkeypatch.setattr(settings, "server_components", [])
+    srv.enable_model_components(selected)
+    resource = resources.find_resource(resources.ResourceId.parse(package))
+    assert resource is not None
+    srv.comfy_dir = tmp_path / "ComfyUI"
+
+    async def download(_name, _network, _url, target, _progress):
+        target.touch()
+
+    downloader = AsyncMock(side_effect=download)
+    monkeypatch.setattr(server, "_download_cached", downloader)
+    await srv.download([package], lambda *_: None)
+    assert [call.args[3] for call in downloader.await_args_list] == [
+        tmp_path / file.path for file in resource.files
+    ]
+    assert srv._model_exists(resource)
+    assert "Krea 2 Edit" not in [node.name for node in srv.selected_custom_nodes]
+
+
 def test_moss_edit_dependencies_reuse_existing_checkpoint(tmp_path: Path):
     srv = Server(str(tmp_path))
     edit = "lora-image_edit-moss"

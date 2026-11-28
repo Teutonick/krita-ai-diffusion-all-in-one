@@ -38,6 +38,7 @@ class ExtentInput:
     initial: Extent  # resolution for initial generation
     desired: Extent  # resolution for high res refinement pass
     target: Extent  # target resolution in canvas (may not be multiple of 8)
+    fast_preview: bool = False
 
 
 @dataclass

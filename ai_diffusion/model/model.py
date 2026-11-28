@@ -46,6 +46,7 @@ from ..backend.client import (
     is_style_supported,
     resolve_arch,
 )
+from ..backend.comfy_client import ComfyClient
 from ..backend.dictation import dictation
 from ..backend.network import NetworkError
 from ..backend.resolution import compute_bounds, compute_relative_bounds
@@ -220,6 +221,7 @@ class DocumentModel(QObject, ObservableProperties):
         self.inpaint = CustomInpaint()
         self.upscale = UpscaleWorkspace(self)
         self.live = LiveWorkspace(self)
+        self.live_generation = LiveGeneration(self)
         self.animation = AnimationWorkspace(self)
         self.custom = CustomWorkspace(workflows, self._generate_custom, self.jobs)
         self._style_connection: QMetaObject.Connection | None = None
@@ -433,7 +435,9 @@ class DocumentModel(QObject, ObservableProperties):
             return
 
         try:
-            input, job_params, cond_orig, prompt_loras_0 = self._prepare_workflow()
+            input, job_params, cond_orig, prompt_loras_0 = self._prepare_workflow(
+                seed=self.live_generation.seed if self.live_generation.is_active else None
+            )
         except Exception as e:
             self.report_error(util.log_error(e))
             self.loop_generate = False
@@ -442,6 +446,8 @@ class DocumentModel(QObject, ObservableProperties):
             self.loop_generate = False
             return
         self.clear_error()
+        if self.live_generation.is_active:
+            self.live_generation.suspend()
         jobs = self.enqueue_jobs(
             input,
             JobKind.diffusion,
@@ -503,7 +509,7 @@ class DocumentModel(QObject, ObservableProperties):
         self.report_error(Error(ErrorKind.resolution_warning, message, details))
         return True
 
-    def _prepare_workflow(self, dryrun=False):
+    def _prepare_workflow(self, dryrun=False, *, seed: int | None = None, fast_preview=False):
         arch = self.arch
         use_pose = (
             not dryrun
@@ -556,7 +562,10 @@ class DocumentModel(QObject, ObservableProperties):
         else:
             conditioning, job_regions = ConditioningInput("", ""), []
 
-        seed = self.seed if (self.fixed_seed or self.seed_increment) else workflow.generate_seed()
+        if seed is None:
+            seed = (
+                self.seed if (self.fixed_seed or self.seed_increment) else workflow.generate_seed()
+            )
         ref_layers: dict[str, int] | None = None
         if not dryrun:
             if use_pose and arch is Arch.krea2:
@@ -649,9 +658,15 @@ class DocumentModel(QObject, ObservableProperties):
             loras=self._edit_loras(loras),
             inpaint=inpaint,
             layer_count=self.layer_count,
+            fast_preview=fast_preview,
         )
         if self.lora_filter is not None and input.models:
-            input.models.loras = [l for l in input.models.loras if self.lora_filter(l.name)]
+            adapter = workflow.find_live_lora(client.models) if fast_preview else None
+            input.models.loras = [
+                lora
+                for lora in input.models.loras
+                if lora.name == adapter or self.lora_filter(lora.name)
+            ]
         loras = input.models.loras if input.models else []
         job_name = prompt_meta.get("prompt_eval", prompt_meta["prompt"])
         job_params = JobParams(bounds, job_name, regions=job_regions)
@@ -830,7 +845,7 @@ class DocumentModel(QObject, ObservableProperties):
     def estimate_cost(self, kind=JobKind.diffusion):
         try:
             if kind is JobKind.diffusion:
-                input, _job, _cond = self._prepare_workflow(dryrun=True)
+                input, _, _, _ = self._prepare_workflow(dryrun=True)
             elif kind is JobKind.upscaling:
                 input, _ = self._prepare_upscale_image(dryrun=True)
             else:
@@ -1151,13 +1166,19 @@ class DocumentModel(QObject, ObservableProperties):
         return job
 
     def cancel(self, active=False, queued=False):
+        if queued and self.live_generation.is_active:
+            self.live_generation.suspend()
         if queued and (to_cancel := self.clear_queued()):
             self._connection.cancel(to_cancel)
         if active and self.jobs.any_executing():
             self._connection.interrupt()
 
     def clear_queued(self):
-        to_remove = [job for job in self.jobs if job.state is JobState.queued]
+        to_remove = [
+            job
+            for job in self.jobs
+            if job.state is JobState.queued and job.kind is not JobKind.live_generation
+        ]
         for job in to_remove:
             self.jobs.remove(job)
         return [job.id for job in to_remove if job.id is not None]
@@ -1475,6 +1496,8 @@ class DocumentModel(QObject, ObservableProperties):
         )
 
     def set_workspace(self, workspace: Workspace):
+        if workspace is not Workspace.generation:
+            self.live_generation.is_active = False
         if self.workspace is Workspace.live:
             self.live.is_active = False
         self._workspace = workspace
@@ -2025,6 +2048,157 @@ class UpscaleWorkspace(QObject, ObservableProperties):
             target_extent=self.target_extent,
             seed=model.seed if model.fixed_seed else workflow.generate_seed(),
         )
+
+
+class LiveGeneration(QObject, ObservableProperties):
+    is_active = Property(False, setter="toggle")
+    is_active_changed = pyqtSignal(bool)
+    debounce = 0.4
+    poll_interval = 0.1
+
+    def __init__(self, model: DocumentModel):
+        super().__init__()
+        self._model = weakref.ref(model)
+        self._task: asyncio.Task | None = None
+        self._revision = 0
+        self._session = 0
+        self._preview_visible = False
+        self.seed = 0
+
+    @property
+    def available(self):
+        model = ensure(self._model())
+        client = model._connection.client_if_connected
+        return (
+            model.has_document
+            and model.workspace is Workspace.generation
+            and isinstance(client, ComfyClient)
+            and workflow.supports_live_preview(model.active_style, client.models)
+            and workflow.find_live_lora(client.models) is not None
+        )
+
+    def toggle(self, active: bool):
+        model = ensure(self._model())
+        if active == self.is_active or (active and not self.available):
+            return
+        if active:
+            ok, message = model.document.check_color_mode()
+            if not ok and message:
+                model.report_error(message)
+                return
+            self.seed = (
+                model.seed
+                if (model.fixed_seed or model.seed_increment)
+                else workflow.generate_seed()
+            )
+            self._session += 1
+            model.loop_generate = False
+        else:
+            self.suspend()
+        self._is_active = active
+        self.is_active_changed.emit(active)
+        if active and (self._task is None or self._task.done()):
+            self._task = eventloop.run(_report_errors(model, self._run()))
+
+    def suspend(self):
+        self._revision += 1
+        if self._preview_visible:
+            self._preview_visible = False
+            ensure(self._model()).update_preview()
+
+    async def _run(self):
+        model = ensure(self._model())
+        client = model._connection.client_if_connected
+        if not isinstance(client, ComfyClient):
+            self.is_active = False
+            return
+        current: WorkflowInput | None = None
+        submitted: WorkflowInput | None = None
+        job: Job | None = None
+        revision = self._revision
+        session = self._session
+        changed_at = 0.0
+        prompt: tuple[str, ...] | None = None
+        prepared_prompt: tuple[str, ...] | None = None
+        prompt_changed_at = 0.0
+        cancel_requested = False
+        try:
+            while (self.is_active or job) and model._connection.client_if_connected is client:
+                if session != self._session:
+                    current = submitted = None
+                    session = self._session
+                if self.is_active and not self.available:
+                    self.is_active = False
+                ready = (
+                    self.is_active
+                    and model.document.is_active
+                    and not any(
+                        other is not job and other.state in (JobState.queued, JobState.executing)
+                        for other in model.jobs
+                    )
+                )
+                prepared: tuple[WorkflowInput, JobParams] | None = None
+                if ready:
+                    now = time.monotonic()
+                    regions = model.active_regions
+                    new_prompt = (
+                        regions.positive,
+                        regions.negative,
+                        *(r.positive for r in regions),
+                    )
+                    if new_prompt != prompt:
+                        prompt_changed_at = now if prompt is not None else 0.0
+                        prompt = new_prompt
+                    if now - prompt_changed_at >= self.debounce:
+                        new_input, params, _, _ = model._prepare_workflow(
+                            seed=self.seed, fast_preview=True
+                        )
+                        prepared = (new_input, params)
+                        if current != new_input:
+                            changed_at = prompt_changed_at if prompt != prepared_prompt else now
+                            current = new_input
+                        prepared_prompt = prompt
+                if job is not None:
+                    stale = prepared is None or current != submitted or revision != self._revision
+                    if job.state in (JobState.finished, JobState.cancelled):
+                        if not stale and not cancel_requested and job.results:
+                            image = job.results[0]
+                            bounds = Bounds(*job.params.bounds.offset, *image.extent)
+                            model._write_preview_layer(
+                                f"[Live] {trim_text(job.params.name, 77)}", image, bounds
+                            )
+                            self._preview_visible = True
+                        if job in model.jobs:
+                            model.jobs.remove(job)
+                        if (stale or cancel_requested) and revision == self._revision:
+                            submitted = None
+                        job = None
+                    elif stale and not cancel_requested and job.id:
+                        cancel_requested = True
+                        await client.cancel_preview(job.id)
+                elif (
+                    prepared
+                    and current != submitted
+                    and time.monotonic() - changed_at >= self.debounce
+                ):
+                    new_input, params = prepared
+                    model.clear_error()
+                    params.seed = self.seed
+                    params.workflow_kind = new_input.kind
+                    job = model.jobs.add(JobKind.live_generation, params)
+                    submitted, revision = current, self._revision
+                    cancel_requested = False
+                    await model._enqueue_job(job, new_input)
+                await asyncio.sleep(self.poll_interval)
+        finally:
+            self.is_active = False
+            if job is not None and job in model.jobs:
+                try:
+                    if job.id and model._connection.client_if_connected is client:
+                        await client.cancel_preview(job.id)
+                finally:
+                    if job in model.jobs:
+                        model.jobs.remove(job)
 
 
 class LiveScheduler:

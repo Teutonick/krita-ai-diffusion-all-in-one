@@ -320,6 +320,13 @@ class CustomPackageTab(QWidget):
                         "Edit V2 weights are free for non-commercial use. Review the model terms before installing."
                     )
                     + ' <a href="https://www.krea.ai/krea-2-licensing">Krea 2 Community License</a>'
+                    + "<br>"
+                    + _(
+                        "Select Live Generation to install the 2-step preview adapter and any missing Krea 2 Turbo models."
+                    )
+                    + ' <a href="https://huggingface.co/lvladikov/Krea2-Turbo-Distill-2step-LoRA">'
+                    + _("Model card")
+                    + "</a>"
                 )
             self._packages.append(
                 PackageGroupWidget(

@@ -13,7 +13,7 @@ from krita import Document as MockKritaDocument
 from krita import Krita, Selection
 from PyQt5.QtCore import QByteArray, Qt
 
-from ai_diffusion.backend import pov
+from ai_diffusion.backend import pov, workflow
 from ai_diffusion.backend.api import ConditioningInput, WorkflowInput, WorkflowKind
 from ai_diffusion.backend.client import CheckpointInfo, ClientEvent, ClientMessage
 from ai_diffusion.backend.comfy_workflow import ComfyObjectInfo
@@ -157,6 +157,77 @@ async def test_generate_simple(workflows_dir: Path):
         # Pure generation: no input image is passed to the workflow
         assert result[0].images is not None
         assert result[0].images.initial_image is None
+
+
+@qtapp
+async def test_live_generation_discards_stale_result_and_renders_full_quality(
+    workflows_dir: Path, monkeypatch
+):
+    monkeypatch.setattr("ai_diffusion.model.model.ComfyClient", MockClient)
+    monkeypatch.setattr(workflow, "generate_seed", lambda: 123)
+    krita_doc = Krita.instance().openDocument("test")
+    async with _model_env(krita_doc, workflows_dir) as (model, client):
+        checkpoint = "krea2_turbo_fp8_scaled.safetensors"
+        client.models.checkpoints[checkpoint] = CheckpointInfo(checkpoint, Arch.krea2)
+        style = _make_style(checkpoint)
+        style.sampler = "Flux - Euler simple"
+        style.cfg_scale = 1.0
+        style.sampler_steps = 8
+        model.style = style
+        model.regions.positive = "A cat"
+        assert not model.live_generation.available
+        client.models.loras = [workflow.krea_live_lora]
+        assert model.live_generation.available
+
+        cancelled = []
+        previews = []
+        images = ImageCollection([Image.create(Extent(64, 64), fill=Qt.GlobalColor.blue)])
+        monkeypatch.setattr(model, "_write_preview_layer", lambda *args: previews.append(args))
+
+        async def finish_stale_preview(job_id):
+            cancelled.append(job_id)
+            client.push(ClientMessage(ClientEvent.finished, job_id, images=images))
+
+        monkeypatch.setattr(client, "cancel_preview", finish_stale_preview, raising=False)
+
+        async def wait_until(predicate):
+            async with asyncio.timeout(3):
+                while not predicate():
+                    await asyncio.sleep(0.02)
+
+        model.live_generation.is_active = True
+        try:
+            await wait_until(lambda: len(client.enqueued) == 1)
+            model.regions.positive = "A cat in"
+            await wait_until(lambda: cancelled)
+            model.regions.positive = "A cat in a garden"
+            await asyncio.sleep(0.2)
+            assert len(client.enqueued) == 1
+            assert not previews
+            await wait_until(lambda: len(client.enqueued) == 2)
+
+            preview = client.enqueued[1]
+            assert preview.sampling and (preview.sampling.seed, preview.sampling.total_steps) == (
+                123,
+                2,
+            )
+            assert preview.conditioning and preview.conditioning.positive == model.regions.positive
+            assert cancelled == ["mock-job-0"]
+            client.push(ClientMessage(ClientEvent.finished, "mock-job-1", images=images))
+            await wait_until(lambda: previews)
+            assert len(previews) == 1
+
+            model.generate()
+            await wait_until(lambda: len(client.enqueued) == 3)
+            full = client.enqueued[2]
+            assert full.sampling and (full.sampling.seed, full.sampling.total_steps) == (123, 8)
+            assert full.models and not full.models.loras
+            assert not full.extent.fast_preview
+            assert not model.fixed_seed
+        finally:
+            model.live_generation.is_active = False
+            if model.live_generation._task is not None:
+                await model.live_generation._task
 
 
 @qtapp

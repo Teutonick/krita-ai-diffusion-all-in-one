@@ -1224,7 +1224,11 @@ def inpaint(
         desired_bounds = extent.convert(target_bounds, "target", "desired")
         desired_extent = desired_bounds.extent
         cropped_extent = ScaledExtent(
-            desired_extent, desired_extent, desired_extent, target_bounds.extent
+            desired_extent,
+            desired_extent,
+            desired_extent,
+            target_bounds.extent,
+            extent.fast_preview,
         )
         out_image = vae_decode(w, vae, out_latent, checkpoint.tiled_vae)
         out_image = w.color_match(out_image, in_image, inpaint_mask, misc.color_match)
@@ -1962,6 +1966,36 @@ def prepare_prompts(
     return PreparedPrompt(cond, extra_loras, meta)
 
 
+krea_live_lora = "krea2_turbo_2step_rank_64_lora_comfyui.safetensors"
+
+
+def supports_live_preview(style: Style, models: ClientModels):
+    checkpoint = style.preferred_checkpoint(models.checkpoints)
+    filename = Path(checkpoint.replace("\\", "/")).name.lower()
+    return (
+        checkpoint in models.checkpoints
+        and resolve_arch(style, models) is Arch.krea2
+        and "turbo" in filename
+    )
+
+
+def find_live_lora(models: ClientModels):
+    return next(
+        (
+            name
+            for name in models.loras
+            if name.replace("\\", "/").split("/")[-1].lower() == krea_live_lora
+        ),
+        None,
+    )
+
+
+def _preview_extent(extent: Extent):
+    if extent.longest_side > 512:
+        extent = extent.scale_keep_aspect(Extent(512, 512))
+    return extent.at_least(32).multiple_of(32)
+
+
 def prepare(
     kind: WorkflowKind,
     canvas: Image | Extent,
@@ -1979,6 +2013,7 @@ def prepare(
     upscale: UpscaleInput | None = None,
     is_live: bool = False,
     layer_count: int = 1,
+    fast_preview: bool = False,
 ) -> WorkflowInput:
     """
     Takes UI model state, prepares images, normalizes inputs, and returns a WorkflowInput object
@@ -1986,8 +2021,11 @@ def prepare(
     """
     i = WorkflowInput(kind)
     i.conditioning = cond
-    i.sampling = sampling_from_style(style, strength, is_live)
-    i.sampling.seed = seed
+    if fast_preview:
+        i.sampling = SamplingInput("euler", "simple", 1.0, 2, seed=seed)
+    else:
+        i.sampling = sampling_from_style(style, strength, is_live)
+        i.sampling.seed = seed
     i.models = style.get_models(models.checkpoints)
     i.models.loras = unique(i.models.loras + (loras or []), key=lambda l: l.name)
     i.models.dynamic_caching = perf.dynamic_caching
@@ -2019,7 +2057,17 @@ def prepare(
         i.models.loras = [lora for lora in i.models.loras if not _is_krea_edit_lora(lora.name)] + [
             LoraInput(identity, 1.0)
         ]
-        i.sampling = SamplingInput("euler_ancestral", "beta", 1.0, 8, seed=seed)
+        if not fast_preview:
+            i.sampling = SamplingInput("euler_ancestral", "beta", 1.0, 8, seed=seed)
+
+    if fast_preview:
+        adapter = find_live_lora(models)
+        if not supports_live_preview(style, models) or adapter is None:
+            raise ValueError(
+                _("Live Generation requires Krea 2 Turbo and its ComfyUI 2-step LoRA.")
+            )
+        i.models.loras = [lora for lora in i.models.loras if lora.name != adapter]
+        i.models.loras.append(LoraInput(adapter, 1.0))
 
     _check_server_has_models(i.models, i.conditioning.regions, models, files, style.name)
     _check_inpaint_model(inpaint, arch, models)
@@ -2031,13 +2079,41 @@ def prepare(
         and arch is not Arch.minimax_h3_image
         and not (arch is Arch.krea2 and cond.pose_guide is not None)
     ):
-        i.models.loras += _get_sampling_lora(style, is_live, model_set, models)
+        if not fast_preview:
+            i.models.loras += _get_sampling_lora(style, is_live, model_set, models)
         all_control = cond.control + [c for r in cond.regions for c in r.control]
         face_weight = median_or_zero(c.strength for c in all_control if c.mode is ControlMode.face)
         if face_weight > 0:
             i.models.loras.append(LoraInput(model_set.lora["face"], 0.65 * face_weight))
 
-    if arch is Arch.krea2 and cond.pose_guide is not None:
+    if fast_preview:
+        target = canvas if isinstance(canvas, Extent) else canvas.extent
+        render = _preview_extent(target)
+        source = Image.scale(canvas, render) if isinstance(canvas, Image) else None
+        i.images = ImageInput(
+            ExtentInput(render, render, render, target, fast_preview=True),
+            initial_image=source,
+            hires_mask=mask.to_image(target) if mask else None,
+        )
+        if inpaint is not None:
+            i.inpaint = InpaintParams.clamped(inpaint)
+            i.inpaint.use_inpaint_model = i.inpaint.use_reference = False
+            i.crop_upscale_extent = render
+        if cond.pose_guide is not None:
+            render = _preview_extent(cond.pose_guide.extent)
+            cond.pose_guide = Image.scale(cond.pose_guide, render)
+            i.images.extent = ExtentInput(render, render, render, target, fast_preview=True)
+            cond.pose_upscale = False
+        downscale_all_control_images(cond, target, render)
+        for control in cond.control + [c for r in cond.regions for c in r.control]:
+            if (
+                control.mode.is_ip_adapter
+                and control.image
+                and control.image.extent.longest_side > 512
+            ):
+                control.image = Image.scale(control.image, _preview_extent(control.image.extent))
+        i.batch_count = 1
+    elif arch is Arch.krea2 and cond.pose_guide is not None:
         target = canvas if isinstance(canvas, Extent) else canvas.extent
         render = cond.pose_guide.extent
         i.images = ImageInput(

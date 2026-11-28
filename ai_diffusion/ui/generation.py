@@ -1536,6 +1536,13 @@ class GenerationWidget(QWidget):
         self._update_preview_button(settings.show_generation_preview)
         self.preview_button.toggled.connect(self._toggle_preview)
 
+        self.live_generation_button = QToolButton(self)
+        self.live_generation_button.setIcon(theme.icon("workspace-live"))
+        self.live_generation_button.setCheckable(True)
+        self.live_generation_button.setFixedHeight(self.generate_button.height() - 2)
+        self.live_generation_button.setToolTip(_("Live Generation"))
+        self.live_generation_button.clicked.connect(self._toggle_live_generation)
+
         self.combinations_button = QToolButton(self)
         self.combinations_button.setIcon(theme.icon("combinations"))
         self.combinations_button.setFixedHeight(self.generate_button.height() - 2)
@@ -1562,6 +1569,7 @@ class GenerationWidget(QWidget):
         actions_layout.addWidget(self.loop_button)
         actions_layout.addSpacing(6)
         actions_layout.addWidget(self.preview_button)
+        actions_layout.addWidget(self.live_generation_button)
         actions_layout.addSpacing(6)
         actions_layout.addWidget(self.pause_button)
         actions_layout.addWidget(self.skip_button)
@@ -1681,6 +1689,7 @@ class GenerationWidget(QWidget):
                 model.pose_studio_enabled_changed.connect(self._update_pose_studio),
                 model.pose_studio_upscale_changed.connect(self._update_pose_studio),
                 model.edit_mode_changed.connect(self.update_generate_options),
+                model.live_generation.is_active_changed.connect(self.update_generate_options),
                 self.add_control_button.clicked.connect(self.add_control),
                 self.add_region_button.clicked.connect(self.add_region),
                 self.region_prompt.activated.connect(model.generate),
@@ -1712,6 +1721,10 @@ class GenerationWidget(QWidget):
         settings.show_generation_preview = on
         settings.save()
         self._update_preview_button(on)
+
+    def _toggle_live_generation(self, on: bool):
+        self.model.live_generation.is_active = on
+        self.live_generation_button.setChecked(self.model.live_generation.is_active)
 
     def _update_preview_button(self, on: bool):
         self.preview_button.setIcon(self._preview_icon_active if on else self._preview_icon)
@@ -1998,6 +2011,10 @@ class GenerationWidget(QWidget):
             if self.model.is_editing
             else _("Draw a rectangle and describe what to place there in a newly generated image.")
         )
+        live = self.model.live_generation
+        self.live_generation_button.setVisible(live.available)
+        self.live_generation_button.setChecked(live.is_active)
+        self.loop_button.setEnabled(not live.is_active)
         if not self.model.has_document:
             return
 
@@ -2064,7 +2081,11 @@ class GenerationWidget(QWidget):
                 else:
                     icon = "edit"
 
-        text += f" ({self.model.batch_count})"
+        if live.is_active:
+            icon = "workspace-generation"
+            text = _("Render Full Quality")
+        else:
+            text += f" ({self.model.batch_count})"
         self.generate_button.operation = text
         self.generate_button.setIcon(theme.icon(icon))
 

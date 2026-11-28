@@ -189,7 +189,7 @@ class ComfyClient(Client):
         self._resumed.set()
         self._user_paused = False
         self._video_paused = False
-        self._posting_job = False
+        self._posting_job: JobInfo | None = None
         self._held_job: JobInfo | None = None  # taken off the queue, waiting for resume
         self._last_preview = 0.0
 
@@ -384,13 +384,13 @@ class ComfyClient(Client):
                         continue
                     self._held_job = None
                 try:
-                    self._posting_job = True
+                    self._posting_job = job
                     await self._run_job(job)
                 except Exception as e:
                     log.exception(f"Unhandled exception while processing {job}")
                     await self._report(ClientEvent.error, job.id, error=str(e))
                 finally:
-                    self._posting_job = False
+                    self._posting_job = None
         except asyncio.CancelledError:
             pass
 
@@ -410,7 +410,8 @@ class ComfyClient(Client):
             "client_id": self._id,
             "prompt_id": job.id,
         }
-        if settings.show_generation_preview:
+        fast_preview = job.work.images is not None and job.work.images.extent.fast_preview
+        if settings.show_generation_preview and not fast_preview:
             # per-prompt override, so ComfyUI needs no --preview-method launch argument
             data["extra_data"] = {"preview_method": "auto"}
         self._waiting_job.set(job)
@@ -614,6 +615,28 @@ class ComfyClient(Client):
 
     async def interrupt(self):
         await self._post("interrupt", {})
+
+    async def cancel_preview(self, job_id: str):
+        if any(job.id == job_id for job in self._queue) or (
+            self._held_job is not None and self._held_job.id == job_id
+        ):
+            await self.cancel([job_id])
+            return
+        while self._posting_job is not None and self._posting_job.id == job_id:
+            await asyncio.sleep(0.05)
+        waiting = self._waiting_job.peek()
+        if not any(job is not None and job.id == job_id for job in (waiting, self._active_job)):
+            return
+        try:
+            result = await self._post(f"api/jobs/{job_id}/cancel", {})
+        except NetworkError as error:
+            if error.status not in (404, 405):
+                raise
+            return  # Older servers finish the stale preview before a replacement is queued.
+        if result.get("cancelled") and waiting is not None and waiting.id == job_id:
+            if self._waiting_job.peek() is waiting:
+                self._waiting_job.clear()
+                await self._report(ClientEvent.interrupted, job_id)
 
     async def free_memory(self):
         # ComfyUI frees after the running prompt finishes, queued jobs reload what they need

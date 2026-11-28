@@ -245,9 +245,7 @@ class Server:
     def selected_custom_nodes(self):
         selected_names = set(settings.server_components)
         if any(
-            model.arch is Arch.krea2
-            and model.id.kind is resources.ResourceKind.lora
-            and self._model_exists(model)
+            model.id.string in model_licenses.model_ids and self._model_exists(model)
             for model in resources.optional_models
         ):
             selected_names.add("Krea 2 Edit")
@@ -262,7 +260,7 @@ class Server:
         )
 
     def enable_model_components(self, packages: list[str]):
-        if any(p.startswith("lora-") and p.endswith("-krea2") for p in packages):
+        if model_licenses.model_ids.intersection(packages):
             if "Krea 2 Edit" not in settings.server_components:
                 settings.server_components = [*settings.server_components, "Krea 2 Edit"]
                 settings.save()

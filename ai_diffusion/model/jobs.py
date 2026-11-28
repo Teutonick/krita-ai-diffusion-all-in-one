@@ -34,6 +34,7 @@ class JobKind(Enum):
     animation_frame = 5  # just a single frame
     animation = 6  # full animation in one job
     segmentation = 7  # AI selection / background removal, applied when finished
+    live_generation = 8
 
 
 @dataclass
@@ -248,7 +249,8 @@ class JobQueue(QObject):
             duration = (datetime.now(timezone.utc) - job.started_at).total_seconds()
             job.params.metadata["duration"] = round(duration, 1)
         self.job_finished.emit(job)
-        self._cancel_earlier_jobs(job)
+        if job.kind is not JobKind.live_generation:
+            self._cancel_earlier_jobs(job)
         self.count_changed.emit()
 
         if job.kind not in [JobKind.diffusion, JobKind.animation]:
@@ -256,7 +258,8 @@ class JobQueue(QObject):
 
     def notify_cancelled(self, job: Job):
         job.state = JobState.cancelled
-        self._cancel_earlier_jobs(job)
+        if job.kind is not JobKind.live_generation:
+            self._cancel_earlier_jobs(job)
         self.count_changed.emit()
 
     def notify_used(self, job_id: str, index: int):
@@ -362,7 +365,10 @@ class JobQueue(QObject):
         for j in self._entries:
             if j is job:
                 break
-            if j.state in [JobState.queued, JobState.executing]:
+            if j.kind is not JobKind.live_generation and j.state in (
+                JobState.queued,
+                JobState.executing,
+            ):
                 j.state = JobState.cancelled
 
 

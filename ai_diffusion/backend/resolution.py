@@ -66,6 +66,7 @@ class ScaledExtent(NamedTuple):
     initial: Extent  # resolution for initial generation
     desired: Extent  # resolution for high res refinement pass
     target: Extent  # target resolution in canvas (may not be multiple of 8)
+    fast_preview: bool = False
 
     @staticmethod
     def no_scaling(extent: Extent):
@@ -73,7 +74,9 @@ class ScaledExtent(NamedTuple):
 
     @staticmethod
     def from_input(input: ExtentInput):
-        return ScaledExtent(input.input, input.initial, input.desired, input.target)
+        return ScaledExtent(
+            input.input, input.initial, input.desired, input.target, input.fast_preview
+        )
 
     @property
     def as_input(self):
@@ -127,7 +130,7 @@ class ScaledExtent(NamedTuple):
         ratio = Extent.ratio(self.desired, self.target)
         if ratio == 1:
             return ScaleMode.none
-        elif ratio < 0.9:
+        elif ratio < 0.9 and not self.fast_preview:
             return ScaleMode.upscale_fast
         else:
             return ScaleMode.resize

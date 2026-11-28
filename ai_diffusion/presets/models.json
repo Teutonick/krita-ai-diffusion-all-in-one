@@ -906,6 +906,28 @@
       ]
     },
     {
+      "id": "lora-live_generation-krea2",
+      "name": "Live Generation",
+      "files": [
+        {
+          "id": "lora-live_generation-krea2",
+          "path": "models/loras/krea2-live-license/LICENSE.pdf",
+          "url": "https://huggingface.co/lvladikov/Krea2-Turbo-Distill-2step-LoRA/resolve/d4e6de8e4dd91b35c447315e7b4d4d59cb9371f0/LICENSE.pdf"
+        },
+        {
+          "id": "lora-live_generation-krea2",
+          "path": "models/loras/krea2-live-license/NOTICE.txt",
+          "url": "https://huggingface.co/lvladikov/Krea2-Turbo-Distill-2step-LoRA/resolve/d4e6de8e4dd91b35c447315e7b4d4d59cb9371f0/NOTICE.txt"
+        },
+        {
+          "id": "lora-live_generation-krea2",
+          "path": "models/loras/krea2_turbo_2step_rank_64_lora_comfyui.safetensors",
+          "url": "https://huggingface.co/lvladikov/Krea2-Turbo-Distill-2step-LoRA/resolve/d4e6de8e4dd91b35c447315e7b4d4d59cb9371f0/krea2_turbo_2step_rank_64_lora_comfyui.safetensors",
+          "sha256": "96751c921337cc7108e4aff475d68d611326607213389b9dae8b949966f411cd"
+        }
+      ]
+    },
+    {
       "id": "lora-identity_edit-krea2",
       "name": "Krea 2 Identity Edit V2",
       "files": [

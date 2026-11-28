@@ -25,7 +25,7 @@ from ai_diffusion.backend.api import (
 from ai_diffusion.backend.client import CheckpointInfo, ClientModels
 from ai_diffusion.backend.comfy_workflow import ComfyObjectInfo
 from ai_diffusion.backend.resources import Arch, ControlMode, ResourceKind, resource_id
-from ai_diffusion.files import FileFormat, FileLibrary
+from ai_diffusion.files import File, FileCollection, FileFormat, FileLibrary
 from ai_diffusion.image import Bounds, Extent, Image
 from ai_diffusion.pose_studio import PoseScene
 from ai_diffusion.settings import PerformanceSettings
@@ -178,6 +178,51 @@ def test_krea2_edit_graph(kind, edit_kind, cfg):
     assert positive == [work.conditioning.positive]
 
 
+def test_krea2_live_preview_keeps_prompt_lora_translation_and_edit_references():
+    models, template = _edit_work("identity")
+    assert template.models
+    adapter = f"live/{workflow.krea_live_lora}"
+    character = "characters/subject.safetensors"
+    models.loras = [adapter, character]
+    files = FileLibrary(FileCollection(), FileCollection())
+    files.loras.add(File.remote(character))
+    style = Style(Path("test.json"))
+    style.checkpoints = [template.models.checkpoint]
+    target = Extent(1536, 1024)
+    source = Image.create(target, fill=0)
+    cond = ConditioningInput(
+        "Нарисуй @subject <lora:characters/subject:0.7>",
+        language="ru",
+        edit_reference=True,
+        control=[ControlInput(ControlMode.reference, source, name="subject")],
+    )
+    prepared = workflow.prepare_prompts(cond, style, 42, Arch.krea2, files=files)
+    work = workflow.prepare(
+        WorkflowKind.refine,
+        source,
+        prepared.conditioning,
+        style,
+        42,
+        models,
+        files,
+        PerformanceSettings(),
+        loras=prepared.loras,
+        fast_preview=True,
+    )
+    assert work.models and work.models.loras == [LoraInput(character, 0.7), LoraInput(adapter, 1.0)]
+    assert work.sampling == SamplingInput("euler", "simple", 1.0, 2, seed=42)
+    assert work.extent.initial == work.extent.desired == Extent(512, 352)
+    assert work.extent.target == target
+    assert WorkflowInput.from_dict(work.to_dict()).extent.fast_preview
+    graph = workflow.create(work, models)
+    nodes = {node["class_type"]: node["inputs"] for node in graph.root.values()}
+    assert "ImageUpscaleWithModel" not in nodes
+    assert "image 2" in nodes["ETN_Translate"]["text"]
+    assert "image_b" in nodes["Krea2EditGroundedEncode"]
+    assert "source_latent_b" in nodes["Krea2EditModelPatch"]
+    assert nodes["BasicScheduler"]["steps"] == 2
+
+
 def test_make_povs_workflows():
     models, template = _edit_work("identity")
     character_lora = "characters/android.safetensors"
@@ -236,13 +281,14 @@ def test_make_povs_workflows():
 
 @pytest.mark.parametrize("reference_type", ["named", "canvas"])
 @pytest.mark.parametrize("upscale", [False, True])
-def test_krea2_pose_studio_graph(reference_type, upscale):
+@pytest.mark.parametrize("fast_preview", [False, True])
+def test_krea2_pose_studio_graph(reference_type, upscale, fast_preview):
     kind = WorkflowKind.refine if reference_type == "canvas" else WorkflowKind.generate
     models, template = _edit_work("general", kind)
     assert template.models and template.images and template.images.initial_image
     reference = Image.scale(template.images.initial_image, Extent(1024, 1280))
     identity = "KREA/krea2_identity_edit_v2.safetensors"
-    models.loras = [identity]
+    models.loras = [identity, workflow.krea_live_lora]
     style = Style(Path("test.json"))
     style.checkpoints = [template.models.checkpoint]
     style.style_prompt = ""
@@ -265,6 +311,7 @@ def test_krea2_pose_studio_graph(reference_type, upscale):
         models,
         FileLibrary.instance(),
         PerformanceSettings(),
+        fast_preview=fast_preview,
     )
     graph = workflow.create(work, models)
     nodes = {
@@ -285,13 +332,13 @@ def test_krea2_pose_studio_graph(reference_type, upscale):
         s for s in samplers.values() if s["model"] == [nodes["Krea2EditModelPatch"][0], 0]
     )
     assert nodes["LoraLoaderModelOnly"][1]["lora_name"] == identity
-    assert "LoraLoader" not in nodes
+    if fast_preview:
+        assert nodes["LoraLoader"][1]["lora_name"] == workflow.krea_live_lora
+    else:
+        assert "LoraLoader" not in nodes
     assert sampler["latent_image"] == patch["target_latent"] == [nodes["EmptySD3LatentImage"][0], 0]
-    assert (sampler["sampler_name"], sampler["scheduler"], sampler["steps"]) == (
-        "euler_ancestral",
-        "beta",
-        8,
-    )
+    expected_sampler = ("euler", "simple", 2) if fast_preview else ("euler_ancestral", "beta", 8)
+    assert (sampler["sampler_name"], sampler["scheduler"], sampler["steps"]) == expected_sampler
     assert patch["source_image"] == encoder["image"]
     assert encoder["prompt"].startswith("Draw character from image2.")
     assert "Use image1 only for the body pose" in encoder["prompt"]
@@ -304,10 +351,10 @@ def test_krea2_pose_studio_graph(reference_type, upscale):
     assert graph.root[encoder["image_b"][0]]["class_type"] != "ImageScale"
     assert len(samplers) == 1
     assert sampler["start_at_step"] == 0 and sampler["end_at_step"] == 10000
-    assert nodes["EmptySD3LatentImage"][1]["width"] == 384
-    assert nodes["EmptySD3LatentImage"][1]["height"] == 640
-    assert ("ClownsharKSampler_Beta" in nodes) == upscale
-    if upscale:
+    assert nodes["EmptySD3LatentImage"][1]["width"] == (320 if fast_preview else 384)
+    assert nodes["EmptySD3LatentImage"][1]["height"] == (512 if fast_preview else 640)
+    assert ("ClownsharKSampler_Beta" in nodes) == (upscale and not fast_preview)
+    if upscale and not fast_preview:
         scale_id, scale = nodes["LatentPixelScale"]
         assert scale["scale_factor"] == 1.5 and scale["scale_method"] == "lanczos"
         extra = nodes["ClownsharKSampler_Beta"][1]

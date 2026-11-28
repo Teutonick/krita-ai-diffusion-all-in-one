@@ -1,4 +1,11 @@
-# 1.53.0-all-in-one.76 — krita-ai-diffusion-all-in-one
+# 1.53.0-all-in-one.77 — krita-ai-diffusion-all-in-one
+
+Live Generation for Krea 2 Turbo is available in Managed Server under Models → Krea 2.
+Setup downloads the 2-step LoRA, its license and notice, and any missing Krea 2 Turbo
+dependencies. With a compatible Turbo style selected, the toolbar offers an inline
+preview and a Render Full Quality action.
+
+## 1.53.0-all-in-one.76
 
 MOSS image editing translates Prompt Box captions and scene context through
 the local ComfyUI translation node. Graph tests verify that each box uses the
